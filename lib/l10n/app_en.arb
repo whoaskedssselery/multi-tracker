@@ -1,0 +1,134 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Multi-tracker",
+
+  "tabHome": "Home",
+  "tabTrain": "Train",
+  "tabTasks": "Tasks",
+  "tabAI": "AI",
+
+  "navSettings": "Settings",
+
+  "actionCancel": "Cancel",
+  "actionSave": "Save",
+  "actionDelete": "Delete",
+  "actionUpdate": "Update",
+  "actionEdit": "Edit",
+  "actionAdd": "Add",
+  "actionCreate": "Create",
+  "actionDone": "Done",
+  "actionClose": "Close",
+  "actionBack": "Back",
+  "actionOpen": "Open",
+  "actionRetry": "Retry",
+  "actionExport": "Export",
+  "actionImport": "Import",
+  "actionReset": "Reset",
+  "actionConfirm": "Confirm",
+
+  "labelToday": "Today",
+  "labelTomorrow": "Tomorrow",
+  "labelThisWeek": "This week",
+  "labelLater": "Later",
+  "labelNoDate": "No date",
+  "labelDone": "Done",
+  "labelRest": "Rest",
+
+  "labelKg": "kg",
+  "labelLbs": "lbs",
+  "labelReps": "reps",
+  "labelSet": "Set",
+  "labelSets": "Sets",
+
+  "priorityNone": "none",
+  "priorityLow": "low",
+  "priorityMid": "medium",
+  "priorityHigh": "high",
+
+  "homeGreeting": "Hey, {name}",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "homeGoals": "Goals",
+  "homeWeight": "Weight",
+  "homeHistory": "History",
+  "homeStreaks": "Streaks",
+  "homeTodayPlan": "Today's plan",
+  "homeTodayTasks": "Today's tasks",
+  "homeRecordWeight": "Log weight",
+  "homeActiveTasks": "{count} active",
+  "@homeActiveTasks": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "trainWeek": "Week",
+  "trainProgram": "Program",
+  "trainStart": "Start workout",
+  "trainExercises": "{count} exercises",
+  "@trainExercises": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "trainLastTime": "Last time",
+  "trainNote": "Workout note",
+  "trainAskAI": "Ask AI",
+
+  "tasksTitle": "Tasks",
+  "tasksNotes": "Notes",
+  "tasksNew": "New task",
+  "tasksNewNote": "New note",
+  "tasksWhenLabel": "When",
+  "tasksPriorityLabel": "Priority",
+  "tasksTimeLabel": "Time",
+  "tasksRepeatLabel": "Repeat",
+  "tasksEmpty": "All clear.",
+  "tasksEmptyBody": "Nothing left to do.",
+
+  "aiTitle": "AI",
+  "aiInputHint": "Ask anything…",
+  "aiSend": "Send",
+  "aiContextAll": "All",
+  "aiContextTrain": "Training",
+  "aiContextWeight": "Weight",
+  "aiContextTasks": "Tasks",
+
+  "settingsTitle": "Settings",
+  "settingsProfile": "Profile",
+  "settingsAppearance": "Appearance",
+  "settingsAI": "AI",
+  "settingsNotifications": "Notifications",
+  "settingsData": "Data",
+  "settingsAbout": "About",
+
+  "settingsTheme": "Theme",
+  "settingsThemeLight": "Light",
+  "settingsThemeAuto": "Auto",
+  "settingsThemeDark": "Dark",
+
+  "settingsAccent": "Accent colour",
+  "settingsUnits": "Units",
+
+  "settingsGeminiKey": "Gemini API Key",
+  "settingsGeminiKeyHint": "Paste key from aistudio.google.com",
+  "settingsGeminiVerify": "Verify",
+  "settingsGeminiOk": "Key is working",
+
+  "settingsNotifAll": "All notifications",
+  "settingsNotifTasks": "Task reminders",
+  "settingsNotifWeight": "Weight reminder",
+
+  "settingsExportJson": "Export JSON",
+  "settingsExportCsv": "Export CSV",
+  "settingsResetAll": "Reset everything",
+  "settingsResetConfirm": "Delete all data? This cannot be undone.",
+
+  "settingsVersion": "Version",
+  "settingsPlatform": "Platform"
+}

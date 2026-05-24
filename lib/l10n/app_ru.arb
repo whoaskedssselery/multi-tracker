@@ -1,0 +1,134 @@
+{
+  "@@locale": "ru",
+
+  "appTitle": "Multi-tracker",
+
+  "tabHome": "Главная",
+  "tabTrain": "Train",
+  "tabTasks": "Tasks",
+  "tabAI": "AI",
+
+  "navSettings": "Настройки",
+
+  "actionCancel": "Отмена",
+  "actionSave": "Сохранить",
+  "actionDelete": "Удалить",
+  "actionUpdate": "Обновить",
+  "actionEdit": "Изменить",
+  "actionAdd": "Добавить",
+  "actionCreate": "Создать",
+  "actionDone": "Готово",
+  "actionClose": "Закрыть",
+  "actionBack": "Назад",
+  "actionOpen": "Открыть",
+  "actionRetry": "Повторить",
+  "actionExport": "Экспорт",
+  "actionImport": "Импорт",
+  "actionReset": "Сбросить",
+  "actionConfirm": "Подтвердить",
+
+  "labelToday": "Сегодня",
+  "labelTomorrow": "Завтра",
+  "labelThisWeek": "Эта неделя",
+  "labelLater": "Позже",
+  "labelNoDate": "Без даты",
+  "labelDone": "Выполнено",
+  "labelRest": "Отдых",
+
+  "labelKg": "кг",
+  "labelLbs": "фунты",
+  "labelReps": "повт",
+  "labelSet": "Подход",
+  "labelSets": "Подходы",
+
+  "priorityNone": "нет",
+  "priorityLow": "низкий",
+  "priorityMid": "средний",
+  "priorityHigh": "высокий",
+
+  "homeGreeting": "Привет, {name}",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "homeGoals": "Цели",
+  "homeWeight": "Вес",
+  "homeHistory": "История",
+  "homeStreaks": "Стрики",
+  "homeTodayPlan": "Сегодня по плану",
+  "homeTodayTasks": "Задач на сегодня",
+  "homeRecordWeight": "Записать вес",
+  "homeActiveTasks": "{count} активных",
+  "@homeActiveTasks": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "trainWeek": "Неделя",
+  "trainProgram": "Программа",
+  "trainStart": "Начать тренировку",
+  "trainExercises": "{count} упр.",
+  "@trainExercises": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "trainLastTime": "Прошлый раз",
+  "trainNote": "Заметка к тренировке",
+  "trainAskAI": "Спросить ИИ",
+
+  "tasksTitle": "Задачи",
+  "tasksNotes": "Заметки",
+  "tasksNew": "Новая задача",
+  "tasksNewNote": "Новая заметка",
+  "tasksWhenLabel": "Когда",
+  "tasksPriorityLabel": "Приоритет",
+  "tasksTimeLabel": "Время",
+  "tasksRepeatLabel": "Повтор",
+  "tasksEmpty": "Пусто.",
+  "tasksEmptyBody": "Не работа, отдыхай.",
+
+  "aiTitle": "AI",
+  "aiInputHint": "Спросить…",
+  "aiSend": "Отправить",
+  "aiContextAll": "Всё",
+  "aiContextTrain": "Тренировки",
+  "aiContextWeight": "Вес",
+  "aiContextTasks": "Задачи",
+
+  "settingsTitle": "Настройки",
+  "settingsProfile": "Профиль",
+  "settingsAppearance": "Внешний вид",
+  "settingsAI": "ИИ",
+  "settingsNotifications": "Уведомления",
+  "settingsData": "Данные",
+  "settingsAbout": "О приложении",
+
+  "settingsTheme": "Тема",
+  "settingsThemeLight": "Light",
+  "settingsThemeAuto": "Auto",
+  "settingsThemeDark": "Dark",
+
+  "settingsAccent": "Акцент",
+  "settingsUnits": "Единицы",
+
+  "settingsGeminiKey": "Gemini API Key",
+  "settingsGeminiKeyHint": "Вставь ключ из aistudio.google.com",
+  "settingsGeminiVerify": "Проверить",
+  "settingsGeminiOk": "Ключ работает",
+
+  "settingsNotifAll": "Все уведомления",
+  "settingsNotifTasks": "Задачи",
+  "settingsNotifWeight": "Напомнить взвеситься",
+
+  "settingsExportJson": "Экспорт JSON",
+  "settingsExportCsv": "Экспорт CSV",
+  "settingsResetAll": "Сбросить всё",
+  "settingsResetConfirm": "Удалить все данные? Это необратимо.",
+
+  "settingsVersion": "Версия",
+  "settingsPlatform": "Платформа"
+}
