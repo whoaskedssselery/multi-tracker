@@ -26,12 +26,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   ThemeTokens get _t => ThemeTokens.of(context);
 
+  static const _groqModels = [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'mixtral-8x7b-32768',
+  ];
+
   @override
   Widget build(BuildContext context) {
     final t = _t;
     final profile = ref.watch(profileProvider).valueOrNull;
     final prefs = ref.watch(preferencesProvider).valueOrNull;
-    final apiKey = ref.watch(geminiApiKeyProvider).valueOrNull;
+    final apiKey = ref.watch(groqApiKeyProvider).valueOrNull;
+    final currentModel = prefs?.aiModel ?? _groqModels.first;
+    final safeModel =
+        _groqModels.contains(currentModel) ? currentModel : _groqModels.first;
 
     return Scaffold(
       backgroundColor: t.bg,
@@ -113,11 +122,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: AppSpacing.xl2),
 
             // ── AI ───────────────────────────────────────────
-            _sectionLabel('AI — GEMINI'),
+            _sectionLabel('AI — GROQ'),
             _card([
-              _apiKeySection(apiKey, prefs?.aiModel ?? 'gemini-2.0-flash', t),
+              _apiKeySection(apiKey, safeModel, t),
               _divider(t),
-              _modelRow(prefs?.aiModel ?? 'gemini-2.0-flash', t),
+              _modelRow(safeModel, t),
             ], t: t),
             const SizedBox(height: AppSpacing.xl2),
 
@@ -174,8 +183,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _sectionLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Text(label,
-          style: AppTypography.caps(color: _t.text3)),
+      child: Text(label, style: AppTypography.caps(color: _t.text3)),
     );
   }
 
@@ -212,11 +220,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
           child: Row(
             children: [
-              Text(label,
-                  style: TextStyle(fontSize: 14, color: t.text1)),
+              Text(label, style: TextStyle(fontSize: 14, color: t.text1)),
               const Spacer(),
-              Text(value,
-                  style: TextStyle(fontSize: 14, color: t.text3)),
+              Text(value, style: TextStyle(fontSize: 14, color: t.text3)),
               const SizedBox(width: 6),
               Icon(Icons.chevron_right, size: 16, color: t.text4),
             ],
@@ -299,7 +305,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           Row(
             children: [
-              Text('Gemini API Key',
+              Text('Groq API Key',
                   style: TextStyle(fontSize: 14, color: t.text1)),
               const Spacer(),
               if (hasKey) ...[
@@ -315,14 +321,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(width: 14),
               ],
-              GestureDetector(
-                onTap: () => _showKeyEditor(context, apiKey),
-                child: Text(
-                  hasKey ? 'Изменить' : 'Добавить',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.accent,
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => _showKeyEditor(context, apiKey),
+                  child: Text(
+                    hasKey ? 'Изменить' : 'Добавить',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.accent,
+                    ),
                   ),
                 ),
               ),
@@ -340,7 +349,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               height: 34,
               child: ElevatedButton(
                 onPressed:
-                    _pingLoading ? null : () => _pingGemini(apiKey, model),
+                    _pingLoading ? null : () => _pingGroq(apiKey, model),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
                   foregroundColor: Colors.white,
@@ -390,7 +399,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // ── Model row ────────────────────────────────────────────────
 
   Widget _modelRow(String current, ThemeTokens t) {
-    const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
@@ -399,19 +407,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Text('Модель', style: TextStyle(fontSize: 14, color: t.text1)),
           const Spacer(),
           DropdownButton<String>(
-            value: models.contains(current) ? current : models.first,
+            value: current,
             underline: const SizedBox.shrink(),
             style: TextStyle(
-                fontSize: 13,
-                color: t.text3,
-                fontWeight: FontWeight.w500),
+                fontSize: 13, color: t.text3, fontWeight: FontWeight.w500),
             dropdownColor: t.surface,
             borderRadius: AppRadius.mdAll,
-            items: models
-                .map((m) => DropdownMenuItem(
-                      value: m,
-                      child: Text(m),
-                    ))
+            items: _groqModels
+                .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                 .toList(),
             onChanged: (v) {
               if (v == null) return;
@@ -433,28 +436,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         MediaQuery.sizeOf(ctx).width >= kDesktopBreakpoint;
 
     Future<void> save(BuildContext sheetCtx) async {
-      await ref.read(geminiApiKeyProvider.notifier).set(ctrl.text);
+      await ref.read(groqApiKeyProvider.notifier).set(ctrl.text);
       if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
     }
 
-    Widget content(BuildContext sheetCtx) {
+    Widget body(BuildContext sheetCtx) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Gemini API Key',
-              style: Theme.of(sheetCtx)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w600, fontSize: 17)),
-          const SizedBox(height: AppSpacing.xl),
           TextField(
             controller: ctrl,
             autofocus: true,
-            style: AppTypography.mono(
-                fontSize: 13, color: _t.text1),
+            style: AppTypography.mono(fontSize: 13, color: _t.text1),
             decoration: InputDecoration(
-              hintText: 'AIza...',
+              hintText: 'gsk_...',
               filled: true,
               fillColor: _t.surfaceSunken,
               border: OutlineInputBorder(
@@ -489,13 +485,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await showDialog<void>(
         context: ctx,
         builder: (dialogCtx) => AlertDialog(
-          title: const Text('Gemini API Key'),
-          content: SizedBox(
-            width: 440,
-            child: content(dialogCtx),
-          ),
+          title: const Text('Groq API Key'),
+          content: SizedBox(width: 440, child: body(dialogCtx)),
           actionsPadding: EdgeInsets.zero,
-          contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
         ),
       );
     } else {
@@ -509,7 +502,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             right: AppSpacing.xl2,
             top: AppSpacing.xl2,
           ),
-          child: content(sheetCtx),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Groq API Key',
+                  style: Theme.of(sheetCtx).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600, fontSize: 17)),
+              const SizedBox(height: AppSpacing.xl),
+              body(sheetCtx),
+            ],
+          ),
         ),
       );
     }
@@ -517,48 +520,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ctrl.dispose();
   }
 
-  // ── Gemini ping ──────────────────────────────────────────────
+  // ── Groq ping ────────────────────────────────────────────────
 
-  Future<void> _pingGemini(String apiKey, String model) async {
+  Future<void> _pingGroq(String apiKey, String model) async {
     setState(() => _pingLoading = true);
     try {
       final dio = Dio(BaseOptions(
         connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 15),
         sendTimeout: const Duration(seconds: 10),
       ));
-      final url =
-          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey';
-      await dio.post<dynamic>(url, data: {
-        'contents': [
-          {
-            'role': 'user',
-            'parts': [
-              {'text': 'ping'}
-            ]
-          }
-        ]
-      });
+      await dio.post<dynamic>(
+        'https://api.groq.com/openai/v1/chat/completions',
+        options: Options(
+          headers: {'Authorization': 'Bearer $apiKey'},
+        ),
+        data: {
+          'model': model,
+          'messages': [
+            {'role': 'user', 'content': 'hi'}
+          ],
+          'max_tokens': 1,
+        },
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Ключ работает')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ключ работает')));
       }
     } on DioException catch (e) {
       if (!mounted) return;
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.sendTimeout) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Превышено время ожидания')),
-        );
-      } else {
-        final detail =
-            (e.response?.data as Map?)?['error']?['message'] as String? ??
-                e.message ??
-                'Неизвестная ошибка';
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Ошибка: $detail')));
-      }
+      final status = e.response?.statusCode;
+      final detail =
+          (e.response?.data as Map?)?['error']?['message'] as String?;
+      final msg = status == 401
+          ? 'Неверный ключ (401)'
+          : status == 429
+              ? 'Превышен лимит запросов (429)'
+              : detail ?? e.message ?? 'Ошибка сети';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Ошибка: $msg')));
     } finally {
       if (mounted) setState(() => _pingLoading = false);
     }
@@ -586,14 +586,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () => Navigator.pop(c, true),
             child: const Text('Сбросить',
                 style: TextStyle(
-                    color: AppColors.danger, fontWeight: FontWeight.w600)),
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w600)),
           ),
         ],
       ),
     );
     if (ok == true && ctx.mounted) {
-      ScaffoldMessenger.of(ctx)
-          .showSnackBar(const SnackBar(content: Text('Данные сброшены')));
+      ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(content: Text('Данные сброшены')));
     }
   }
 
@@ -620,8 +621,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 }
 
-// ─── Field editor dialog (Bug C fix) ────────────────────────────
-// Renders as AlertDialog on desktop, BottomSheet body on mobile.
+// ─── Field editor dialog ────────────────────────────────────
 
 class _FieldEditDialog extends StatefulWidget {
   const _FieldEditDialog({
@@ -642,7 +642,6 @@ class _FieldEditDialog extends StatefulWidget {
   final TextInputType? keyboardType;
   final bool isDesktop;
 
-  /// Show the dialog or bottom sheet based on screen width.
   static Future<void> show(
     BuildContext context, {
     required String title,
@@ -663,10 +662,8 @@ class _FieldEditDialog extends StatefulWidget {
       keyboardType: keyboardType,
       isDesktop: isDesktop,
     );
-
     if (isDesktop) {
-      return showDialog<void>(
-          context: context, builder: (_) => widget);
+      return showDialog<void>(context: context, builder: (_) => widget);
     } else {
       return showModalBottomSheet<void>(
         context: context,
@@ -697,8 +694,8 @@ class _FieldEditDialogState extends State<_FieldEditDialog> {
     super.dispose();
   }
 
-  bool get _isDirty =>
-      _ctrl.text.trim() != widget.initialValue.trim();
+  // Always call setState so _isDirty is re-evaluated on every keystroke
+  bool get _isDirty => _ctrl.text.trim() != widget.initialValue.trim();
 
   Future<void> _save() async {
     final v = _ctrl.text;
@@ -707,13 +704,19 @@ class _FieldEditDialogState extends State<_FieldEditDialog> {
       setState(() => _error = err);
       return;
     }
-    setState(() { _error = null; _saving = true; });
+    setState(() {
+      _error = null;
+      _saving = true;
+    });
     try {
       await widget.onSave(v.trim());
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
       if (mounted) {
-        setState(() { _error = 'Ошибка сохранения'; _saving = false; });
+        setState(() {
+          _error = 'Ошибка сохранения';
+          _saving = false;
+        });
       }
     }
   }
@@ -723,7 +726,8 @@ class _FieldEditDialogState extends State<_FieldEditDialog> {
       controller: _ctrl,
       autofocus: true,
       keyboardType: widget.keyboardType,
-      onChanged: (_) { if (_error != null) setState(() => _error = null); },
+      // Always rebuild so the Save button reacts to every keystroke
+      onChanged: (_) => setState(() => _error = null),
       decoration: InputDecoration(
         suffixText: widget.suffix,
         errorText: _error,
@@ -755,16 +759,12 @@ class _FieldEditDialogState extends State<_FieldEditDialog> {
     if (widget.isDesktop) {
       return AlertDialog(
         title: Text(widget.title),
-        content: SizedBox(
-          width: 360,
-          child: _buildField(),
-        ),
+        content: SizedBox(width: 360, child: _buildField()),
         actionsPadding: const EdgeInsets.all(16),
         actions: _buildActions(),
       );
     }
 
-    // Mobile bottom sheet body
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
@@ -826,8 +826,8 @@ class _ThemePicker extends StatelessWidget {
             onTap: () => onChanged(o.$1),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 5),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
                 color: active ? t.surface : Colors.transparent,
                 borderRadius: AppRadius.pill,

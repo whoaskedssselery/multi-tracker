@@ -26,17 +26,17 @@ ThemeMode themeMode(ThemeModeRef ref) {
 }
 
 @riverpod
-class GeminiApiKey extends _$GeminiApiKey {
+class GroqApiKey extends _$GroqApiKey {
   @override
-  Future<String?> build() => SecureStorageService.instance.geminiApiKey;
+  Future<String?> build() => SecureStorageService.instance.groqApiKey;
 
   Future<void> set(String? value) async {
     final trimmed = value?.trim();
     if (trimmed == null || trimmed.isEmpty) {
-      await SecureStorageService.instance.clearGeminiApiKey();
+      await SecureStorageService.instance.clearGroqApiKey();
       state = const AsyncData(null);
     } else {
-      await SecureStorageService.instance.setGeminiApiKey(trimmed);
+      await SecureStorageService.instance.setGroqApiKey(trimmed);
       state = AsyncData(trimmed);
     }
   }

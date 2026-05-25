@@ -30,8 +30,8 @@ class AppPreferencesTable extends Table {
   IntColumn get id => integer().autoIncrement()();
   // 'light' | 'dark' | 'system'
   TextColumn get themeMode => text().withDefault(const Constant('system'))();
-  // 'gemini-2.0-flash' | 'gemini-1.5-flash'
-  TextColumn get aiModel => text().withDefault(const Constant('gemini-2.0-flash'))();
+  // 'llama-3.3-70b-versatile' | 'llama-3.1-8b-instant' | 'mixtral-8x7b-32768'
+  TextColumn get aiModel => text().withDefault(const Constant('llama-3.3-70b-versatile'))();
   BoolColumn get notificationsEnabled => boolean().withDefault(const Constant(true))();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
