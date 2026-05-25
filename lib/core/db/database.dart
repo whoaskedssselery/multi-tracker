@@ -22,6 +22,20 @@ class ProfileTable extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+/// Singleton app preferences (always id = 1)
+class AppPreferencesTable extends Table {
+  @override
+  String get tableName => 'app_preferences';
+
+  IntColumn get id => integer().autoIncrement()();
+  // 'light' | 'dark' | 'system'
+  TextColumn get themeMode => text().withDefault(const Constant('system'))();
+  // 'gemini-2.0-flash' | 'gemini-1.5-flash'
+  TextColumn get aiModel => text().withDefault(const Constant('gemini-2.0-flash'))();
+  BoolColumn get notificationsEnabled => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 /// User goals (e.g. "Lose to 78 kg", "Deadlift 140 kg")
 class GoalTable extends Table {
   @override
@@ -187,6 +201,7 @@ class ChatMessageTable extends Table {
 
 @DriftDatabase(tables: [
   ProfileTable,
+  AppPreferencesTable,
   GoalTable,
   WeightEntryTable,
   WorkoutTemplateTable,
@@ -203,17 +218,20 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
-      // Seed default data
       await _seedDefaultProfile();
+      await _seedDefaultPreferences();
     },
     onUpgrade: (m, from, to) async {
-      // Future migrations go here — never lose data
+      if (from < 2) {
+        await m.createTable(appPreferencesTable);
+        await _seedDefaultPreferences();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -229,6 +247,32 @@ class AppDatabase extends _$AppDatabase {
       ),
     );
   }
+
+  Future<void> _seedDefaultPreferences() async {
+    await into(appPreferencesTable).insert(
+      AppPreferencesTableCompanion.insert(),
+    );
+  }
+
+  // ── Profile DAO ──────────────────────────────────────────────
+
+  Stream<ProfileTableData?> watchProfile() =>
+      (select(profileTable)..where((t) => t.id.equals(1)))
+          .watchSingleOrNull();
+
+  Future<void> upsertProfile(ProfileTableCompanion companion) =>
+      (update(profileTable)..where((t) => t.id.equals(1)))
+          .write(companion.copyWith(updatedAt: Value(DateTime.now())));
+
+  // ── Preferences DAO ─────────────────────────────────────────
+
+  Stream<AppPreferencesTableData?> watchPreferences() =>
+      (select(appPreferencesTable)..where((t) => t.id.equals(1)))
+          .watchSingleOrNull();
+
+  Future<void> upsertPreferences(AppPreferencesTableCompanion companion) =>
+      (update(appPreferencesTable)..where((t) => t.id.equals(1)))
+          .write(companion.copyWith(updatedAt: Value(DateTime.now())));
 }
 
 QueryExecutor _openConnection() {

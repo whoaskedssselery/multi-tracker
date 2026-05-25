@@ -21,6 +21,7 @@ ThemeData buildDarkTheme() {
     onSurface: AppColors.darkText1,
     surfaceContainerHighest: AppColors.darkSurfaceSunken,
     surfaceContainerLow: AppColors.darkBg,
+    onSurfaceVariant: AppColors.darkText3,
     outline: AppColors.darkBorder,
     outlineVariant: AppColors.darkBorderSoft,
     shadow: const Color(0x1A000000),

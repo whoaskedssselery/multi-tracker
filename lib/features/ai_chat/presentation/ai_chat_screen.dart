@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/colors.dart';
 import '../../../app/theme/radius.dart';
 import '../../../app/theme/spacing.dart';
+import '../../../app/theme/theme_tokens.dart';
 import '../../../app/theme/typography.dart';
 
 // ─── Data models ────────────────────────────────────────────
@@ -82,15 +83,16 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = ThemeTokens.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: t.bg,
       body: Column(
         children: [
-          _buildHeader(context),
-          const Divider(height: 1, color: AppColors.divider),
+          _buildHeader(context, t),
+          Divider(height: 1, color: t.divider),
           Expanded(child: _buildMessages(context)),
           _buildSuggestions(context),
-          _buildInput(context),
+          _buildInput(context, t),
         ],
       ),
     );
@@ -98,14 +100,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   // ── Header ────────────────────────────────────────────────
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, ThemeTokens t) {
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xl3, vertical: AppSpacing.xl),
       child: Row(
         children: [
-          Text('AI',
-              style: Theme.of(context).textTheme.headlineLarge),
+          Text('AI', style: Theme.of(context).textTheme.headlineLarge),
           const Spacer(),
           _FilterBar(
               value: _filter,
@@ -140,9 +141,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         children: _suggestions
             .map((s) => _SuggestionChip(
                 label: s,
-                onTap: () {
-                  _inputCtrl.text = s;
-                }))
+                onTap: () => _inputCtrl.text = s))
             .toList(),
       ),
     );
@@ -150,11 +149,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   // ── Input ─────────────────────────────────────────────────
 
-  Widget _buildInput(BuildContext context) {
+  Widget _buildInput(BuildContext context, ThemeTokens t) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.borderSoft)),
+      decoration: BoxDecoration(
+        color: t.surface,
+        border: Border(top: BorderSide(color: t.borderSoft)),
       ),
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xl3, vertical: AppSpacing.md),
@@ -166,20 +165,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
               padding: const EdgeInsets.symmetric(
                   horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.surfaceSunken,
+                color: t.surfaceSunken,
                 borderRadius: AppRadius.mdAll,
-                border: Border.all(color: AppColors.borderSoft),
+                border: Border.all(color: t.borderSoft),
               ),
               child: TextField(
                 controller: _inputCtrl,
                 maxLines: 4,
                 minLines: 1,
-                style: const TextStyle(
-                    fontSize: 14, color: AppColors.text1),
-                decoration: const InputDecoration(
+                style: TextStyle(fontSize: 14, color: t.text1),
+                decoration: InputDecoration(
                   hintText: 'Спросить...',
-                  hintStyle: TextStyle(
-                      fontSize: 14, color: AppColors.text4),
+                  hintStyle: TextStyle(fontSize: 14, color: t.text4),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
@@ -195,20 +192,20 @@ class _AiChatScreenState extends State<AiChatScreen> {
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-            onTap: () {
-              if (_inputCtrl.text.trim().isEmpty) return;
-              _inputCtrl.clear();
-            },
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: AppRadius.smAll,
+              onTap: () {
+                if (_inputCtrl.text.trim().isEmpty) return;
+                _inputCtrl.clear();
+              },
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: AppRadius.smAll,
+                ),
+                child: const Icon(Icons.arrow_upward,
+                    size: 18, color: Colors.white),
               ),
-              child: const Icon(Icons.arrow_upward,
-                  size: 18, color: Colors.white),
-            ),
             ),
           ),
         ],
@@ -227,6 +224,7 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = ThemeTokens.of(context);
     const labels = ['Всё', 'Тренировки', 'Вес', 'Задачи'];
     const filters = _AiFilter.values;
 
@@ -239,28 +237,27 @@ class _FilterBar extends StatelessWidget {
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-            onTap: () => onChanged(filters[i]),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                color:
-                    active ? AppColors.accent : AppColors.surface,
-                borderRadius: AppRadius.pill,
-                border: active
-                    ? null
-                    : Border.all(color: AppColors.border),
-              ),
-              child: Text(
-                labels[i],
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: active ? Colors.white : AppColors.text2,
+              onTap: () => onChanged(filters[i]),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: active ? AppColors.accent : t.surface,
+                  borderRadius: AppRadius.pill,
+                  border: active
+                      ? null
+                      : Border.all(color: t.border),
+                ),
+                child: Text(
+                  labels[i],
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: active ? Colors.white : t.text2,
+                  ),
                 ),
               ),
-            ),
             ),
           ),
         );
@@ -278,6 +275,7 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = ThemeTokens.of(context);
     final isUser = message.isUser;
 
     return Padding(
@@ -318,14 +316,10 @@ class _MessageBubble extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(
-                    color: isUser
-                        ? AppColors.accentTint
-                        : AppColors.surface,
+                    color: isUser ? t.accentTint : t.surface,
                     borderRadius: BorderRadius.only(
-                      topLeft:
-                          const Radius.circular(AppRadius.lg),
-                      topRight:
-                          const Radius.circular(AppRadius.lg),
+                      topLeft: const Radius.circular(AppRadius.lg),
+                      topRight: const Radius.circular(AppRadius.lg),
                       bottomLeft: Radius.circular(
                           isUser ? AppRadius.lg : AppRadius.xs),
                       bottomRight: Radius.circular(
@@ -333,15 +327,13 @@ class _MessageBubble extends StatelessWidget {
                     ),
                     border: isUser
                         ? null
-                        : Border.all(color: AppColors.borderSoft),
+                        : Border.all(color: t.borderSoft),
                   ),
                   child: Text(
                     message.text,
                     style: TextStyle(
                       fontSize: 14,
-                      color: isUser
-                          ? AppColors.accentPress
-                          : AppColors.text1,
+                      color: isUser ? t.accentPress : t.text1,
                       height: 1.5,
                     ),
                   ),
@@ -368,25 +360,26 @@ class _InlineCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = ThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSunken,
+        color: t.surfaceSunken,
         borderRadius: AppRadius.mdAll,
-        border: Border.all(color: AppColors.borderSoft),
+        border: Border.all(color: t.borderSoft),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(card.title,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.text2)),
+                  color: t.text2)),
           const SizedBox(height: 6),
           Text(card.body,
               style: AppTypography.mono(
-                  fontSize: 13, color: AppColors.text1)),
+                  fontSize: 13, color: t.text1)),
         ],
       ),
     );
@@ -404,24 +397,25 @@ class _SuggestionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = ThemeTokens.of(context);
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.pill,
-          border: Border.all(color: AppColors.border),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: t.surface,
+            borderRadius: AppRadius.pill,
+            border: Border.all(color: t.border),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 13,
+                  color: t.text2,
+                  fontWeight: FontWeight.w400)),
         ),
-        child: Text(label,
-            style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.text2,
-                fontWeight: FontWeight.w400)),
-      ),
       ),
     );
   }

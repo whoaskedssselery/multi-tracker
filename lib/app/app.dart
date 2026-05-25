@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:multi_tracker/l10n/app_localizations.dart';
 
+import 'providers/providers.dart';
 import 'router.dart';
 import 'theme/light_theme.dart';
 import 'theme/dark_theme.dart';
 
-class MultiTrackerApp extends StatelessWidget {
+class MultiTrackerApp extends ConsumerWidget {
   const MultiTrackerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp.router(
       title: 'Multi-tracker',
       debugShowCheckedModeBanner: false,
@@ -18,7 +22,7 @@ class MultiTrackerApp extends StatelessWidget {
       // Themes
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
-      themeMode: ThemeMode.light, // TODO: read from settings provider
+      themeMode: themeMode,
 
       // Router
       routerConfig: appRouter,
@@ -31,7 +35,7 @@ class MultiTrackerApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('ru'), // TODO: read from settings provider
+      locale: const Locale('ru'),
     );
   }
 }

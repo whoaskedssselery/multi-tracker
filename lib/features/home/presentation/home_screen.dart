@@ -1,20 +1,26 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/providers/providers.dart';
 import '../../../app/theme/colors.dart';
 import '../../../app/theme/radius.dart';
 import '../../../app/theme/spacing.dart';
+import '../../../app/theme/theme_tokens.dart';
 import '../../../app/theme/typography.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   _Period _period = _Period.week;
+
+  ThemeTokens get _t => ThemeTokens.of(context);
 
   static const _weekPoints = <(String, double, double)>[
     ('Вс\n17', 0, 82.4),
@@ -37,9 +43,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = _t;
     final wide = MediaQuery.sizeOf(context).width >= 800;
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: t.bg,
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(
           horizontal: wide ? AppSpacing.xl3 : AppSpacing.lg,
@@ -48,9 +55,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _header(context),
+            _header(context, t),
             const SizedBox(height: AppSpacing.xl2),
-            wide ? _desktopBody(context) : _mobileBody(context),
+            wide ? _desktopBody(context, t) : _mobileBody(context, t),
           ],
         ),
       ),
@@ -59,27 +66,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Header ──────────────────────────────────────────────────
 
-  Widget _header(BuildContext context) {
+  Widget _header(BuildContext context, ThemeTokens t) {
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final name = profile?.name.trim() ?? '';
+    final greeting =
+        name.isEmpty || name == 'User' ? 'Привет' : 'Привет, $name';
+
     return Row(
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Привет, Алекс',
+            Text(greeting,
                 style: Theme.of(context).textTheme.headlineLarge),
             const SizedBox(height: 3),
             Text('Суббота · 23 мая 2026',
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.text3)),
+                    ?.copyWith(color: t.text3)),
           ],
         ),
         const Spacer(),
         IconButton(
           icon: const Icon(Icons.settings_outlined, size: 22),
-          color: AppColors.text3,
-          onPressed: () {},
+          color: t.text3,
+          onPressed: () => context.go('/settings'),
         ),
       ],
     );
@@ -87,82 +99,86 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Layouts ─────────────────────────────────────────────────
 
-  Widget _desktopBody(BuildContext context) {
+  Widget _desktopBody(BuildContext context, ThemeTokens t) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           flex: 5,
           child: Column(children: [
-            _weightEntryCard(context),
+            _weightEntryCard(context, t),
             const SizedBox(height: 16),
-            _weightChartCard(context),
+            _weightChartCard(context, t),
             const SizedBox(height: 16),
-            _historyCard(context),
+            _historyCard(context, t),
           ]),
         ),
         const SizedBox(width: 16),
         SizedBox(
           width: 300,
           child: Column(children: [
-            _goalsCard(context),
+            _goalsCard(context, t),
             const SizedBox(height: 16),
-            _streaksCard(context),
+            _streaksCard(context, t),
             const SizedBox(height: 16),
-            _todayPlanCard(context),
+            _todayPlanCard(context, t),
             const SizedBox(height: 16),
-            _tasksSummaryCard(context),
+            _tasksSummaryCard(context, t),
           ]),
         ),
       ],
     );
   }
 
-  Widget _mobileBody(BuildContext context) {
+  Widget _mobileBody(BuildContext context, ThemeTokens t) {
     return Column(children: [
-      _goalsCard(context),
+      _goalsCard(context, t),
       const SizedBox(height: 12),
-      _weightEntryCard(context),
+      _weightEntryCard(context, t),
       const SizedBox(height: 12),
-      _weightChartCard(context),
+      _weightChartCard(context, t),
       const SizedBox(height: 12),
-      _streaksCard(context),
+      _streaksCard(context, t),
       const SizedBox(height: 12),
-      _todayPlanCard(context),
+      _todayPlanCard(context, t),
       const SizedBox(height: 12),
-      _tasksSummaryCard(context),
+      _tasksSummaryCard(context, t),
       const SizedBox(height: 12),
-      _historyCard(context),
+      _historyCard(context, t),
     ]);
   }
 
   // ── Cards ────────────────────────────────────────────────────
 
-  Widget _weightEntryCard(BuildContext context) {
+  Widget _weightEntryCard(BuildContext context, ThemeTokens t) {
     return _card(
+      t: t,
       child: Row(
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('ЗАПИСАТЬ ВЕС', style: AppTypography.caps(color: AppColors.text3)),
+              Text('ЗАПИСАТЬ ВЕС',
+                  style: AppTypography.caps(color: t.text3)),
               const SizedBox(height: 8),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  const Text('81.4',
+                  Text('81.4',
                       style: TextStyle(
                           fontSize: 48,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.text1,
+                          color: t.text1,
                           height: 1.0)),
                   const SizedBox(width: 6),
                   Text('кг',
                       style: Theme.of(context)
                           .textTheme
                           .headlineMedium
-                          ?.copyWith(color: AppColors.text3, fontWeight: FontWeight.w400)),
+                          ?.copyWith(
+                              color: t.text3,
+                              fontWeight: FontWeight.w400)),
                 ],
               ),
               const SizedBox(height: 6),
@@ -170,25 +186,36 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
-                      ?.copyWith(color: AppColors.text3)),
+                      ?.copyWith(color: t.text3)),
             ],
           ),
           const Spacer(),
-          _greenButton(
-            label: 'Записать',
-            icon: Icons.add,
+          ElevatedButton(
             onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              minimumSize: const Size(0, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              shape: RoundedRectangleBorder(
+                  borderRadius: AppRadius.mdAll),
+              textStyle: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            child: const Text('Записать'),
           ),
         ],
       ),
     );
   }
 
-  Widget _weightChartCard(BuildContext context) {
+  Widget _weightChartCard(BuildContext context, ThemeTokens t) {
     final spots =
         _weekPoints.map((d) => FlSpot(d.$2, d.$3)).toList();
 
     return _card(
+      t: t,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -197,33 +224,34 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('ВЕС', style: AppTypography.caps(color: AppColors.text3)),
+                  Text('ВЕС',
+                      style: AppTypography.caps(color: t.text3)),
                   const SizedBox(height: 4),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
-                      const Text('81.4',
+                      Text('81.4',
                           style: TextStyle(
                               fontSize: 30,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.text1,
+                              color: t.text1,
                               height: 1.0)),
                       const SizedBox(width: 5),
                       Text('кг',
                           style: Theme.of(context)
                               .textTheme
                               .bodyMedium
-                              ?.copyWith(color: AppColors.text3)),
+                              ?.copyWith(color: t.text3)),
                       const SizedBox(width: 12),
-                      const Icon(Icons.arrow_downward,
-                          size: 13, color: AppColors.success),
+                      Icon(Icons.arrow_downward,
+                          size: 13, color: t.success),
                       const SizedBox(width: 2),
                       Text('1.0 за 7 дней',
                           style: Theme.of(context)
                               .textTheme
                               .bodyMedium
-                              ?.copyWith(color: AppColors.success)),
+                              ?.copyWith(color: t.success)),
                     ],
                   ),
                 ],
@@ -237,14 +265,14 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 20),
           SizedBox(
             height: 160,
-            child: LineChart(_chartData(spots)),
+            child: LineChart(_chartData(spots, t)),
           ),
         ],
       ),
     );
   }
 
-  LineChartData _chartData(List<FlSpot> spots) {
+  LineChartData _chartData(List<FlSpot> spots, ThemeTokens t) {
     return LineChartData(
       gridData: const FlGridData(show: false),
       borderData: FlBorderData(show: false),
@@ -264,35 +292,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
                   _weekPoints[i].$1,
-                  style:
-                      const TextStyle(fontSize: 10, color: AppColors.text3),
+                  style: TextStyle(fontSize: 10, color: t.text3),
                   textAlign: TextAlign.center,
                 ),
               );
             },
           ),
         ),
-        leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
-        topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
+        leftTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       ),
       extraLinesData: ExtraLinesData(
         horizontalLines: [
           HorizontalLine(
             y: 78,
-            color: AppColors.text4,
+            color: t.text4,
             strokeWidth: 1,
             dashArray: [5, 6],
             label: HorizontalLineLabel(
               show: true,
               alignment: Alignment.bottomRight,
-              padding: const EdgeInsets.only(right: 6, bottom: 4),
-              style: const TextStyle(
+              padding:
+                  const EdgeInsets.only(right: 6, bottom: 4),
+              style: TextStyle(
                   fontSize: 10,
-                  color: AppColors.text4,
+                  color: t.text4,
                   fontWeight: FontWeight.w500),
               labelResolver: (_) => 'target 78',
             ),
@@ -350,42 +378,44 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _historyCard(BuildContext context) {
+  Widget _historyCard(BuildContext context, ThemeTokens t) {
     return _card(
+      t: t,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Text('ИСТОРИЯ',
-                  style: AppTypography.caps(color: AppColors.text3)),
+                  style: AppTypography.caps(color: t.text3)),
               const Spacer(),
               Text('последние 6',
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
-                      ?.copyWith(color: AppColors.text3)),
+                      ?.copyWith(color: t.text3)),
             ],
           ),
           const SizedBox(height: 12),
-          ..._history.map((d) => _historyRow(context, d.$1, d.$2, d.$3)),
+          ..._history
+              .map((d) => _historyRow(context, d.$1, d.$2, d.$3, t)),
         ],
       ),
     );
   }
 
-  Widget _historyRow(
-      BuildContext context, String date, double weight, double delta) {
+  Widget _historyRow(BuildContext context, String date, double weight,
+      double delta, ThemeTokens t) {
     final Color deltaColor;
     final String deltaStr;
     if (delta == 0) {
-      deltaColor = AppColors.text3;
+      deltaColor = t.text3;
       deltaStr = '—';
     } else if (delta > 0) {
-      deltaColor = AppColors.warning;
+      deltaColor = t.warning;
       deltaStr = '+${delta.toStringAsFixed(1)}';
     } else {
-      deltaColor = AppColors.success;
+      deltaColor = t.success;
       deltaStr = delta.toStringAsFixed(1);
     }
 
@@ -397,13 +427,13 @@ class _HomeScreenState extends State<HomeScreen> {
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: AppColors.text2)),
+                  ?.copyWith(color: t.text2)),
           const Spacer(),
           Text(weight.toStringAsFixed(1),
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.text1)),
+                  color: t.text1)),
           const SizedBox(width: 10),
           SizedBox(
             width: 38,
@@ -419,30 +449,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _goalsCard(BuildContext context) {
+  Widget _goalsCard(BuildContext context, ThemeTokens t) {
     return _card(
+      t: t,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text('ЦЕЛИ',
-                  style: AppTypography.caps(color: AppColors.text3)),
+              Text('ЦЕЛИ', style: AppTypography.caps(color: t.text3)),
               const Spacer(),
-              const Icon(Icons.add, size: 18, color: AppColors.text3),
+              Icon(Icons.add, size: 18, color: t.text3),
             ],
           ),
           const SizedBox(height: 16),
-          _goalRow(context, 'Сбросить до 78 кг', 0.51, '81.4 / 78'),
+          _goalRow(context, 'Сбросить до 78 кг', 0.51, '81.4 / 78', t),
           const SizedBox(height: 16),
-          _goalRow(context, 'Становая 140', 0.50, '120 / 140'),
+          _goalRow(context, 'Становая 140', 0.50, '120 / 140', t),
         ],
       ),
     );
   }
 
-  Widget _goalRow(
-      BuildContext context, String title, double progress, String label) {
+  Widget _goalRow(BuildContext context, String title, double progress,
+      String label, ThemeTokens t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -451,13 +481,13 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: Text(title,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w500, color: AppColors.text1)),
+                      fontWeight: FontWeight.w500, color: t.text1)),
             ),
             Text(label,
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.text3)),
+                    ?.copyWith(color: t.text3)),
           ],
         ),
         const SizedBox(height: 6),
@@ -466,9 +496,9 @@ class _HomeScreenState extends State<HomeScreen> {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 4,
-            backgroundColor: AppColors.surfaceSunken,
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(AppColors.accentPress),
+            backgroundColor: t.surfaceSunken,
+            valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.accentPress),
           ),
         ),
         const SizedBox(height: 4),
@@ -476,37 +506,37 @@ class _HomeScreenState extends State<HomeScreen> {
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
-                ?.copyWith(color: AppColors.text3)),
+                ?.copyWith(color: t.text3)),
       ],
     );
   }
 
-  Widget _streaksCard(BuildContext context) {
+  Widget _streaksCard(BuildContext context, ThemeTokens t) {
     const chips = ['12 дней с весом', 'Push 4 недели', '5 дней задач'];
     return _card(
+      t: t,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('СТРИКИ',
-              style: AppTypography.caps(color: AppColors.text3)),
+          Text('СТРИКИ', style: AppTypography.caps(color: t.text3)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: chips.map(_streakChip).toList(),
+            children: chips.map((l) => _streakChip(l, t)).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _streakChip(String label) {
+  Widget _streakChip(String label, ThemeTokens t) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.accentTint,
+        color: t.accentTint,
         borderRadius: AppRadius.pill,
-        border: Border.all(color: AppColors.borderSoft),
+        border: Border.all(color: t.borderSoft),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -514,28 +544,29 @@ class _HomeScreenState extends State<HomeScreen> {
           const Text('🔥', style: TextStyle(fontSize: 12)),
           const SizedBox(width: 5),
           Text(label,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.accentPress)),
+                  color: t.accentPress)),
         ],
       ),
     );
   }
 
-  Widget _todayPlanCard(BuildContext context) {
-    return _summaryCard(context, 'СЕГОДНЯ ПО ПЛАНУ', 'Push');
+  Widget _todayPlanCard(BuildContext context, ThemeTokens t) {
+    return _summaryCard(context, 'СЕГОДНЯ ПО ПЛАНУ', 'Push', t);
   }
 
-  Widget _tasksSummaryCard(BuildContext context) {
-    return _summaryCard(context, 'ЗАДАЧИ', '3 на сегодня');
+  Widget _tasksSummaryCard(BuildContext context, ThemeTokens t) {
+    return _summaryCard(context, 'ЗАДАЧИ', '3 на сегодня', t);
   }
 
-  Widget _summaryCard(BuildContext context, String label, String value) {
+  Widget _summaryCard(BuildContext context, String label, String value,
+      ThemeTokens t) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSunken,
+        color: t.surfaceSunken,
         borderRadius: AppRadius.lgAll,
       ),
       child: Row(
@@ -543,22 +574,21 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: AppTypography.caps(color: AppColors.text3)),
+              Text(label, style: AppTypography.caps(color: t.text3)),
               const SizedBox(height: 4),
               Text(value,
                   style: Theme.of(context)
                       .textTheme
                       .titleLarge
-                      ?.copyWith(color: AppColors.text1)),
+                      ?.copyWith(color: t.text1)),
             ],
           ),
           const Spacer(),
           OutlinedButton(
             onPressed: () {},
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.text1,
-              side: const BorderSide(color: AppColors.border),
+              foregroundColor: t.text1,
+              side: BorderSide(color: t.border),
               shape: RoundedRectangleBorder(
                   borderRadius: AppRadius.mdAll),
               padding: const EdgeInsets.symmetric(
@@ -575,40 +605,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Helpers ──────────────────────────────────────────────────
 
-  static Widget _card({required Widget child}) {
+  Widget _card({required Widget child, required ThemeTokens t}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: t.surface,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: AppColors.borderSoft),
+        border: Border.all(color: t.borderSoft),
       ),
       child: child,
     );
   }
-
-  static Widget _greenButton({
-    required String label,
-    required IconData icon,
-    required VoidCallback onPressed,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: _primaryButtonStyle,
-      child: Text(label),
-    );
-  }
-
-  static final _primaryButtonStyle = ElevatedButton.styleFrom(
-    backgroundColor: AppColors.accent,
-    foregroundColor: Colors.white,
-    elevation: 0,
-    minimumSize: const Size(0, 44),
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-  );
 }
 
 // ── Period selector ──────────────────────────────────────────
@@ -616,21 +624,21 @@ class _HomeScreenState extends State<HomeScreen> {
 enum _Period { week, month, quarter, all }
 
 class _PeriodSelector extends StatelessWidget {
-  const _PeriodSelector(
-      {required this.value, required this.onChanged});
+  const _PeriodSelector({required this.value, required this.onChanged});
 
   final _Period value;
   final ValueChanged<_Period> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final t = ThemeTokens.of(context);
     const labels = ['7д', '30д', '90д', 'всё'];
     const periods = _Period.values;
 
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSunken,
+        color: t.surfaceSunken,
         borderRadius: AppRadius.pill,
       ),
       child: Row(
@@ -644,24 +652,19 @@ class _PeriodSelector extends StatelessWidget {
               padding: const EdgeInsets.symmetric(
                   horizontal: 11, vertical: 5),
               decoration: BoxDecoration(
-                color: active
-                    ? AppColors.surface
-                    : Colors.transparent,
+                color: active ? t.surface : Colors.transparent,
                 borderRadius: AppRadius.pill,
                 border: active
-                    ? Border.all(color: AppColors.border)
+                    ? Border.all(color: t.border)
                     : null,
               ),
               child: Text(
                 labels[i],
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: active
-                      ? FontWeight.w600
-                      : FontWeight.w400,
-                  color: active
-                      ? AppColors.text1
-                      : AppColors.text3,
+                  fontWeight:
+                      active ? FontWeight.w600 : FontWeight.w400,
+                  color: active ? t.text1 : t.text3,
                 ),
               ),
             ),

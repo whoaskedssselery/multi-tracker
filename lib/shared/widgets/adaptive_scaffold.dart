@@ -2,11 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../app/theme/breakpoints.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/radius.dart';
-
-/// Breakpoint at which we switch from BottomNavigationBar to NavigationRail
-const _kDesktopBreakpoint = 800.0;
 
 class AdaptiveScaffold extends StatelessWidget {
   const AdaptiveScaffold({
@@ -27,7 +25,7 @@ class AdaptiveScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    return width >= _kDesktopBreakpoint
+    return width >= kDesktopBreakpoint
         ? _DesktopLayout(
             selectedIndex: selectedIndex,
             destinations: destinations,
