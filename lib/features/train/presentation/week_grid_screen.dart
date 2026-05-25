@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/colors.dart';
 import '../../../app/theme/radius.dart';
 import '../../../app/theme/spacing.dart';
+import '../../../app/theme/theme_tokens.dart';
 import '../../../app/theme/typography.dart';
 
 // ─── Data models ────────────────────────────────────────────
@@ -52,6 +53,8 @@ class WeekGridScreen extends StatefulWidget {
 class _WeekGridScreenState extends State<WeekGridScreen> {
   int _selectedIndex = 5; // Saturday
 
+  ThemeTokens get _t => ThemeTokens.of(context);
+
   static const _days = <_DayData>[
     _DayData(
         weekday: 'ПН',
@@ -99,22 +102,23 @@ class _WeekGridScreenState extends State<WeekGridScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = _t;
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: t.bg,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(context),
-          const Divider(height: 1, color: AppColors.divider),
+          _buildHeader(context, t),
+          Divider(height: 1, color: t.divider),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.xl3),
-            child: _buildWeekGrid(context),
+            child: _buildWeekGrid(context, t),
           ),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.xl3, 0, AppSpacing.xl3, AppSpacing.xl3),
-              child: _buildWorkoutDetail(context),
+              child: _buildWorkoutDetail(context, t),
             ),
           ),
         ],
@@ -124,7 +128,7 @@ class _WeekGridScreenState extends State<WeekGridScreen> {
 
   // ── Header ────────────────────────────────────────────────
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, ThemeTokens t) {
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xl3, vertical: AppSpacing.xl),
@@ -140,19 +144,17 @@ class _WeekGridScreenState extends State<WeekGridScreen> {
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
-                      ?.copyWith(color: AppColors.text3)),
+                      ?.copyWith(color: t.text3)),
             ],
           ),
           const Spacer(),
-          _NavIconButton(
-              icon: Icons.chevron_left, onTap: () {}),
+          _NavIconButton(icon: Icons.chevron_left, t: t, onTap: () {}),
           const SizedBox(width: 8),
-          _outlinedSmallButton('Сегодня', onTap: () {}),
+          _outlinedSmallButton('Сегодня', t: t, onTap: () {}),
           const SizedBox(width: 8),
-          _NavIconButton(
-              icon: Icons.chevron_right, onTap: () {}),
+          _NavIconButton(icon: Icons.chevron_right, t: t, onTap: () {}),
           const SizedBox(width: 16),
-          _outlinedSmallButton('≡  Программа', onTap: () {}),
+          _outlinedSmallButton('≡  Программа', t: t, onTap: () {}),
         ],
       ),
     );
@@ -160,16 +162,16 @@ class _WeekGridScreenState extends State<WeekGridScreen> {
 
   // ── Week grid ─────────────────────────────────────────────
 
-  Widget _buildWeekGrid(BuildContext context) {
+  Widget _buildWeekGrid(BuildContext context, ThemeTokens t) {
     return Row(
       children: List.generate(_days.length, (i) {
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.only(
-                right: i < _days.length - 1 ? 8 : 0),
+            padding: EdgeInsets.only(right: i < _days.length - 1 ? 8 : 0),
             child: _DayCard(
               data: _days[i],
               selected: i == _selectedIndex,
+              t: t,
               onTap: () => setState(() => _selectedIndex = i),
             ),
           ),
@@ -180,7 +182,7 @@ class _WeekGridScreenState extends State<WeekGridScreen> {
 
   // ── Workout detail ────────────────────────────────────────
 
-  Widget _buildWorkoutDetail(BuildContext context) {
+  Widget _buildWorkoutDetail(BuildContext context, ThemeTokens t) {
     final day = _days[_selectedIndex];
 
     if (day.status == _DayStatus.rest) {
@@ -188,38 +190,37 @@ class _WeekGridScreenState extends State<WeekGridScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 40),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: t.surface,
           borderRadius: AppRadius.lgAll,
-          border: Border.all(color: AppColors.borderSoft),
+          border: Border.all(color: t.borderSoft),
         ),
         child: Column(
           children: [
-            const Icon(Icons.self_improvement_outlined,
-                size: 32, color: AppColors.text4),
+            Icon(Icons.self_improvement_outlined, size: 32, color: t.text4),
             const SizedBox(height: 12),
             Text('День отдыха',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.text2)),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: t.text2)),
           ],
         ),
       );
     }
 
-    final typeName = _workoutName(day.type);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('СЕГОДНЯШНЯЯ ТРЕНИРОВКА',
-            style: AppTypography.caps(color: AppColors.text3)),
+            style: AppTypography.caps(color: t.text3)),
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.xl2),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: t.surface,
             borderRadius: AppRadius.lgAll,
-            border: Border.all(color: AppColors.borderSoft),
+            border: Border.all(color: t.borderSoft),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,18 +230,18 @@ class _WeekGridScreenState extends State<WeekGridScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(typeName,
-                          style: const TextStyle(
+                      Text(_workoutName(day.type),
+                          style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.text1)),
+                              color: t.text1)),
                       const SizedBox(height: 4),
                       Text(
                           'Сб · ${day.date} · ${day.exercises} упр.',
                           style: Theme.of(context)
                               .textTheme
                               .bodyMedium
-                              ?.copyWith(color: AppColors.text3)),
+                              ?.copyWith(color: t.text3)),
                     ],
                   ),
                   const Spacer(),
@@ -251,7 +252,8 @@ class _WeekGridScreenState extends State<WeekGridScreen> {
                       foregroundColor: Colors.white,
                       elevation: 0,
                       minimumSize: const Size(0, 46),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 20),
                       shape: RoundedRectangleBorder(
                           borderRadius: AppRadius.mdAll),
                       textStyle: const TextStyle(
@@ -270,7 +272,7 @@ class _WeekGridScreenState extends State<WeekGridScreen> {
                   separatorBuilder: (_, __) =>
                       const SizedBox(width: 12),
                   itemBuilder: (_, i) =>
-                      _ExerciseCard(exercise: _todayExercises[i]),
+                      _ExerciseCard(exercise: _todayExercises[i], t: t),
                 ),
               ),
             ],
@@ -280,37 +282,30 @@ class _WeekGridScreenState extends State<WeekGridScreen> {
     );
   }
 
-  // ── Helpers ───────────────────────────────────────────────
-
-  static String _workoutName(_WorkoutType? type) {
-    switch (type) {
-      case _WorkoutType.push:
-        return 'Push';
-      case _WorkoutType.pull:
-        return 'Pull';
-      case _WorkoutType.legs:
-        return 'Legs';
-      case null:
-        return '';
-    }
-  }
+  static String _workoutName(_WorkoutType? type) => switch (type) {
+        _WorkoutType.push => 'Push',
+        _WorkoutType.pull => 'Pull',
+        _WorkoutType.legs => 'Legs',
+        null => '',
+      };
 
   static Widget _outlinedSmallButton(String label,
-      {required VoidCallback onTap}) {
+      {required ThemeTokens t, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border.all(color: AppColors.border),
+          color: t.surface,
+          border: Border.all(color: t.border),
           borderRadius: AppRadius.smAll,
         ),
         child: Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: AppColors.text1)),
+                color: t.text1)),
       ),
     );
   }
@@ -322,11 +317,13 @@ class _DayCard extends StatelessWidget {
   const _DayCard({
     required this.data,
     required this.selected,
+    required this.t,
     required this.onTap,
   });
 
   final _DayData data;
   final bool selected;
+  final ThemeTokens t;
   final VoidCallback onTap;
 
   @override
@@ -341,16 +338,16 @@ class _DayCard extends StatelessWidget {
     final Border border;
 
     if (isDone) {
-      bg = AppColors.accentTint;
-      border = Border.all(color: AppColors.borderSoft);
+      bg = t.accentTint;
+      border = Border.all(color: t.borderSoft);
     } else if (isToday) {
-      bg = selected ? AppColors.surface : AppColors.surface;
+      bg = t.surface;
       border = Border.all(
-          color: selected ? AppColors.accentPress : AppColors.border,
+          color: selected ? t.accentPress : t.border,
           width: selected ? 2 : 1);
     } else {
-      bg = AppColors.surface;
-      border = Border.all(color: AppColors.border);
+      bg = t.surface;
+      border = Border.all(color: t.border);
     }
 
     return GestureDetector(
@@ -373,10 +370,8 @@ class _DayCard extends StatelessWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,
-                        color: isDone
-                            ? AppColors.accentPress
-                            : AppColors.text3)),
-                if (data.trend != null) _trendIcon(data.trend!),
+                        color: isDone ? t.accentPress : t.text3)),
+                if (data.trend != null) _trendIcon(data.trend!, t),
               ],
             ),
             const SizedBox(height: 2),
@@ -384,20 +379,20 @@ class _DayCard extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: isDone ? AppColors.accentPress : AppColors.text1)),
+                    color: isDone ? t.accentPress : t.text1)),
             const SizedBox(height: 6),
             Text(_workoutName(data.type),
                 style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: isDone ? AppColors.accentPress : AppColors.text1)),
+                    color: isDone ? t.accentPress : t.text1)),
             const SizedBox(height: 4),
             Text('${data.exercises} упр.  ≈${data.minutes} мин',
                 style: TextStyle(
                     fontSize: 11,
-                    color: isDone ? AppColors.accent : AppColors.text3)),
+                    color: isDone ? t.accent : t.text3)),
             const SizedBox(height: 12),
-            const Divider(height: 1, color: AppColors.divider),
+            Divider(height: 1, color: t.divider),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -411,18 +406,12 @@ class _DayCard extends StatelessWidget {
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
-                      color: isDone
-                          ? AppColors.accentPress
-                          : isToday
-                              ? AppColors.accentPress
-                              : AppColors.text3),
+                      color: isDone || isToday ? t.accentPress : t.text3),
                 ),
                 const SizedBox(width: 4),
                 Icon(Icons.arrow_forward,
                     size: 11,
-                    color: isDone || isToday
-                        ? AppColors.accentPress
-                        : AppColors.text3),
+                    color: isDone || isToday ? t.accentPress : t.text3),
               ],
             ),
           ],
@@ -435,69 +424,58 @@ class _DayCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.bg,
+        color: t.bg,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(
-            color: AppColors.border.withValues(alpha: 0.5)),
+        border: Border.all(color: t.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(data.weekday,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
-                  color: AppColors.text4)),
+                  color: t.text4)),
           const SizedBox(height: 2),
           Text(data.date,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.text4)),
+                  color: t.text4)),
           const SizedBox(height: 20),
           Text('Отдых',
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: AppColors.text4)),
+                  ?.copyWith(color: t.text4)),
         ],
       ),
     );
   }
 
-  Widget _trendIcon(_Trend trend) {
-    switch (trend) {
-      case _Trend.up:
-        return const Icon(Icons.trending_up, size: 14, color: AppColors.success);
-      case _Trend.flat:
-        return const Icon(Icons.trending_flat, size: 14, color: AppColors.text3);
-      case _Trend.down:
-        return const Icon(Icons.trending_down,
-            size: 14, color: AppColors.warning);
-    }
-  }
+  Widget _trendIcon(_Trend trend, ThemeTokens t) => switch (trend) {
+        _Trend.up => Icon(Icons.trending_up, size: 14, color: t.success),
+        _Trend.flat =>
+          Icon(Icons.trending_flat, size: 14, color: t.text3),
+        _Trend.down => Icon(Icons.trending_down, size: 14, color: t.warning),
+      };
 
-  static String _workoutName(_WorkoutType? type) {
-    switch (type) {
-      case _WorkoutType.push:
-        return 'Push';
-      case _WorkoutType.pull:
-        return 'Pull';
-      case _WorkoutType.legs:
-        return 'Legs';
-      case null:
-        return '';
-    }
-  }
+  static String _workoutName(_WorkoutType? type) => switch (type) {
+        _WorkoutType.push => 'Push',
+        _WorkoutType.pull => 'Pull',
+        _WorkoutType.legs => 'Legs',
+        null => '',
+      };
 }
 
 // ─── Exercise card ───────────────────────────────────────────
 
 class _ExerciseCard extends StatelessWidget {
-  const _ExerciseCard({required this.exercise});
+  const _ExerciseCard({required this.exercise, required this.t});
 
   final _ExerciseData exercise;
+  final ThemeTokens t;
 
   @override
   Widget build(BuildContext context) {
@@ -505,22 +483,20 @@ class _ExerciseCard extends StatelessWidget {
       width: 180,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSunken,
+        color: t.surfaceSunken,
         borderRadius: AppRadius.mdAll,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(exercise.name,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.text1)),
+                  color: t.text1)),
           const SizedBox(height: 6),
           Text('прошлый раз: ${exercise.lastSets}',
-              style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.text3),
+              style: TextStyle(fontSize: 11, color: t.text3),
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
         ],
@@ -532,9 +508,11 @@ class _ExerciseCard extends StatelessWidget {
 // ─── Nav icon button ─────────────────────────────────────────
 
 class _NavIconButton extends StatelessWidget {
-  const _NavIconButton({required this.icon, required this.onTap});
+  const _NavIconButton(
+      {required this.icon, required this.t, required this.onTap});
 
   final IconData icon;
+  final ThemeTokens t;
   final VoidCallback onTap;
 
   @override
@@ -545,11 +523,11 @@ class _NavIconButton extends StatelessWidget {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: t.border),
           borderRadius: AppRadius.smAll,
-          color: AppColors.surface,
+          color: t.surface,
         ),
-        child: Icon(icon, size: 18, color: AppColors.text2),
+        child: Icon(icon, size: 18, color: t.text2),
       ),
     );
   }

@@ -20,6 +20,7 @@ ThemeData buildDarkTheme() {
     surface: AppColors.darkSurface,
     onSurface: AppColors.darkText1,
     surfaceContainerHighest: AppColors.darkSurfaceSunken,
+    surfaceContainerHigh: AppColors.darkSurfaceRaised,
     surfaceContainerLow: AppColors.darkBg,
     onSurfaceVariant: AppColors.darkText3,
     outline: AppColors.darkBorder,

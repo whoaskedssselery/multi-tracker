@@ -15,6 +15,7 @@ class ThemeTokens {
   // ── Surfaces ─────────────────────────────────────────────────
   Color get bg            => _cs.surfaceContainerLow;
   Color get surface       => _cs.surface;
+  Color get surfaceRaised => _cs.surfaceContainerHigh;
   Color get surfaceSunken => _cs.surfaceContainerHighest;
 
   // ── Borders / lines ──────────────────────────────────────────

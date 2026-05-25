@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/colors.dart';
 import '../../../app/theme/radius.dart';
 import '../../../app/theme/spacing.dart';
+import '../../../app/theme/theme_tokens.dart';
 import '../../../app/theme/typography.dart';
 
 // ─── Data models ────────────────────────────────────────────
@@ -49,6 +50,8 @@ class _TasksScreenState extends State<TasksScreen> {
   int _folderIndex = 0;
   int? _selectedTaskId = 1;
 
+  ThemeTokens get _t => ThemeTokens.of(context);
+
   static const _folders = <_FolderData>[
     _FolderData('Все активные', 10),
     _FolderData('Сегодня', 3),
@@ -66,8 +69,7 @@ class _TasksScreenState extends State<TasksScreen> {
         time: '14:00',
         dateLabel: 'Сегодня',
         priority: _Priority.medium),
-    _TaskData(
-        id: 2, title: 'Купить молоко', dateLabel: 'Сегодня'),
+    _TaskData(id: 2, title: 'Купить молоко', dateLabel: 'Сегодня'),
     _TaskData(
         id: 3,
         title: 'Отчёт за апрель',
@@ -110,35 +112,28 @@ class _TasksScreenState extends State<TasksScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = _t;
     final w = MediaQuery.sizeOf(context).width;
     final showDetail = w >= 1100 && _selectedTask != null;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: t.bg,
       body: Column(
         children: [
-          _buildTopBar(context),
-          const Divider(height: 1, color: AppColors.divider),
+          _buildTopBar(context, t),
+          Divider(height: 1, color: t.divider),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Folders sidebar
-                SizedBox(
-                  width: 200,
-                  child: _buildFolderList(context),
-                ),
-                const VerticalDivider(
-                    width: 1, color: AppColors.divider),
-                // Task list
-                Expanded(child: _buildTaskList(context)),
-                // Detail panel
+                SizedBox(width: 200, child: _buildFolderList(context, t)),
+                VerticalDivider(width: 1, color: t.divider),
+                Expanded(child: _buildTaskList(context, t)),
                 if (showDetail) ...[
-                  const VerticalDivider(
-                      width: 1, color: AppColors.divider),
+                  VerticalDivider(width: 1, color: t.divider),
                   SizedBox(
                       width: 300,
-                      child: _buildDetailPanel(context, _selectedTask!)),
+                      child: _buildDetailPanel(context, _selectedTask!, t)),
                 ],
               ],
             ),
@@ -150,7 +145,7 @@ class _TasksScreenState extends State<TasksScreen> {
 
   // ── Top bar ──────────────────────────────────────────────
 
-  Widget _buildTopBar(BuildContext context) {
+  Widget _buildTopBar(BuildContext context, ThemeTokens t) {
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xl3, vertical: AppSpacing.xl),
@@ -159,19 +154,18 @@ class _TasksScreenState extends State<TasksScreen> {
           Text('Задачи',
               style: Theme.of(context).textTheme.headlineLarge),
           const Spacer(),
-          // Tab pills
           Container(
             height: 44,
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: t.border),
               borderRadius: AppRadius.smAll,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _tabPill(context, 'Задачи', 10, true),
-                Container(width: 1, height: 44, color: AppColors.border),
-                _tabPill(context, 'Заметки', 3, false),
+                _tabPill(context, 'Задачи', 10, true, t),
+                Container(width: 1, height: 44, color: t.border),
+                _tabPill(context, 'Заметки', 3, false, t),
               ],
             ),
           ),
@@ -198,26 +192,26 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _tabPill(
-      BuildContext context, String label, int count, bool active) {
+  Widget _tabPill(BuildContext context, String label, int count,
+      bool active, ThemeTokens t) {
     return Container(
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       alignment: Alignment.center,
-      color: active ? AppColors.surfaceSunken : Colors.transparent,
+      color: active ? t.surfaceSunken : Colors.transparent,
       child: Text(
         '$label · $count',
         style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: active ? AppColors.text1 : AppColors.text3),
+            color: active ? t.text1 : t.text3),
       ),
     );
   }
 
   // ── Folder list ──────────────────────────────────────────
 
-  Widget _buildFolderList(BuildContext context) {
+  Widget _buildFolderList(BuildContext context, ThemeTokens t) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(
           vertical: AppSpacing.md, horizontal: AppSpacing.md),
@@ -228,39 +222,34 @@ class _TasksScreenState extends State<TasksScreen> {
         return MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
-          onTap: () => setState(() => _folderIndex = i),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            margin: const EdgeInsets.only(bottom: 2),
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md, vertical: AppSpacing.md),
-            decoration: BoxDecoration(
-              color:
-                  active ? AppColors.accentTint : Colors.transparent,
-              borderRadius: AppRadius.smAll,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(f.name,
+            onTap: () => setState(() => _folderIndex = i),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              margin: const EdgeInsets.only(bottom: 2),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md, vertical: AppSpacing.md),
+              decoration: BoxDecoration(
+                color: active ? t.accentTint : Colors.transparent,
+                borderRadius: AppRadius.smAll,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(f.name,
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: active
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                            color: active ? t.accentPress : t.text2)),
+                  ),
+                  Text('${f.count}',
                       style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: active
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: active
-                              ? AppColors.accentPress
-                              : AppColors.text2)),
-                ),
-                Text('${f.count}',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: active
-                            ? AppColors.accentPress
-                            : AppColors.text4)),
-              ],
+                          fontSize: 12,
+                          color: active ? t.accentPress : t.text4)),
+                ],
+              ),
             ),
-          ),
           ),
         );
       },
@@ -269,29 +258,27 @@ class _TasksScreenState extends State<TasksScreen> {
 
   // ── Task list ────────────────────────────────────────────
 
-  Widget _buildTaskList(BuildContext context) {
+  Widget _buildTaskList(BuildContext context, ThemeTokens t) {
     return Column(
       children: [
-        // Search bar
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Container(
             height: 38,
             decoration: BoxDecoration(
-              color: AppColors.surfaceSunken,
+              color: t.surfaceSunken,
               borderRadius: AppRadius.smAll,
             ),
-            child: const Row(
+            child: Row(
               children: [
-                SizedBox(width: 12),
-                Icon(Icons.search, size: 16, color: AppColors.text3),
-                SizedBox(width: 8),
+                const SizedBox(width: 12),
+                Icon(Icons.search, size: 16, color: t.text3),
+                const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Поиск задач...',
-                      hintStyle: TextStyle(
-                          fontSize: 13, color: AppColors.text3),
+                      hintStyle: TextStyle(fontSize: 13, color: t.text3),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
@@ -300,28 +287,25 @@ class _TasksScreenState extends State<TasksScreen> {
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
                     ),
-                    style: const TextStyle(
-                        fontSize: 13, color: AppColors.text1),
+                    style: TextStyle(fontSize: 13, color: t.text1),
                   ),
                 ),
               ],
             ),
           ),
         ),
-        // Tasks
         Expanded(
           child: ListView.builder(
             itemCount: _tasks.length,
             itemBuilder: (_, i) {
-              final t = _tasks[i];
-              final selected = t.id == _selectedTaskId;
+              final task = _tasks[i];
+              final selected = task.id == _selectedTaskId;
               return _TaskRow(
-                task: t,
+                task: task,
                 selected: selected,
-                onTap: () =>
-                    setState(() => _selectedTaskId = t.id),
-                onToggle: () =>
-                    setState(() => t.done = !t.done),
+                t: t,
+                onTap: () => setState(() => _selectedTaskId = task.id),
+                onToggle: () => setState(() => task.done = !task.done),
               );
             },
           ),
@@ -332,28 +316,27 @@ class _TasksScreenState extends State<TasksScreen> {
 
   // ── Detail panel ─────────────────────────────────────────
 
-  Widget _buildDetailPanel(BuildContext context, _TaskData task) {
+  Widget _buildDetailPanel(
+      BuildContext context, _TaskData task, ThemeTokens t) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.xl2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ЗАДАЧА',
-              style: AppTypography.caps(color: AppColors.text3)),
+          Text('ЗАДАЧА', style: AppTypography.caps(color: t.text3)),
           const SizedBox(height: 8),
           Text(task.title,
               style: Theme.of(context)
                   .textTheme
                   .titleLarge
-                  ?.copyWith(color: AppColors.text1)),
+                  ?.copyWith(color: t.text1)),
           const SizedBox(height: 20),
-          _detailRow('Когда', task.dateLabel ?? '—'),
-          if (task.time != null)
-            _detailRow('Время', task.time!),
-          _detailRow('Приоритет', _priorityLabel(task.priority),
+          _detailRow('Когда', task.dateLabel ?? '—', t),
+          if (task.time != null) _detailRow('Время', task.time!, t),
+          _detailRow('Приоритет', _priorityLabel(task.priority), t,
               valueColor: _priorityColor(task.priority),
               dot: task.priority != _Priority.none),
-          _detailRow('Повтор', 'нет'),
+          _detailRow('Повтор', 'нет', t),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -361,6 +344,7 @@ class _TasksScreenState extends State<TasksScreen> {
                 child: _DetailButton(
                   label: 'Изменить',
                   icon: Icons.edit_outlined,
+                  t: t,
                   onTap: () {},
                 ),
               ),
@@ -368,6 +352,7 @@ class _TasksScreenState extends State<TasksScreen> {
               _DetailButton(
                 icon: Icons.delete_outline,
                 iconColor: AppColors.danger,
+                t: t,
                 onTap: () {},
                 squareSize: 40,
               ),
@@ -378,7 +363,7 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _detailRow(String label, String value,
+  Widget _detailRow(String label, String value, ThemeTokens t,
       {Color? valueColor, bool dot = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -387,8 +372,7 @@ class _TasksScreenState extends State<TasksScreen> {
           SizedBox(
             width: 80,
             child: Text(label,
-                style: const TextStyle(
-                    fontSize: 13, color: AppColors.text3)),
+                style: TextStyle(fontSize: 13, color: t.text3)),
           ),
           if (dot) ...[
             Container(
@@ -396,7 +380,7 @@ class _TasksScreenState extends State<TasksScreen> {
               height: 7,
               margin: const EdgeInsets.only(right: 5),
               decoration: BoxDecoration(
-                color: valueColor ?? AppColors.text3,
+                color: valueColor ?? t.text3,
                 shape: BoxShape.circle,
               ),
             ),
@@ -405,37 +389,25 @@ class _TasksScreenState extends State<TasksScreen> {
               style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: valueColor ?? AppColors.text1)),
+                  color: valueColor ?? t.text1)),
         ],
       ),
     );
   }
 
-  static String _priorityLabel(_Priority p) {
-    switch (p) {
-      case _Priority.none:
-        return 'нет';
-      case _Priority.low:
-        return 'низкий';
-      case _Priority.medium:
-        return 'средний';
-      case _Priority.high:
-        return 'высокий';
-    }
-  }
+  static String _priorityLabel(_Priority p) => switch (p) {
+        _Priority.none => 'нет',
+        _Priority.low => 'низкий',
+        _Priority.medium => 'средний',
+        _Priority.high => 'высокий',
+      };
 
-  static Color? _priorityColor(_Priority p) {
-    switch (p) {
-      case _Priority.none:
-        return null;
-      case _Priority.low:
-        return AppColors.text3;
-      case _Priority.medium:
-        return AppColors.warning;
-      case _Priority.high:
-        return AppColors.danger;
-    }
-  }
+  static Color? _priorityColor(_Priority p) => switch (p) {
+        _Priority.none => null,
+        _Priority.low => AppColors.text3,
+        _Priority.medium => AppColors.warning,
+        _Priority.high => AppColors.danger,
+      };
 }
 
 // ─── Detail button ───────────────────────────────────────────
@@ -444,14 +416,16 @@ class _DetailButton extends StatefulWidget {
   const _DetailButton({
     this.label,
     required this.icon,
-    this.iconColor = AppColors.text2,
+    required this.t,
+    this.iconColor,
     required this.onTap,
     this.squareSize,
   });
 
   final String? label;
   final IconData icon;
-  final Color iconColor;
+  final ThemeTokens t;
+  final Color? iconColor;
   final VoidCallback onTap;
   final double? squareSize;
 
@@ -464,44 +438,46 @@ class _DetailButtonState extends State<_DetailButton> {
 
   @override
   Widget build(BuildContext context) {
+    final t = widget.t;
+    final iconColor = widget.iconColor ?? t.text2;
     final isSquare = widget.squareSize != null;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        width: isSquare ? widget.squareSize : null,
-        height: isSquare ? widget.squareSize : 40,
-        padding: isSquare
-            ? EdgeInsets.zero
-            : const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: _pressed ? AppColors.surfaceRaised : AppColors.surface,
-          borderRadius: AppRadius.mdAll,
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(widget.icon, size: 16, color: widget.iconColor),
-            if (widget.label != null) ...[
-              const SizedBox(width: 6),
-              Text(
-                widget.label!,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: widget.iconColor,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          width: isSquare ? widget.squareSize : null,
+          height: isSquare ? widget.squareSize : 40,
+          padding: isSquare
+              ? EdgeInsets.zero
+              : const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: _pressed ? t.surfaceRaised : t.surface,
+            borderRadius: AppRadius.mdAll,
+            border: Border.all(color: t.border),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(widget.icon, size: 16, color: iconColor),
+              if (widget.label != null) ...[
+                const SizedBox(width: 6),
+                Text(
+                  widget.label!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: iconColor,
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -513,12 +489,14 @@ class _TaskRow extends StatelessWidget {
   const _TaskRow({
     required this.task,
     required this.selected,
+    required this.t,
     required this.onTap,
     required this.onToggle,
   });
 
   final _TaskData task;
   final bool selected;
+  final ThemeTokens t;
   final VoidCallback onTap;
   final VoidCallback onToggle;
 
@@ -527,134 +505,107 @@ class _TaskRow extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl, vertical: AppSpacing.md),
-        color: selected
-            ? AppColors.accentTint.withValues(alpha: 0.5)
-            : Colors.transparent,
-        child: Row(
-          children: [
-            // Checkbox
-            GestureDetector(
-              onTap: onToggle,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: task.done ? AppColors.accent : Colors.transparent,
-                  border: Border.all(
-                    color: task.done
-                        ? AppColors.accent
-                        : AppColors.border,
-                    width: 1.5,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+          color: selected
+              ? t.accentTint.withValues(alpha: 0.5)
+              : Colors.transparent,
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: onToggle,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: task.done ? AppColors.accent : Colors.transparent,
+                    border: Border.all(
+                      color: task.done ? AppColors.accent : t.border,
+                      width: 1.5,
+                    ),
                   ),
-                ),
-                child: task.done
-                    ? const Icon(Icons.check,
-                        size: 12, color: Colors.white)
-                    : null,
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Priority dot
-            if (task.priority != _Priority.none) ...[
-              Container(
-                width: 7,
-                height: 7,
-                margin: const EdgeInsets.only(right: 6),
-                decoration: BoxDecoration(
-                  color: _priorityColor(task.priority),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-            // Title
-            Expanded(
-              child: Text(
-                task.title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: task.done
-                      ? AppColors.text3
-                      : AppColors.text1,
-                  decoration: task.done
-                      ? TextDecoration.lineThrough
+                  child: task.done
+                      ? const Icon(Icons.check, size: 12, color: Colors.white)
                       : null,
                 ),
               ),
-            ),
-            // Right side: time + date
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (task.time != null) ...[
-                  Text(task.time!,
-                      style: const TextStyle(
-                          fontSize: 12, color: AppColors.text3)),
-                  const SizedBox(width: 6),
-                ],
-                if (task.dayLabel != null) ...[
-                  Text(task.dayLabel!,
-                      style: const TextStyle(
-                          fontSize: 12, color: AppColors.text3)),
-                  const SizedBox(width: 4),
-                ],
-                if (task.dateLabel != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _dateBg(task.dateLabel!),
-                      borderRadius: AppRadius.xsAll,
-                    ),
-                    child: Text(task.dateLabel!,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: _dateColor(task.dateLabel!))),
-                  )
-                else
-                  const Text('—',
-                      style: TextStyle(
-                          fontSize: 13, color: AppColors.text4)),
+              const SizedBox(width: 12),
+              if (task.priority != _Priority.none) ...[
+                Container(
+                  width: 7,
+                  height: 7,
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    color: _priorityColor(task.priority),
+                    shape: BoxShape.circle,
+                  ),
+                ),
               ],
-            ),
-          ],
+              Expanded(
+                child: Text(
+                  task.title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: task.done ? t.text3 : t.text1,
+                    decoration:
+                        task.done ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (task.time != null) ...[
+                    Text(task.time!,
+                        style: TextStyle(fontSize: 12, color: t.text3)),
+                    const SizedBox(width: 6),
+                  ],
+                  if (task.dayLabel != null) ...[
+                    Text(task.dayLabel!,
+                        style: TextStyle(fontSize: 12, color: t.text3)),
+                    const SizedBox(width: 4),
+                  ],
+                  if (task.dateLabel != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _dateBg(task.dateLabel!, t),
+                        borderRadius: AppRadius.xsAll,
+                      ),
+                      child: Text(task.dateLabel!,
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: _dateColor(task.dateLabel!, t))),
+                    )
+                  else
+                    Text('—',
+                        style: TextStyle(fontSize: 13, color: t.text4)),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 
-  static Color? _priorityColor(_Priority p) {
-    switch (p) {
-      case _Priority.none:
-        return null;
-      case _Priority.low:
-        return AppColors.text3;
-      case _Priority.medium:
-        return AppColors.warning;
-      case _Priority.high:
-        return AppColors.danger;
-    }
-  }
+  static Color? _priorityColor(_Priority p) => switch (p) {
+        _Priority.none => null,
+        _Priority.low => AppColors.text3,
+        _Priority.medium => AppColors.warning,
+        _Priority.high => AppColors.danger,
+      };
 
-  static Color _dateBg(String label) {
-    if (label == 'Сегодня') {
-      return AppColors.accentTint;
-    } else if (label == 'Завтра') {
-      return AppColors.surfaceSunken;
-    }
-    return AppColors.surfaceSunken;
-  }
+  static Color _dateBg(String label, ThemeTokens t) =>
+      label == 'Сегодня' ? t.accentTint : t.surfaceSunken;
 
-  static Color _dateColor(String label) {
-    if (label == 'Сегодня') return AppColors.accentPress;
-    return AppColors.text3;
-  }
+  static Color _dateColor(String label, ThemeTokens t) =>
+      label == 'Сегодня' ? t.accentPress : t.text3;
 }

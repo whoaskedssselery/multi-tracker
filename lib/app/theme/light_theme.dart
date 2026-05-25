@@ -20,6 +20,7 @@ ThemeData buildLightTheme() {
     surface: AppColors.surface,
     onSurface: AppColors.text1,
     surfaceContainerHighest: AppColors.surfaceSunken,
+    surfaceContainerHigh: AppColors.surfaceRaised,
     surfaceContainerLow: AppColors.bg,
     onSurfaceVariant: AppColors.text3,
     outline: AppColors.border,
