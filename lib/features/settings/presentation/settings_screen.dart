@@ -522,7 +522,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // ── Groq ping ────────────────────────────────────────────────
 
-  Future<void> _pingGroq(String apiKey, String model) async {
+  // Always ping with the smallest free-tier model to avoid 403 from
+  // premium-only models.
+  static const _pingModel = 'llama-3.1-8b-instant';
+
+  Future<void> _pingGroq(String apiKey, String _model) async {
     setState(() => _pingLoading = true);
     try {
       final dio = Dio(BaseOptions(
@@ -533,10 +537,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await dio.post<dynamic>(
         'https://api.groq.com/openai/v1/chat/completions',
         options: Options(
-          headers: {'Authorization': 'Bearer $apiKey'},
+          headers: {
+            'Authorization': 'Bearer $apiKey',
+            'Content-Type': 'application/json',
+          },
         ),
         data: {
-          'model': model,
+          'model': _pingModel,
           'messages': [
             {'role': 'user', 'content': 'hi'}
           ],
@@ -550,15 +557,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } on DioException catch (e) {
       if (!mounted) return;
       final status = e.response?.statusCode;
-      final detail =
-          (e.response?.data as Map?)?['error']?['message'] as String?;
-      final msg = status == 401
-          ? 'Неверный ключ (401)'
-          : status == 429
-              ? 'Превышен лимит запросов (429)'
-              : detail ?? e.message ?? 'Ошибка сети';
+      final body = e.response?.data;
+      String? detail;
+      if (body is Map) {
+        final err = body['error'];
+        if (err is Map) detail = err['message'] as String?;
+      } else if (body is String && body.isNotEmpty) {
+        detail = body;
+      }
+      final String msg;
+      if (status == null) {
+        msg = 'Нет ответа от сервера: ${e.message ?? e.type.name}';
+      } else if (status == 401) {
+        msg = 'Неверный ключ (401)';
+      } else if (status == 403) {
+        msg = detail ?? 'Доступ запрещён (403) — проверь тарифный план';
+      } else if (status == 429) {
+        msg = 'Превышен лимит запросов (429)';
+      } else if (status == 400) {
+        msg = 'Неверный запрос (400): ${detail ?? ""}';
+      } else {
+        msg = '${detail ?? e.message ?? e.type.name} ($status)';
+      }
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Ошибка: $msg')));
+    } catch (e) {
+      // Non-Dio exceptions (SocketException, TlsException, etc.)
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Сетевая ошибка: $e')));
     } finally {
       if (mounted) setState(() => _pingLoading = false);
     }
