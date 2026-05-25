@@ -61,11 +61,9 @@ class ExportService {
     final file = File('${dir.path}/$filename');
     await file.writeAsString(content, encoding: utf8);
 
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(file.path, mimeType: mimeType)],
-        text: 'Multi-tracker export',
-      ),
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: mimeType)],
+      text: 'Multi-tracker export',
     );
   }
 
