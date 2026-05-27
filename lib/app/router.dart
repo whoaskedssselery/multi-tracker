@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/train/presentation/week_grid_screen.dart';
 import '../features/tasks/presentation/tasks_screen.dart';
+import '../features/notes/presentation/notes_screen.dart';
 import '../features/ai_chat/presentation/ai_chat_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../shared/widgets/adaptive_scaffold.dart';
@@ -17,6 +18,7 @@ class AppRoutes {
   static const home     = '/';
   static const train    = '/train';
   static const tasks    = '/tasks';
+  static const notes    = '/notes';
   static const ai       = '/ai';
   static const settings = '/settings';
 }
@@ -49,6 +51,10 @@ final appRouter = GoRouter(
         GoRoute(
           path: AppRoutes.tasks,
           pageBuilder: (ctx, s) => _fade(const TasksScreen(), s),
+        ),
+        GoRoute(
+          path: AppRoutes.notes,
+          pageBuilder: (ctx, s) => _fade(const NotesScreen(), s),
         ),
         GoRoute(
           path: AppRoutes.ai,
@@ -89,6 +95,7 @@ class _AppShell extends StatelessWidget {
     AppRoutes.home,
     AppRoutes.train,
     AppRoutes.tasks,
+    AppRoutes.notes,
     AppRoutes.ai,
     AppRoutes.settings,
   ];
@@ -120,6 +127,10 @@ class _AppShell extends StatelessWidget {
         AdaptiveDestination(
           icon: Icon(Icons.checklist_outlined),
           label: 'Задачи',
+        ),
+        AdaptiveDestination(
+          icon: Icon(Icons.sticky_note_2_outlined),
+          label: 'Заметки',
         ),
         AdaptiveDestination(
           icon: Icon(Icons.auto_awesome_outlined),

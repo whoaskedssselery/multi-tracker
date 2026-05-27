@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/providers/providers.dart';
+import '../../../app/router.dart';
 import '../../../app/theme/colors.dart';
 import '../../../app/theme/radius.dart';
 import '../../../app/theme/spacing.dart';
@@ -425,8 +427,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               children: [
                 _tabPill(context, 'Задачи', totalActive, true, t),
                 Container(width: 1, height: 44, color: t.border),
-                _tabPill(
-                    context, 'Заметки', noteCount, false, t),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => context.go(AppRoutes.notes),
+                    child: _tabPill(
+                        context, 'Заметки', noteCount, false, t),
+                  ),
+                ),
               ],
             ),
           ),

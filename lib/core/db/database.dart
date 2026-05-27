@@ -576,6 +576,40 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> clearChatHistory() => delete(chatMessageTable).go();
 
+  // ── Notes DAO ────────────────────────────────────────────────────────────
+
+  Stream<List<NoteItemTableData>> watchNotes() =>
+      (select(noteItemTable)
+            ..orderBy([
+              (t) => OrderingTerm.desc(t.isPinned),
+              (t) => OrderingTerm.desc(t.updatedAt),
+            ]))
+          .watch();
+
+  Future<int> addNote({String title = '', String body = ''}) =>
+      into(noteItemTable).insert(NoteItemTableCompanion.insert(
+        title: title.isEmpty ? 'Без названия' : title,
+        body: Value(body),
+      ));
+
+  Future<void> updateNote(
+    int id, {
+    String? title,
+    String? body,
+    bool? isPinned,
+  }) =>
+      (update(noteItemTable)..where((t) => t.id.equals(id))).write(
+        NoteItemTableCompanion(
+          title:    title    != null ? Value(title)    : const Value.absent(),
+          body:     body     != null ? Value(body)     : const Value.absent(),
+          isPinned: isPinned != null ? Value(isPinned) : const Value.absent(),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+  Future<void> deleteNote(int id) =>
+      (delete(noteItemTable)..where((t) => t.id.equals(id))).go();
+
   /// Overwrites all sets for [exerciseId] on [date] with [sets].
   Future<void> logSets({
     required int exerciseId,

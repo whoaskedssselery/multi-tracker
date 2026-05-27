@@ -60,6 +60,10 @@ Stream<List<ChatMessageTableData>> chatMessages(ChatMessagesRef ref) =>
     ref.watch(dbProvider).watchChatMessages();
 
 @riverpod
+Stream<List<NoteItemTableData>> notes(NotesRef ref) =>
+    ref.watch(dbProvider).watchNotes();
+
+@riverpod
 Stream<Set<DateTime>> loggedDates(
         LoggedDatesRef ref, DateTime weekStart) =>
     ref.watch(dbProvider).watchLoggedDates(
