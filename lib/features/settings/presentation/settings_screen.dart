@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../app/providers/providers.dart';
 import '../../../app/theme/breakpoints.dart';
@@ -23,10 +25,18 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _obscureKey = true;
-  bool _pingLoading = false;
+  bool _obscureKey    = true;
+  bool _pingLoading   = false;
+  bool _exportLoading = false;
+  final _keyCtrl = TextEditingController();
 
   ThemeTokens get _t => ThemeTokens.of(context);
+
+  @override
+  void dispose() {
+    _keyCtrl.dispose();
+    super.dispose();
+  }
 
   static const _groqModels = [
     'llama-3.3-70b-versatile',
@@ -151,10 +161,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _sectionLabel('ДАННЫЕ'),
             _card([
               _actionRow('Экспорт данных (CSV)',
-                  Icons.download_outlined, () {}, t: t),
+                  Icons.download_outlined,
+                  _exportLoading ? null : _exportCsv,
+                  t: t),
               _divider(t),
               _actionRow('Экспорт данных (JSON)',
-                  Icons.code_outlined, () {}, t: t),
+                  Icons.code_outlined,
+                  _exportLoading ? null : _exportJson,
+                  t: t),
               _divider(t),
               _actionRow(
                 'Сбросить все данные',
@@ -171,7 +185,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _card([
               _infoRow('Версия', '0.1.0', t: t),
               _divider(t),
-              _infoRow('Платформа', 'Windows', t: t),
+              _infoRow('Платформа',
+                  '${Platform.operatingSystem[0].toUpperCase()}${Platform.operatingSystem.substring(1)}',
+                  t: t),
             ], t: t),
             const SizedBox(height: AppSpacing.xl4),
           ],
@@ -268,9 +284,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _actionRow(String label, IconData icon, VoidCallback onTap,
+  Widget _actionRow(String label, IconData icon, VoidCallback? onTap,
       {Color? color, required ThemeTokens t}) {
-    final c = color ?? t.text1;
+    final enabled = onTap != null;
+    final c = (color ?? t.text1).withValues(alpha: enabled ? 1.0 : 0.4);
     return InkWell(
       onTap: onTap,
       borderRadius: AppRadius.lgAll,
@@ -444,12 +461,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // ── Key editor ───────────────────────────────────────────────
 
   Future<void> _showKeyEditor(BuildContext ctx, String? current) async {
-    final ctrl = TextEditingController(text: current ?? '');
+    _keyCtrl.text = current ?? '';
     final isDesktop =
         MediaQuery.sizeOf(ctx).width >= kDesktopBreakpoint;
 
     Future<void> save(BuildContext sheetCtx) async {
-      await ref.read(groqApiKeyProvider.notifier).set(ctrl.text);
+      await ref.read(groqApiKeyProvider.notifier).set(_keyCtrl.text);
       if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
     }
 
@@ -459,7 +476,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
-            controller: ctrl,
+            controller: _keyCtrl,
             autofocus: true,
             style: AppTypography.mono(fontSize: 13, color: _t.text1),
             decoration: InputDecoration(
@@ -530,7 +547,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
     }
 
-    ctrl.dispose();
   }
 
   // ── Groq ping ────────────────────────────────────────────────
@@ -589,7 +605,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title: const Text('Сбросить все данные?',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
         content: const Text(
-          'Это действие удалит все записи веса, тренировки и задачи без возможности восстановления.',
+          'Это действие удалит все записи веса, тренировки, задачи и заметки без возможности восстановления.',
           style: TextStyle(fontSize: 14),
         ),
         actionsPadding: const EdgeInsets.all(16),
@@ -608,11 +624,149 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
-    if (ok == true && ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(content: Text('Данные сброшены')));
+    if (ok == true) {
+      await ref.read(dbProvider).clearAllData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Все данные удалены')));
+      }
     }
   }
+
+  // ── Export ───────────────────────────────────────────────────
+
+  Future<void> _exportJson() async {
+    setState(() => _exportLoading = true);
+    try {
+      final data = await ref.read(dbProvider).exportAllData();
+      final json = const JsonEncoder.withIndent('  ').convert(data);
+      await _saveOrShare(
+        bytes: utf8.encode(json),
+        fileName: 'multi_tracker_${_dateStamp()}.json',
+        mimeType: 'application/json',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _exportLoading = false);
+    }
+  }
+
+  Future<void> _exportCsv() async {
+    setState(() => _exportLoading = true);
+    try {
+      final data = await ref.read(dbProvider).exportAllData();
+      final buf = StringBuffer();
+
+      buf.writeln('# WEIGHT');
+      buf.writeln('date,value,note');
+      for (final w in data['weight'] as List) {
+        buf.writeln('${w['date']},${w['value']},${_csv(w['note']?.toString() ?? '')}');
+      }
+      buf.writeln();
+
+      buf.writeln('# TASKS');
+      buf.writeln('body,group,priority,isDone,completedAt,createdAt');
+      for (final t in data['tasks'] as List) {
+        final m = t as Map;
+        buf.writeln(
+            '${_csv(m['body'].toString())},${m['group']},${m['priority']},${m['isDone']},${m['completedAt'] ?? ''},${m['createdAt']}');
+      }
+      buf.writeln();
+
+      buf.writeln('# NOTES');
+      buf.writeln('title,isPinned,createdAt,updatedAt,body');
+      for (final n in data['notes'] as List) {
+        final m = n as Map;
+        buf.writeln(
+            '${_csv(m['title'].toString())},${m['isPinned']},${m['createdAt']},${m['updatedAt']},${_csv(m['body'].toString())}');
+      }
+      buf.writeln();
+
+      buf.writeln('# GOALS');
+      buf.writeln('label,startValue,currentValue,targetValue,unit');
+      for (final g in data['goals'] as List) {
+        final m = g as Map;
+        buf.writeln(
+            '${_csv(m['label'].toString())},${m['startValue']},${m['currentValue']},${m['targetValue']},${m['unit']}');
+      }
+      buf.writeln();
+
+      buf.writeln('# WORKOUTS');
+      buf.writeln('template,exercise,date,setIndex,weightKg,reps');
+      for (final w in data['workouts'] as List) {
+        final wm = w as Map;
+        for (final e in wm['exercises'] as List) {
+          final em = e as Map;
+          for (final s in em['sets'] as List) {
+            final sm = s as Map;
+            buf.writeln(
+                '${_csv(wm['name'].toString())},${_csv(em['name'].toString())},${sm['date']},${sm['setIndex']},${sm['weightKg']},${sm['reps']}');
+          }
+        }
+      }
+
+      await _saveOrShare(
+        bytes: utf8.encode(buf.toString()),
+        fileName: 'multi_tracker_${_dateStamp()}.csv',
+        mimeType: 'text/csv',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _exportLoading = false);
+    }
+  }
+
+  Future<void> _saveOrShare({
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    if (Platform.isWindows) {
+      final dir =
+          await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}\\$fileName');
+      await file.writeAsBytes(bytes);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Сохранено: ${file.path}'),
+          duration: const Duration(seconds: 6),
+        ));
+      }
+    } else {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: mimeType)],
+        subject: fileName,
+      );
+    }
+  }
+
+  static String _csv(String v) {
+    if (v.contains(',') ||
+        v.contains('"') ||
+        v.contains('\n') ||
+        v.contains('\r')) {
+      return '"${v.replaceAll('"', '""')}"';
+    }
+    return v;
+  }
+
+  static String _dateStamp() {
+    final n = DateTime.now();
+    return '${n.year}${_p(n.month)}${_p(n.day)}_${_p(n.hour)}${_p(n.minute)}';
+  }
+
+  static String _p(int v) => v.toString().padLeft(2, '0');
 
   // ── Validators ───────────────────────────────────────────────
 
@@ -838,24 +992,27 @@ class _ThemePicker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: options.map((o) {
           final active = o.$1 == value;
-          return GestureDetector(
-            onTap: () => onChanged(o.$1),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: active ? t.surface : Colors.transparent,
-                borderRadius: AppRadius.pill,
-                border: active ? Border.all(color: t.border) : null,
-              ),
-              child: Text(
-                o.$2,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight:
-                      active ? FontWeight.w600 : FontWeight.w400,
-                  color: active ? t.text1 : t.text3,
+          return MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => onChanged(o.$1),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: active ? t.surface : Colors.transparent,
+                  borderRadius: AppRadius.pill,
+                  border: active ? Border.all(color: t.border) : null,
+                ),
+                child: Text(
+                  o.$2,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight:
+                        active ? FontWeight.w600 : FontWeight.w400,
+                    color: active ? t.text1 : t.text3,
+                  ),
                 ),
               ),
             ),

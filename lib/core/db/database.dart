@@ -610,6 +610,91 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteNote(int id) =>
       (delete(noteItemTable)..where((t) => t.id.equals(id))).go();
 
+  // ── Export / Reset DAO ───────────────────────────────────────────────────
+
+  Future<void> clearAllData() async {
+    await delete(chatMessageTable).go();
+    await delete(setEntryTable).go();
+    await delete(scheduleSlotTable).go();
+    await delete(exerciseTemplateTable).go();
+    await delete(workoutTemplateTable).go();
+    await delete(noteItemTable).go();
+    await delete(taskItemTable).go();
+    await delete(goalTable).go();
+    await delete(weightEntryTable).go();
+    // Profile and preferences are intentionally kept.
+  }
+
+  Future<Map<String, dynamic>> exportAllData() async {
+    final weights   = await select(weightEntryTable).get();
+    final tasks     = await select(taskItemTable).get();
+    final notes     = await select(noteItemTable).get();
+    final goals     = await select(goalTable).get();
+    final templates = await (select(workoutTemplateTable)
+          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+        .get();
+
+    final workoutsJson = <Map<String, dynamic>>[];
+    for (final tmpl in templates) {
+      final exercises = await (select(exerciseTemplateTable)
+            ..where((e) => e.workoutTemplateId.equals(tmpl.id))
+            ..orderBy([(e) => OrderingTerm.asc(e.sortOrder)]))
+          .get();
+      final exList = <Map<String, dynamic>>[];
+      for (final ex in exercises) {
+        final sets = await (select(setEntryTable)
+              ..where((s) => s.exerciseTemplateId.equals(ex.id))
+              ..orderBy([
+                (s) => OrderingTerm.desc(s.date),
+                (s) => OrderingTerm.asc(s.setIndex),
+              ]))
+            .get();
+        exList.add({
+          'name': ex.name,
+          'sets': sets.map((s) => {
+                'date': s.date.toIso8601String(),
+                'setIndex': s.setIndex,
+                'weightKg': s.weightKg,
+                'reps': s.reps,
+              }).toList(),
+        });
+      }
+      workoutsJson.add({'name': tmpl.name, 'exercises': exList});
+    }
+
+    return {
+      'exportedAt': DateTime.now().toIso8601String(),
+      'weight': weights.map((w) => {
+            'date': w.date.toIso8601String(),
+            'value': w.value,
+            'note': w.note,
+          }).toList(),
+      'tasks': tasks.map((t) => {
+            'body': t.body,
+            'group': t.group,
+            'priority': t.priority,
+            'isDone': t.isDone,
+            'completedAt': t.completedAt?.toIso8601String(),
+            'createdAt': t.createdAt.toIso8601String(),
+          }).toList(),
+      'notes': notes.map((n) => {
+            'title': n.title,
+            'body': n.body,
+            'isPinned': n.isPinned,
+            'createdAt': n.createdAt.toIso8601String(),
+            'updatedAt': n.updatedAt.toIso8601String(),
+          }).toList(),
+      'goals': goals.map((g) => {
+            'label': g.label,
+            'startValue': g.startValue,
+            'currentValue': g.currentValue,
+            'targetValue': g.targetValue,
+            'unit': g.unit,
+          }).toList(),
+      'workouts': workoutsJson,
+    };
+  }
+
   /// Overwrites all sets for [exerciseId] on [date] with [sets].
   Future<void> logSets({
     required int exerciseId,
