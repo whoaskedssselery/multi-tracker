@@ -12,19 +12,19 @@ import '../../../app/theme/typography.dart';
 import '../../../core/db/database.dart';
 import '../../../main.dart';
 
-// ─── Screen ──────────────────────────────────────────────────────────────────
+// ─── NotesPane — embeddable widget (no Scaffold) ─────────────────────────────
+// State is public so TasksScreen can call newNote() via GlobalKey.
 
-class NotesScreen extends ConsumerStatefulWidget {
-  const NotesScreen({super.key});
+class NotesPane extends ConsumerStatefulWidget {
+  const NotesPane({super.key});
 
   @override
-  ConsumerState<NotesScreen> createState() => _NotesScreenState();
+  NotesPaneState createState() => NotesPaneState();
 }
 
-class _NotesScreenState extends ConsumerState<NotesScreen> {
+class NotesPaneState extends ConsumerState<NotesPane> {
   int?   _selectedId;
   String _searchQuery = '';
-  bool   _sidebarVisible = true;
 
   final _searchCtrl = TextEditingController();
   final _titleCtrl  = TextEditingController();
@@ -45,7 +45,19 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     super.dispose();
   }
 
-  // ── Selection ─────────────────────────────────────────────────
+  // ── Public API (called via GlobalKey from TasksScreen) ────────────────────
+
+  Future<void> newNote() async {
+    _flushSave();
+    final id = await database.addNote();
+    await Future.microtask(() {});
+    if (!mounted) return;
+    final notes = ref.read(notesProvider).valueOrNull ?? [];
+    final note  = notes.where((n) => n.id == id).firstOrNull;
+    if (note != null) _select(note);
+  }
+
+  // ── Selection & auto-save ──────────────────────────────────────────────────
 
   void _select(NoteItemTableData note) {
     if (_selectedId == note.id) return;
@@ -54,8 +66,6 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     _titleCtrl.text = note.title == 'Без названия' ? '' : note.title;
     _bodyCtrl.text  = note.body;
   }
-
-  // ── Auto-save (debounced 700 ms) ──────────────────────────────
 
   void _onChanged() {
     _saveTimer?.cancel();
@@ -73,21 +83,6 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         body:  _bodyCtrl.text);
   }
 
-  // ── New note ──────────────────────────────────────────────────
-
-  Future<void> _newNote() async {
-    _flushSave();
-    final id = await database.addNote();
-    // Wait one frame so the stream rebuilds the list
-    await Future.microtask(() {});
-    if (!mounted) return;
-    final notes = ref.read(notesProvider).valueOrNull ?? [];
-    final note  = notes.where((n) => n.id == id).firstOrNull;
-    if (note != null) _select(note);
-  }
-
-  // ── Delete current note ───────────────────────────────────────
-
   Future<void> _deleteSelected() async {
     final id = _selectedId;
     if (id == null) return;
@@ -98,111 +93,67 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     await database.deleteNote(id);
   }
 
-  // ── Pin toggle ────────────────────────────────────────────────
-
   Future<void> _togglePin(NoteItemTableData note) =>
       database.updateNote(note.id, isPinned: !note.isPinned);
 
-  // ── Build ─────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final t = _t;
     _notes = ref.watch(notesProvider).valueOrNull ?? [];
 
-    // Selected note (may have been deleted)
+    // If selected note was deleted, clear selection
     final selected = _selectedId == null
         ? null
         : _notes.where((n) => n.id == _selectedId).firstOrNull;
     if (selected == null && _selectedId != null) {
-      // Was deleted externally
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _selectedId = null);
       });
     }
 
-    // Filter
     final q = _searchQuery.toLowerCase();
     final visible = q.isEmpty
         ? _notes
-        : _notes
-            .where((n) =>
-                n.title.toLowerCase().contains(q) ||
-                n.body.toLowerCase().contains(q))
-            .toList();
+        : _notes.where((n) =>
+            n.title.toLowerCase().contains(q) ||
+            n.body.toLowerCase().contains(q)).toList();
 
     final pinned  = visible.where((n) => n.isPinned).toList();
     final regular = visible.where((n) => !n.isPinned).toList();
 
-    return Scaffold(
-      backgroundColor: t.bg,
-      body: Row(
-        children: [
-          // ── Sidebar ──
-          SizedBox(
-            width: 260,
-            child: Column(
-              children: [
-                _buildSidebarHeader(context, t),
-                Divider(height: 1, color: t.divider),
-                _buildSearch(t),
-                Expanded(
-                  child: _buildNoteList(t, pinned, regular),
-                ),
-              ],
-            ),
+    return Row(
+      children: [
+        // ── Sidebar ──
+        SizedBox(
+          width: 240,
+          child: Column(
+            children: [
+              _buildSearch(t),
+              Divider(height: 1, color: t.divider),
+              Expanded(child: _buildList(t, pinned, regular)),
+            ],
           ),
-          VerticalDivider(width: 1, color: t.divider),
-          // ── Editor ──
-          Expanded(
-            child: selected == null
-                ? _buildEmptyState(context, t)
-                : _buildEditor(context, t, selected),
-          ),
-        ],
-      ),
+        ),
+        VerticalDivider(width: 1, color: t.divider),
+        // ── Editor ──
+        Expanded(
+          child: selected == null
+              ? _buildEmptyState(context, t)
+              : _buildEditor(context, t, selected),
+        ),
+      ],
     );
   }
 
-  // ── Sidebar header ────────────────────────────────────────────
-
-  Widget _buildSidebarHeader(BuildContext context, ThemeTokens t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl3, vertical: AppSpacing.xl),
-      child: Row(
-        children: [
-          Text('Заметки',
-              style: Theme.of(context).textTheme.headlineLarge),
-          const Spacer(),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: _newNote,
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: AppColors.accent,
-                  borderRadius: AppRadius.smAll,
-                ),
-                child: const Icon(Icons.add, size: 18, color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Search bar ────────────────────────────────────────────────
+  // ── Search ────────────────────────────────────────────────────────────────
 
   Widget _buildSearch(ThemeTokens t) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Container(
-        height: 34,
+        height: 36,
         decoration: BoxDecoration(
           color: t.surfaceSunken,
           borderRadius: AppRadius.smAll,
@@ -210,7 +161,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         child: Row(
           children: [
             const SizedBox(width: 10),
-            Icon(Icons.search, size: 14, color: t.text3),
+            Icon(Icons.search, size: 15, color: t.text3),
             const SizedBox(width: 6),
             Expanded(
               child: TextField(
@@ -218,11 +169,13 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 onChanged: (v) => setState(() => _searchQuery = v),
                 style: TextStyle(fontSize: 13, color: t.text1),
                 decoration: InputDecoration(
-                  hintText: 'Поиск...',
+                  hintText: 'Поиск по заметкам...',
                   hintStyle: TextStyle(fontSize: 13, color: t.text4),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
+                  filled: true,
+                  fillColor: Colors.transparent,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -248,23 +201,20 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     );
   }
 
-  // ── Note list ─────────────────────────────────────────────────
+  // ── Note list ─────────────────────────────────────────────────────────────
 
-  Widget _buildNoteList(ThemeTokens t,
+  Widget _buildList(ThemeTokens t,
       List<NoteItemTableData> pinned, List<NoteItemTableData> regular) {
     if (pinned.isEmpty && regular.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.sticky_note_2_outlined, size: 36, color: t.text4),
+            Icon(Icons.sticky_note_2_outlined, size: 32, color: t.text4),
             const SizedBox(height: 10),
             Text(
-              _searchQuery.isEmpty
-                  ? 'Нет заметок'
-                  : 'Ничего не найдено',
+              _searchQuery.isEmpty ? 'Нет заметок' : 'Ничего не найдено',
               style: TextStyle(fontSize: 13, color: t.text4),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -281,11 +231,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 style: AppTypography.caps(color: t.text4)),
           ),
           ...pinned.map((n) => _NoteCard(
-                note: n,
-                selected: n.id == _selectedId,
-                t: t,
-                onTap: () => _select(n),
-              )),
+                note: n, selected: n.id == _selectedId,
+                t: t, onTap: () => _select(n))),
           if (regular.isNotEmpty) const SizedBox(height: 8),
         ],
         if (regular.isNotEmpty) ...[
@@ -296,58 +243,34 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   style: AppTypography.caps(color: t.text4)),
             ),
           ...regular.map((n) => _NoteCard(
-                note: n,
-                selected: n.id == _selectedId,
-                t: t,
-                onTap: () => _select(n),
-              )),
+                note: n, selected: n.id == _selectedId,
+                t: t, onTap: () => _select(n))),
         ],
       ],
     );
   }
 
-  // ── Empty state ───────────────────────────────────────────────
+  // ── Empty state ───────────────────────────────────────────────────────────
 
   Widget _buildEmptyState(BuildContext context, ThemeTokens t) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.sticky_note_2_outlined, size: 56, color: t.text4),
-          const SizedBox(height: 16),
+          Icon(Icons.sticky_note_2_outlined, size: 48, color: t.text4),
+          const SizedBox(height: 14),
           Text(
             _notes.isEmpty
                 ? 'Здесь будут твои заметки'
                 : 'Выбери заметку слева',
             style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w500, color: t.text3),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _notes.isEmpty ? 'Нажми + чтобы создать первую' : '',
-            style: TextStyle(fontSize: 14, color: t.text4),
+                fontSize: 15, fontWeight: FontWeight.w500, color: t.text3),
           ),
           if (_notes.isEmpty) ...[
-            const SizedBox(height: 24),
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: ElevatedButton.icon(
-                onPressed: _newNote,
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Новая заметка'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  side: BorderSide.none,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdAll),
-                  textStyle: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-              ),
+            const SizedBox(height: 6),
+            Text(
+              'Нажми «Новая заметка» чтобы начать',
+              style: TextStyle(fontSize: 13, color: t.text4),
             ),
           ],
         ],
@@ -355,16 +278,21 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     );
   }
 
-  // ── Editor ────────────────────────────────────────────────────
+  // ── Editor ────────────────────────────────────────────────────────────────
 
   Widget _buildEditor(
       BuildContext context, ThemeTokens t, NoteItemTableData note) {
+    final wordCount = _bodyCtrl.text.trim().isEmpty
+        ? 0
+        : _bodyCtrl.text.trim().split(RegExp(r'\s+')).length;
+    final charCount = _bodyCtrl.text.length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Toolbar ──
+        // Toolbar
         Container(
-          height: 48,
+          height: 46,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
           child: Row(
             children: [
@@ -372,11 +300,12 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 _fmtDate(note.updatedAt),
                 style: TextStyle(fontSize: 12, color: t.text4),
               ),
+              const SizedBox(width: 12),
+              Text(
+                '$wordCount сл · $charCount симв',
+                style: TextStyle(fontSize: 12, color: t.text4),
+              ),
               const Spacer(),
-              // Word count
-              _buildWordCount(t),
-              const SizedBox(width: 16),
-              // Pin button
               MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
@@ -393,8 +322,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
-              // Delete button
+              const SizedBox(width: 2),
               MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
@@ -410,7 +338,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           ),
         ),
         Divider(height: 1, color: t.divider),
-        // ── Title field ──
+        // Title
         Padding(
           padding: const EdgeInsets.fromLTRB(
               AppSpacing.xl3, AppSpacing.xl2, AppSpacing.xl3, 0),
@@ -418,30 +346,32 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
             controller: _titleCtrl,
             onChanged: (_) => _onChanged(),
             style: TextStyle(
-                fontSize: 28,
+                fontSize: 26,
                 fontWeight: FontWeight.w700,
                 color: t.text1,
                 height: 1.2),
             decoration: InputDecoration(
               hintText: 'Без названия',
               hintStyle: TextStyle(
-                  fontSize: 28,
+                  fontSize: 26,
                   fontWeight: FontWeight.w700,
                   color: t.text4,
                   height: 1.2),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
+              filled: true,
+              fillColor: Colors.transparent,
               isDense: true,
               contentPadding: EdgeInsets.zero,
             ),
           ),
         ),
-        // ── Body field ──
+        // Body
         Expanded(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl3, AppSpacing.lg,
+                AppSpacing.xl3, AppSpacing.md,
                 AppSpacing.xl3, AppSpacing.xl3),
             child: TextField(
               controller: _bodyCtrl,
@@ -449,15 +379,15 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               maxLines: null,
               expands: true,
               textAlignVertical: TextAlignVertical.top,
-              style: TextStyle(
-                  fontSize: 15, height: 1.65, color: t.text1),
+              style: TextStyle(fontSize: 15, height: 1.65, color: t.text1),
               decoration: InputDecoration(
                 hintText: 'Начни писать...',
-                hintStyle:
-                    TextStyle(fontSize: 15, color: t.text4),
+                hintStyle: TextStyle(fontSize: 15, color: t.text4),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
+                filled: true,
+                fillColor: Colors.transparent,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
               ),
@@ -468,21 +398,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     );
   }
 
-  // ── Word / char count ─────────────────────────────────────────
-
-  Widget _buildWordCount(ThemeTokens t) {
-    final body   = _bodyCtrl.text;
-    final words  = body.trim().isEmpty
-        ? 0
-        : body.trim().split(RegExp(r'\s+')).length;
-    final chars  = body.length;
-    return Text(
-      '$words сл · $chars симв',
-      style: TextStyle(fontSize: 11, color: t.text4),
-    );
-  }
-
-  // ── Delete confirmation ───────────────────────────────────────
+  // ── Delete confirmation ───────────────────────────────────────────────────
 
   Future<void> _confirmDelete() async {
     final t = _t;
@@ -493,10 +409,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
         title: Text('Удалить заметку?',
             style: Theme.of(ctx).textTheme.titleLarge),
-        content: Text(
-          'Это действие нельзя отменить.',
-          style: TextStyle(fontSize: 14, color: t.text2),
-        ),
+        content: Text('Это действие нельзя отменить.',
+            style: TextStyle(fontSize: 14, color: t.text2)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -508,8 +422,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               foregroundColor: Colors.white,
               elevation: 0,
               side: BorderSide.none,
-              shape: RoundedRectangleBorder(
-                  borderRadius: AppRadius.mdAll),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Удалить'),
@@ -520,7 +433,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     if (confirmed == true) await _deleteSelected();
   }
 
-  // ── Helpers ───────────────────────────────────────────────────
+  // ── Date formatter ────────────────────────────────────────────────────────
 
   static String _fmtDate(DateTime d) {
     final now     = DateTime.now();
@@ -531,13 +444,12 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     if (noteDay == today) return 'сегодня $hh:$mm';
     final yesterday = today.subtract(const Duration(days: 1));
     if (noteDay == yesterday) return 'вчера $hh:$mm';
-    final dd  = d.day.toString().padLeft(2, '0');
-    final mo  = d.month.toString().padLeft(2, '0');
-    return '$dd.$mo.${d.year}  $hh:$mm';
+    return '${d.day.toString().padLeft(2,'0')}.'
+        '${d.month.toString().padLeft(2,'0')}.${d.year}  $hh:$mm';
   }
 }
 
-// ─── Note card (sidebar list item) ───────────────────────────────────────────
+// ─── Note card ────────────────────────────────────────────────────────────────
 
 class _NoteCard extends StatelessWidget {
   const _NoteCard({
@@ -558,8 +470,7 @@ class _NoteCard extends StatelessWidget {
     final preview = note.body.isEmpty
         ? 'Нет текста'
         : note.body.replaceAll('\n', ' ').trim();
-
-    final fg = selected ? t.accentPress : t.text1;
+    final fg  = selected ? t.accentPress : t.text1;
     final fg2 = selected
         ? t.accentPress.withValues(alpha: 0.65)
         : t.text3;

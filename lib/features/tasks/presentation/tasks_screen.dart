@@ -2,10 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-
 import '../../../app/providers/providers.dart';
-import '../../../app/router.dart';
 import '../../../app/theme/colors.dart';
 import '../../../app/theme/radius.dart';
 import '../../../app/theme/spacing.dart';
@@ -14,6 +11,7 @@ import '../../../app/theme/typography.dart';
 import '../../../core/db/database.dart';
 import '../../../core/notifications/notifications_service.dart';
 import '../../../main.dart';
+import '../../notes/presentation/notes_screen.dart';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -33,6 +31,10 @@ const _groupLabels = ['Сегодня', 'Завтра', 'На неделе', 'П
 const _priorityKeys   = ['none', 'low', 'mid', 'high'];
 const _priorityLabels = ['нет', 'низкий', 'средний', 'высокий'];
 
+// ─── Tab ─────────────────────────────────────────────────────────────────────
+
+enum _Tab { tasks, notes }
+
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
 class TasksScreen extends ConsumerStatefulWidget {
@@ -43,11 +45,13 @@ class TasksScreen extends ConsumerStatefulWidget {
 }
 
 class _TasksScreenState extends ConsumerState<TasksScreen> {
+  _Tab _activeTab = _Tab.tasks;
   int _folderIndex = 0;
   int? _selectedTaskId;
   String _searchQuery = '';
-  final _searchCtrl  = TextEditingController();
+  final _searchCtrl   = TextEditingController();
   final _taskBodyCtrl = TextEditingController();
+  final _notesPaneKey = GlobalKey<NotesPaneState>();
 
   // Populated from provider each build.
   List<TaskItemTableData> _allTasks = [];
@@ -362,6 +366,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   Widget build(BuildContext context) {
     final t = _t;
     _allTasks = ref.watch(tasksProvider).valueOrNull ?? [];
+    final noteCount = ref.watch(notesProvider).valueOrNull?.length ?? 0;
 
     final visible    = _forFolder(_folderIndex);
     final selectedTask = _selectedTaskId == null
@@ -373,25 +378,31 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
       backgroundColor: t.bg,
       body: Column(
         children: [
-          _buildTopBar(context, t, visible.length),
+          _buildTopBar(context, t, visible.length, noteCount),
           Divider(height: 1, color: t.divider),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: IndexedStack(
+              index: _activeTab == _Tab.tasks ? 0 : 1,
               children: [
-                SizedBox(
-                    width: 200,
-                    child: _buildFolderList(context, t)),
-                VerticalDivider(width: 1, color: t.divider),
-                Expanded(
-                    child: _buildTaskList(context, t, visible)),
-                if (wide && selectedTask != null) ...[
-                  VerticalDivider(width: 1, color: t.divider),
-                  SizedBox(
-                      width: 300,
-                      child: _buildDetailPanel(
-                          context, selectedTask, t)),
-                ],
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                        width: 200,
+                        child: _buildFolderList(context, t)),
+                    VerticalDivider(width: 1, color: t.divider),
+                    Expanded(
+                        child: _buildTaskList(context, t, visible)),
+                    if (wide && selectedTask != null) ...[
+                      VerticalDivider(width: 1, color: t.divider),
+                      SizedBox(
+                          width: 300,
+                          child: _buildDetailPanel(
+                              context, selectedTask, t)),
+                    ],
+                  ],
+                ),
+                NotesPane(key: _notesPaneKey),
               ],
             ),
           ),
@@ -403,10 +414,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   // ── Top bar ───────────────────────────────────────────────────────────────
 
   Widget _buildTopBar(
-      BuildContext context, ThemeTokens t, int visibleCount) {
+      BuildContext context, ThemeTokens t, int visibleCount, int noteCount) {
     final totalActive =
         _allTasks.where((t) => !t.isDone).length;
-    final noteCount = 0; // Notes wired in a later phase
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -425,14 +435,21 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _tabPill(context, 'Задачи', totalActive, true, t),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _activeTab = _Tab.tasks),
+                    child: _tabPill(context, 'Задачи', totalActive,
+                        _activeTab == _Tab.tasks, t),
+                  ),
+                ),
                 Container(width: 1, height: 44, color: t.border),
                 MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
-                    onTap: () => context.go(AppRoutes.notes),
-                    child: _tabPill(
-                        context, 'Заметки', noteCount, false, t),
+                    onTap: () => setState(() => _activeTab = _Tab.notes),
+                    child: _tabPill(context, 'Заметки', noteCount,
+                        _activeTab == _Tab.notes, t),
                   ),
                 ),
               ],
@@ -444,7 +461,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             child: SizedBox(
               height: 44,
               child: ElevatedButton(
-                onPressed: () => _showTaskForm(),
+                onPressed: _activeTab == _Tab.tasks
+                    ? () => _showTaskForm()
+                    : () => _notesPaneKey.currentState?.newNote(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
                   foregroundColor: Colors.white,
@@ -456,7 +475,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                   textStyle: const TextStyle(
                       fontSize: 14, fontWeight: FontWeight.w600),
                 ),
-                child: const Text('Новая задача'),
+                child: Text(_activeTab == _Tab.tasks
+                    ? 'Новая задача'
+                    : 'Новая заметка'),
               ),
             ),
           ),
