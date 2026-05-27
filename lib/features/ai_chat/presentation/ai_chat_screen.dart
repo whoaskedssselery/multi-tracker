@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/providers.dart';
@@ -331,12 +332,21 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 borderRadius: AppRadius.mdAll,
                 border: Border.all(color: t.borderSoft),
               ),
-              child: TextField(
+              child: Focus(
+                onKeyEvent: (_, event) {
+                  if (event is KeyDownEvent &&
+                      event.logicalKey == LogicalKeyboardKey.enter &&
+                      !HardwareKeyboard.instance.isShiftPressed) {
+                    if (!_sending) _sendMessage();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: TextField(
                 controller: _inputCtrl,
                 maxLines: 4,
                 minLines: 1,
                 style: TextStyle(fontSize: 14, color: t.text1),
-                onSubmitted: (_) => _sendMessage(),
                 decoration: InputDecoration(
                   hintText: 'Спросить...',
                   hintStyle: TextStyle(fontSize: 14, color: t.text4),
@@ -349,6 +359,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+              ), // Focus
             ),
           ),
           const SizedBox(width: 10),
