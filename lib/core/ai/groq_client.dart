@@ -4,7 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../network/dio_provider.dart';
 import '../storage/secure_storage.dart';
 
-part 'gemini_client.g.dart';
+part 'groq_client.g.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Exceptions
@@ -23,7 +23,7 @@ class NoApiKeyException extends GroqException {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Domain types (kept compatible with existing callers)
+// Domain types
 // ─────────────────────────────────────────────────────────────
 
 class ChatTurn {
@@ -34,8 +34,8 @@ class ChatTurn {
   Map<String, dynamic> toJson() => {'role': role, 'content': text};
 }
 
-class GeminiResponse {
-  const GeminiResponse({required this.text, this.finishReason = 'stop'});
+class GroqResponse {
+  const GroqResponse({required this.text, this.finishReason = 'stop'});
   final String text;
   final String finishReason;
 }
@@ -44,27 +44,24 @@ class GeminiResponse {
 // Groq client (OpenAI-compatible)
 // ─────────────────────────────────────────────────────────────
 
-class GeminiClient {
-  GeminiClient({required Dio dio}) : _dio = dio;
+class GroqClient {
+  GroqClient({required Dio dio}) : _dio = dio;
 
   final Dio _dio;
 
   static const _baseUrl = 'https://api.groq.com/openai/v1/chat/completions';
   static const _defaultModel = 'llama-3.3-70b-versatile';
 
-  /// Send a message with optional conversation history.
-  /// Throws [NoApiKeyException] if key not set.
-  Future<GeminiResponse> generateContent(
+  Future<GroqResponse> generateContent(
     String prompt, {
     List<ChatTurn> history = const [],
     String? systemInstruction,
     String? model,
   }) async {
     final key = await SecureStorageService.instance.groqApiKey;
-    if (key == null || key.isEmpty) throw const NoApiKeyException();
+    if (key == null || key.trim().isEmpty) throw const NoApiKeyException();
 
     final messages = <Map<String, dynamic>>[];
-
     if (systemInstruction != null) {
       messages.add({'role': 'system', 'content': systemInstruction});
     }
@@ -75,7 +72,7 @@ class GeminiClient {
       final res = await _dio.post<Map<String, dynamic>>(
         _baseUrl,
         options: Options(
-          headers: {'Authorization': 'Bearer $key'},
+          headers: {'Authorization': 'Bearer ${key.trim()}'},
         ),
         data: {
           'model': model ?? _defaultModel,
@@ -95,7 +92,7 @@ class GeminiClient {
     }
   }
 
-  GeminiResponse _parse(Map<String, dynamic> data) {
+  GroqResponse _parse(Map<String, dynamic> data) {
     final choices = data['choices'] as List?;
     if (choices == null || choices.isEmpty) {
       throw const GroqException('No choices in response');
@@ -103,15 +100,15 @@ class GeminiClient {
     final choice = choices.first as Map<String, dynamic>;
     final text = choice['message']?['content'] as String? ?? '';
     final finish = choice['finish_reason'] as String? ?? 'stop';
-    return GeminiResponse(text: text.trim(), finishReason: finish);
+    return GroqResponse(text: text.trim(), finishReason: finish);
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// Provider (name kept for backwards compat with existing usages)
+// Provider
 // ─────────────────────────────────────────────────────────────
 
 @riverpod
-GeminiClient geminiClient(GeminiClientRef ref) {
-  return GeminiClient(dio: ref.watch(dioProvider));
+GroqClient groqClient(GroqClientRef ref) {
+  return GroqClient(dio: ref.watch(dioProvider));
 }

@@ -267,16 +267,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsUnits => 'Единицы';
 
   @override
-  String get settingsGeminiKey => 'Gemini API Key';
+  String get settingsGroqKey => 'Groq API Key';
 
   @override
-  String get settingsGeminiKeyHint => 'Вставь ключ из aistudio.google.com';
+  String get settingsGroqKeyHint => 'Вставь ключ из console.groq.com';
 
   @override
-  String get settingsGeminiVerify => 'Проверить';
+  String get settingsGroqVerify => 'Проверить';
 
   @override
-  String get settingsGeminiOk => 'Ключ работает';
+  String get settingsGroqOk => 'Ключ работает';
 
   @override
   String get settingsNotifAll => 'Все уведомления';

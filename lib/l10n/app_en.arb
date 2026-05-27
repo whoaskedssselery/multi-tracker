@@ -115,10 +115,10 @@
   "settingsAccent": "Accent colour",
   "settingsUnits": "Units",
 
-  "settingsGeminiKey": "Gemini API Key",
-  "settingsGeminiKeyHint": "Paste key from aistudio.google.com",
-  "settingsGeminiVerify": "Verify",
-  "settingsGeminiOk": "Key is working",
+  "settingsGroqKey": "Groq API Key",
+  "settingsGroqKeyHint": "Paste key from console.groq.com",
+  "settingsGroqVerify": "Verify",
+  "settingsGroqOk": "Key is working",
 
   "settingsNotifAll": "All notifications",
   "settingsNotifTasks": "Task reminders",

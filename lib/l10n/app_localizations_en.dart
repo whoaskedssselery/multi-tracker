@@ -267,16 +267,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsUnits => 'Units';
 
   @override
-  String get settingsGeminiKey => 'Gemini API Key';
+  String get settingsGroqKey => 'Groq API Key';
 
   @override
-  String get settingsGeminiKeyHint => 'Paste key from aistudio.google.com';
+  String get settingsGroqKeyHint => 'Paste key from console.groq.com';
 
   @override
-  String get settingsGeminiVerify => 'Verify';
+  String get settingsGroqVerify => 'Verify';
 
   @override
-  String get settingsGeminiOk => 'Key is working';
+  String get settingsGroqOk => 'Key is working';
 
   @override
   String get settingsNotifAll => 'All notifications';

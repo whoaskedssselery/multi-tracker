@@ -602,29 +602,29 @@ abstract class AppLocalizations {
   /// **'Единицы'**
   String get settingsUnits;
 
-  /// No description provided for @settingsGeminiKey.
+  /// No description provided for @settingsGroqKey.
   ///
   /// In ru, this message translates to:
-  /// **'Gemini API Key'**
-  String get settingsGeminiKey;
+  /// **'Groq API Key'**
+  String get settingsGroqKey;
 
-  /// No description provided for @settingsGeminiKeyHint.
+  /// No description provided for @settingsGroqKeyHint.
   ///
   /// In ru, this message translates to:
-  /// **'Вставь ключ из aistudio.google.com'**
-  String get settingsGeminiKeyHint;
+  /// **'Вставь ключ из console.groq.com'**
+  String get settingsGroqKeyHint;
 
-  /// No description provided for @settingsGeminiVerify.
+  /// No description provided for @settingsGroqVerify.
   ///
   /// In ru, this message translates to:
   /// **'Проверить'**
-  String get settingsGeminiVerify;
+  String get settingsGroqVerify;
 
-  /// No description provided for @settingsGeminiOk.
+  /// No description provided for @settingsGroqOk.
   ///
   /// In ru, this message translates to:
   /// **'Ключ работает'**
-  String get settingsGeminiOk;
+  String get settingsGroqOk;
 
   /// No description provided for @settingsNotifAll.
   ///

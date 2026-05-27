@@ -115,10 +115,10 @@
   "settingsAccent": "Акцент",
   "settingsUnits": "Единицы",
 
-  "settingsGeminiKey": "Gemini API Key",
-  "settingsGeminiKeyHint": "Вставь ключ из aistudio.google.com",
-  "settingsGeminiVerify": "Проверить",
-  "settingsGeminiOk": "Ключ работает",
+  "settingsGroqKey": "Groq API Key",
+  "settingsGroqKeyHint": "Вставь ключ из console.groq.com",
+  "settingsGroqVerify": "Проверить",
+  "settingsGroqOk": "Ключ работает",
 
   "settingsNotifAll": "Все уведомления",
   "settingsNotifTasks": "Задачи",

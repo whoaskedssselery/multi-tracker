@@ -1,4 +1,4 @@
-/// Gemini prompt templates
+/// Groq prompt templates
 ///
 /// Each function returns a ready-to-send prompt string.
 /// Fill in TODOs when implementing the respective feature.

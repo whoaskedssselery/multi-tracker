@@ -273,6 +273,333 @@ class AppDatabase extends _$AppDatabase {
   Future<void> upsertPreferences(AppPreferencesTableCompanion companion) =>
       (update(appPreferencesTable)..where((t) => t.id.equals(1)))
           .write(companion.copyWith(updatedAt: Value(DateTime.now())));
+
+  // ── Weight DAO ───────────────────────────────────────────────────────────
+
+  /// Stream of weight entries newest-first, capped at [limit] rows.
+  Stream<List<WeightEntryTableData>> watchWeightEntries(
+          {int limit = 366}) =>
+      (select(weightEntryTable)
+            ..orderBy([
+              (t) => OrderingTerm.desc(t.date),
+              (t) => OrderingTerm.desc(t.createdAt), // tiebreaker for same-day entries
+            ])
+            ..limit(limit))
+          .watch();
+
+  Future<void> addWeightEntry({
+    required double value,
+    required DateTime date,
+    String? note,
+  }) =>
+      into(weightEntryTable).insert(
+        WeightEntryTableCompanion.insert(
+          value: value,
+          date: date,
+          note: Value(note),
+        ),
+      );
+
+  Future<void> deleteWeightEntry(int id) =>
+      (delete(weightEntryTable)..where((t) => t.id.equals(id))).go();
+
+  // ── Tasks DAO ────────────────────────────────────────────────────────────
+
+  /// All tasks, active first, then by creation time.
+  Stream<List<TaskItemTableData>> watchAllTasks() =>
+      (select(taskItemTable)
+            ..orderBy([
+              (t) => OrderingTerm(expression: t.isDone),
+              (t) => OrderingTerm.asc(t.createdAt),
+            ]))
+          .watch();
+
+  Future<int> addTask({
+    required String body,
+    String group = 'none',
+    String priority = 'none',
+    DateTime? notifyAt,
+  }) =>
+      into(taskItemTable).insert(
+        TaskItemTableCompanion.insert(
+          body: body,
+          group: Value(group),
+          priority: Value(priority),
+          notifyAt: Value(notifyAt),
+        ),
+      );
+
+  Future<void> setTaskNotificationId(int id, int? notifId) =>
+      (update(taskItemTable)..where((t) => t.id.equals(id))).write(
+        TaskItemTableCompanion(notificationId: Value(notifId)),
+      );
+
+  Future<void> toggleTaskDone(int id, {required bool done}) =>
+      (update(taskItemTable)..where((t) => t.id.equals(id))).write(
+        TaskItemTableCompanion(
+          isDone: Value(done),
+          completedAt: Value(done ? DateTime.now() : null),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+  Future<void> updateTask(
+    int id, {
+    String? body,
+    String? group,
+    String? priority,
+    DateTime? notifyAt,
+    bool clearNotifyAt = false,
+  }) =>
+      (update(taskItemTable)..where((t) => t.id.equals(id))).write(
+        TaskItemTableCompanion(
+          body: body != null ? Value(body) : const Value.absent(),
+          group: group != null ? Value(group) : const Value.absent(),
+          priority: priority != null ? Value(priority) : const Value.absent(),
+          notifyAt: clearNotifyAt
+              ? const Value(null)
+              : notifyAt != null
+                  ? Value(notifyAt)
+                  : const Value.absent(),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+  Future<void> deleteTask(int id) =>
+      (delete(taskItemTable)..where((t) => t.id.equals(id))).go();
+
+  // ── Workout DAO ──────────────────────────────────────────────────────────
+
+  Stream<List<WorkoutTemplateTableData>> watchWorkoutTemplates() =>
+      (select(workoutTemplateTable)
+            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+          .watch();
+
+  Stream<List<ExerciseTemplateTableData>> watchExercisesForTemplate(
+          int templateId) =>
+      (select(exerciseTemplateTable)
+            ..where((t) => t.workoutTemplateId.equals(templateId))
+            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+          .watch();
+
+  Stream<List<ScheduleSlotTableData>> watchScheduleSlots() =>
+      select(scheduleSlotTable).watch();
+
+  /// Stream of midnight-local DateTimes within [from]..[to] that have logged sets.
+  Stream<Set<DateTime>> watchLoggedDates(
+          {required DateTime from, required DateTime to}) =>
+      (select(setEntryTable)
+            ..where((t) =>
+                t.date.isBiggerOrEqualValue(from) &
+                t.date.isSmallerOrEqualValue(to)))
+          .watch()
+          .map((rows) => {
+                for (final r in rows)
+                  DateTime(r.date.year, r.date.month, r.date.day)
+              });
+
+  /// Summary string of the last logged sets for [exerciseId], e.g. "80×8 · 80×8".
+  Future<String> getLastSetsString(int exerciseId) async {
+    final rows = await (select(setEntryTable)
+          ..where((t) => t.exerciseTemplateId.equals(exerciseId))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.date),
+            (t) => OrderingTerm.asc(t.setIndex),
+          ]))
+        .get();
+    if (rows.isEmpty) return '';
+    final lastDate = rows.first.date;
+    return rows
+        .where((r) =>
+            r.date.year == lastDate.year &&
+            r.date.month == lastDate.month &&
+            r.date.day == lastDate.day)
+        .map((s) {
+          final w = s.weightKg == s.weightKg.roundToDouble()
+              ? s.weightKg.toInt().toString()
+              : s.weightKg.toStringAsFixed(1);
+          return '${w}×${s.reps}';
+        })
+        .join(' · ');
+  }
+
+  Future<int> addWorkoutTemplate(String name) =>
+      into(workoutTemplateTable)
+          .insert(WorkoutTemplateTableCompanion.insert(name: name));
+
+  /// Deletes template and all its exercises + their set entries.
+  Future<void> deleteWorkoutTemplate(int id) async {
+    final exs = await (select(exerciseTemplateTable)
+          ..where((t) => t.workoutTemplateId.equals(id)))
+        .get();
+    for (final ex in exs) {
+      await (delete(setEntryTable)
+            ..where((t) => t.exerciseTemplateId.equals(ex.id)))
+          .go();
+    }
+    await (delete(exerciseTemplateTable)
+          ..where((t) => t.workoutTemplateId.equals(id)))
+        .go();
+    await (delete(scheduleSlotTable)
+          ..where((t) => t.workoutTemplateId.equals(id)))
+        .go();
+    await (delete(workoutTemplateTable)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<void> addExercise(
+          {required int templateId, required String name}) async {
+    final count = await (select(exerciseTemplateTable)
+          ..where((t) => t.workoutTemplateId.equals(templateId)))
+        .get();
+    await into(exerciseTemplateTable).insert(
+      ExerciseTemplateTableCompanion.insert(
+        workoutTemplateId: templateId,
+        name: name,
+        sortOrder: Value(count.length),
+      ),
+    );
+  }
+
+  Future<void> deleteExercise(int id) async {
+    await (delete(setEntryTable)
+          ..where((t) => t.exerciseTemplateId.equals(id)))
+        .go();
+    await (delete(exerciseTemplateTable)..where((t) => t.id.equals(id))).go();
+  }
+
+  /// Sets workout [templateId] for [dayOfWeek] (1=Mon..7=Sun).
+  /// Pass null to clear (mark as rest).
+  Future<void> setScheduleSlot(int dayOfWeek, int? templateId) async {
+    await (delete(scheduleSlotTable)
+          ..where((t) => t.dayOfWeek.equals(dayOfWeek)))
+        .go();
+    if (templateId != null) {
+      await into(scheduleSlotTable).insert(
+        ScheduleSlotTableCompanion.insert(
+          workoutTemplateId: templateId,
+          dayOfWeek: dayOfWeek,
+        ),
+      );
+    }
+  }
+
+  // ── Goals DAO ────────────────────────────────────────────────────────────
+
+  Stream<List<GoalTableData>> watchGoals() =>
+      (select(goalTable)..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+          .watch();
+
+  Future<void> addGoal({
+    required String label,
+    required double startValue,
+    required double currentValue,
+    required double targetValue,
+    String unit = 'kg',
+  }) =>
+      into(goalTable).insert(GoalTableCompanion.insert(
+        label: label,
+        startValue: startValue,
+        currentValue: currentValue,
+        targetValue: targetValue,
+        unit: Value(unit),
+      ));
+
+  Future<void> updateGoal(
+    int id, {
+    String? label,
+    double? startValue,
+    double? currentValue,
+    double? targetValue,
+    String? unit,
+  }) =>
+      (update(goalTable)..where((t) => t.id.equals(id))).write(
+        GoalTableCompanion(
+          label: label != null ? Value(label) : const Value.absent(),
+          startValue:
+              startValue != null ? Value(startValue) : const Value.absent(),
+          currentValue:
+              currentValue != null ? Value(currentValue) : const Value.absent(),
+          targetValue:
+              targetValue != null ? Value(targetValue) : const Value.absent(),
+          unit: unit != null ? Value(unit) : const Value.absent(),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+  Future<void> deleteGoal(int id) =>
+      (delete(goalTable)..where((t) => t.id.equals(id))).go();
+
+  // ── Workout dates (for streaks) ──────────────────────────────────────────
+
+  Stream<List<DateTime>> watchWorkoutDates() =>
+      select(setEntryTable).watch().map((rows) {
+        final seen = <String>{};
+        final result = <DateTime>[];
+        for (final r in rows) {
+          final key =
+              '${r.date.year}-${r.date.month}-${r.date.day}';
+          if (seen.add(key)) {
+            result.add(DateTime(r.date.year, r.date.month, r.date.day));
+          }
+        }
+        result.sort((a, b) => b.compareTo(a)); // desc
+        return result;
+      });
+
+  // ── Chat DAO ─────────────────────────────────────────────────────────────
+
+  Stream<List<ChatMessageTableData>> watchChatMessages() =>
+      (select(chatMessageTable)
+            ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+          .watch();
+
+  Future<void> addChatMessage({
+    required String role,
+    required String content,
+    String contextFilter = 'all',
+  }) =>
+      into(chatMessageTable).insert(
+        ChatMessageTableCompanion.insert(
+          role: role,
+          content: content,
+          contextFilter: Value(contextFilter),
+        ),
+      );
+
+  Future<List<ChatMessageTableData>> getLastChatMessages({int limit = 20}) async {
+    final rows = await (select(chatMessageTable)
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(limit))
+        .get();
+    return rows.reversed.toList();
+  }
+
+  Future<void> clearChatHistory() => delete(chatMessageTable).go();
+
+  /// Overwrites all sets for [exerciseId] on [date] with [sets].
+  Future<void> logSets({
+    required int exerciseId,
+    required DateTime date,
+    required List<({double weightKg, int reps})> sets,
+  }) async {
+    final midnight = DateTime(date.year, date.month, date.day);
+    await (delete(setEntryTable)
+          ..where((t) =>
+              t.exerciseTemplateId.equals(exerciseId) &
+              t.date.equals(midnight)))
+        .go();
+    for (var i = 0; i < sets.length; i++) {
+      await into(setEntryTable).insert(
+        SetEntryTableCompanion.insert(
+          exerciseTemplateId: exerciseId,
+          date: midnight,
+          setIndex: i,
+          weightKg: sets[i].weightKg,
+          reps: sets[i].reps,
+        ),
+      );
+    }
+  }
 }
 
 QueryExecutor _openConnection() {

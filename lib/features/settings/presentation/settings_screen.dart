@@ -1,4 +1,6 @@
-import 'package:dio/dio.dart';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -338,10 +340,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            displayed,
-            style: AppTypography.mono(fontSize: 12, color: t.text3),
-            overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  displayed,
+                  style: AppTypography.mono(fontSize: 12, color: t.text3),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (hasKey)
+                Text(
+                  '${apiKey.length} симв.',
+                  style: TextStyle(fontSize: 11, color: t.text4),
+                ),
+            ],
           ),
           if (hasKey) ...[
             const SizedBox(height: 12),
@@ -526,63 +539,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // premium-only models.
   static const _pingModel = 'llama-3.1-8b-instant';
 
-  Future<void> _pingGroq(String apiKey, String _model) async {
+  Future<void> _pingGroq(String rawKey, String _model) async {
+    // Strip surrounding quotes in case user pasted from .env ("gsk_...")
+    var apiKey = rawKey.trim();
+    if (apiKey.length >= 2 && apiKey.startsWith('"') && apiKey.endsWith('"')) {
+      apiKey = apiKey.substring(1, apiKey.length - 1).trim();
+    }
+
     setState(() => _pingLoading = true);
     try {
-      final dio = Dio(BaseOptions(
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 15),
-        sendTimeout: const Duration(seconds: 10),
-      ));
-      await dio.post<dynamic>(
-        'https://api.groq.com/openai/v1/chat/completions',
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $apiKey',
-            'Content-Type': 'application/json',
-          },
-        ),
-        data: {
-          'model': _pingModel,
-          'messages': [
-            {'role': 'user', 'content': 'hi'}
-          ],
-          'max_tokens': 1,
-        },
+      final client = HttpClient();
+      final req = await client.postUrl(
+        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
       );
-      if (mounted) {
+      req.headers.set('authorization', 'Bearer $apiKey');
+      req.headers.set('content-type', 'application/json');
+      req.write(
+        '{"model":"$_pingModel","messages":[{"role":"user","content":"hi"}],"max_tokens":1}',
+      );
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      client.close();
+
+      if (!mounted) return;
+      if (res.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Ключ работает')));
-      }
-    } on DioException catch (e) {
-      if (!mounted) return;
-      final status = e.response?.statusCode;
-      final body = e.response?.data;
-      String? detail;
-      if (body is Map) {
-        final err = body['error'];
-        if (err is Map) detail = err['message'] as String?;
-      } else if (body is String && body.isNotEmpty) {
-        detail = body;
-      }
-      final String msg;
-      if (status == null) {
-        msg = 'Нет ответа от сервера: ${e.message ?? e.type.name}';
-      } else if (status == 401) {
-        msg = 'Неверный ключ (401)';
-      } else if (status == 403) {
-        msg = detail ?? 'Доступ запрещён (403) — проверь тарифный план';
-      } else if (status == 429) {
-        msg = 'Превышен лимит запросов (429)';
-      } else if (status == 400) {
-        msg = 'Неверный запрос (400): ${detail ?? ""}';
       } else {
-        msg = '${detail ?? e.message ?? e.type.name} ($status)';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Ошибка ${res.statusCode}: $body'),
+          duration: const Duration(seconds: 10),
+        ));
       }
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Ошибка: $msg')));
     } catch (e) {
-      // Non-Dio exceptions (SocketException, TlsException, etc.)
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Сетевая ошибка: $e')));

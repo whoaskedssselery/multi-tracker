@@ -1,78 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers/providers.dart';
 import '../../../app/theme/colors.dart';
 import '../../../app/theme/radius.dart';
 import '../../../app/theme/spacing.dart';
 import '../../../app/theme/theme_tokens.dart';
-import '../../../app/theme/typography.dart';
+import '../../../core/ai/context_builder.dart';
+import '../../../core/ai/groq_client.dart';
+import '../../../core/db/database.dart';
+import '../../../main.dart';
 
-// ─── Data models ────────────────────────────────────────────
+// ─── Filter enum ────────────────────────────────────────────
 
 enum _AiFilter { all, train, weight, tasks }
 
-class _Message {
-  const _Message({
-    required this.text,
-    required this.isUser,
-    this.card,
-  });
-
-  final String text;
-  final bool isUser;
-  final _InlineCard? card;
-}
-
-class _InlineCard {
-  const _InlineCard({required this.title, required this.body});
-
-  final String title;
-  final String body;
+extension _AiFilterX on _AiFilter {
+  String get key => switch (this) {
+        _AiFilter.all => 'all',
+        _AiFilter.train => 'train',
+        _AiFilter.weight => 'weight',
+        _AiFilter.tasks => 'tasks',
+      };
+  String get label => switch (this) {
+        _AiFilter.all => 'Всё',
+        _AiFilter.train => 'Тренировки',
+        _AiFilter.weight => 'Вес',
+        _AiFilter.tasks => 'Задачи',
+      };
 }
 
 // ─── Screen ─────────────────────────────────────────────────
 
-class AiChatScreen extends StatefulWidget {
+class AiChatScreen extends ConsumerStatefulWidget {
   const AiChatScreen({super.key});
 
   @override
-  State<AiChatScreen> createState() => _AiChatScreenState();
+  ConsumerState<AiChatScreen> createState() => _AiChatScreenState();
 }
 
-class _AiChatScreenState extends State<AiChatScreen> {
+class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   _AiFilter _filter = _AiFilter.all;
   final _inputCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
-
-  static const _messages = <_Message>[
-    _Message(
-      text: 'Покажи мою прогрессию по жиму лёжа за апрель.',
-      isUser: true,
-    ),
-    _Message(
-      text:
-          'За апрель ты сделал 4 push-сессии. Рабочий вес шёл 75 → 77.5 → 80 → 80 — линейный прогресс, потом плато на 80.',
-      isUser: false,
-      card: _InlineCard(
-        title: 'Жим лёжа · 12 апр',
-        body: '80 × 8  ·  80 × 8  ·  80 × 6',
-      ),
-    ),
-    _Message(
-      text: 'Что не так с плато?',
-      isUser: true,
-    ),
-    _Message(
-      text:
-          'Похоже, нужно либо неделю разгрузить (80% работы), либо повысить частоту жима до 2× в неделю. Готов раскладку — попроси.',
-      isUser: false,
-    ),
-  ];
+  bool _sending = false;
 
   static const _suggestions = [
     'Как у меня дела на неделе?',
-    'Оцени мои жимы',
+    'Оцени мои тренировки',
     'Что с весом?',
   ];
+
+  List<ChatMessageTableData> _msgs = [];
 
   @override
   void dispose() {
@@ -81,16 +60,101 @@ class _AiChatScreenState extends State<AiChatScreen> {
     super.dispose();
   }
 
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _inputCtrl.text.trim();
+    if (text.isEmpty || _sending) return;
+
+    _inputCtrl.clear();
+    setState(() => _sending = true);
+
+    try {
+      // Persist user message
+      await database.addChatMessage(
+        role: 'user',
+        content: text,
+        contextFilter: _filter.key,
+      );
+      _scrollToBottom();
+
+      // Build context and history
+      final contextStr =
+          await ref.read(contextBuilderProvider).build(_filter.key);
+      final history = (await database.getLastChatMessages(limit: 20))
+          .map((m) => ChatTurn(role: m.role, text: m.content))
+          .toList();
+
+      // Compose prompt with context preamble + user message
+      final prompt =
+          'Контекст из приложения (${_filter.label}):\n$contextStr\n\nВопрос: $text';
+
+      // Call Groq
+      final client = ref.read(groqClientProvider);
+      final response = await client.generateContent(
+        prompt,
+        history: history,
+        systemInstruction:
+            'Ты персональный фитнес- и продуктивность-тренер в приложении Multi-tracker. '
+            'Будь лаконичен, основывайся на данных и будь дружелюбен. '
+            'Отвечай на том же языке, на котором пишет пользователь. '
+            'При цитировании данных указывай даты и цифры. '
+            'Не превышай 200 слов, если пользователь не просит подробнее.',
+      );
+
+      // Persist assistant response
+      await database.addChatMessage(
+        role: 'assistant',
+        content: response.text,
+        contextFilter: _filter.key,
+      );
+      _scrollToBottom();
+    } on NoApiKeyException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Укажите Groq API ключ в Настройках'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    } on GroqException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: ${e.message}'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = ThemeTokens.of(context);
+    _msgs = ref.watch(chatMessagesProvider).valueOrNull ?? [];
+
     return Scaffold(
       backgroundColor: t.bg,
       body: Column(
         children: [
           _buildHeader(context, t),
           Divider(height: 1, color: t.divider),
-          Expanded(child: _buildMessages(context)),
+          Expanded(child: _buildMessages(context, t)),
+          if (_sending) _buildTypingIndicator(t),
           _buildSuggestions(context),
           _buildInput(context, t),
         ],
@@ -111,6 +175,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
           _FilterBar(
               value: _filter,
               onChanged: (f) => setState(() => _filter = f)),
+          const SizedBox(width: 12),
+          if (_msgs.isNotEmpty)
+            _ClearButton(onTap: () async {
+              await database.clearChatHistory();
+            }),
         ],
       ),
     );
@@ -118,19 +187,106 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   // ── Messages ──────────────────────────────────────────────
 
-  Widget _buildMessages(BuildContext context) {
+  Widget _buildMessages(BuildContext context, ThemeTokens t) {
+    if (_msgs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.accent, AppColors.accentPress],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: AppRadius.mdAll,
+              ),
+              child: const Center(
+                child: Text('AI',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Привет! Я твой AI-тренер.',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: t.text1)),
+            const SizedBox(height: 6),
+            Text('Спроси что-нибудь о тренировках, весе или задачах.',
+                style: TextStyle(fontSize: 13, color: t.text3),
+                textAlign: TextAlign.center),
+          ],
+        ),
+      );
+    }
+
     return ListView.builder(
       controller: _scrollCtrl,
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xl3, vertical: AppSpacing.lg),
-      itemCount: _messages.length,
-      itemBuilder: (_, i) => _MessageBubble(message: _messages[i]),
+      itemCount: _msgs.length,
+      itemBuilder: (_, i) => _MessageBubble(message: _msgs[i]),
+    );
+  }
+
+  // ── Typing indicator ──────────────────────────────────────
+
+  Widget _buildTypingIndicator(ThemeTokens t) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl3, vertical: AppSpacing.sm),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            margin: const EdgeInsets.only(right: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.accent, AppColors.accentPress],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: AppRadius.smAll,
+            ),
+            child: const Center(
+              child: Text('AI',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700)),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: t.surface,
+              borderRadius: AppRadius.mdAll,
+              border: Border.all(color: t.borderSoft),
+            ),
+            child: const SizedBox(
+              width: 36,
+              child: LinearProgressIndicator(
+                  backgroundColor: Colors.transparent,
+                  color: AppColors.accent),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   // ── Suggestions ───────────────────────────────────────────
 
   Widget _buildSuggestions(BuildContext context) {
+    if (_msgs.isNotEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
@@ -141,7 +297,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
         children: _suggestions
             .map((s) => _SuggestionChip(
                 label: s,
-                onTap: () => _inputCtrl.text = s))
+                onTap: () {
+                  _inputCtrl.text = s;
+                }))
             .toList(),
       ),
     );
@@ -162,8 +320,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
         children: [
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: t.surfaceSunken,
                 borderRadius: AppRadius.mdAll,
@@ -174,6 +332,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 maxLines: 4,
                 minLines: 1,
                 style: TextStyle(fontSize: 14, color: t.text1),
+                onSubmitted: (_) => _sendMessage(),
                 decoration: InputDecoration(
                   hintText: 'Спросить...',
                   hintStyle: TextStyle(fontSize: 14, color: t.text4),
@@ -190,17 +349,19 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ),
           const SizedBox(width: 10),
           MouseRegion(
-            cursor: SystemMouseCursors.click,
+            cursor: _sending
+                ? SystemMouseCursors.basic
+                : SystemMouseCursors.click,
             child: GestureDetector(
-              onTap: () {
-                if (_inputCtrl.text.trim().isEmpty) return;
-                _inputCtrl.clear();
-              },
-              child: Container(
+              onTap: _sending ? null : _sendMessage,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.accent,
+                  color: _sending
+                      ? AppColors.accent.withAlpha(120)
+                      : AppColors.accent,
                   borderRadius: AppRadius.smAll,
                 ),
                 child: const Icon(Icons.arrow_upward,
@@ -209,6 +370,36 @@ class _AiChatScreenState extends State<AiChatScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Clear button ────────────────────────────────────────────
+
+class _ClearButton extends StatelessWidget {
+  const _ClearButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = ThemeTokens.of(context);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: t.surface,
+            borderRadius: AppRadius.pill,
+            border: Border.all(color: t.border),
+          ),
+          child: Text('Очистить',
+              style: TextStyle(
+                  fontSize: 12, color: t.text3, fontWeight: FontWeight.w500)),
+        ),
       ),
     );
   }
@@ -225,19 +416,18 @@ class _FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = ThemeTokens.of(context);
-    const labels = ['Всё', 'Тренировки', 'Вес', 'Задачи'];
-    const filters = _AiFilter.values;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(4, (i) {
-        final active = filters[i] == value;
+      children: List.generate(_AiFilter.values.length, (i) {
+        final f = _AiFilter.values[i];
+        final active = f == value;
         return Padding(
           padding: EdgeInsets.only(left: i > 0 ? 6 : 0),
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              onTap: () => onChanged(filters[i]),
+              onTap: () => onChanged(f),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 padding: const EdgeInsets.symmetric(
@@ -245,12 +435,10 @@ class _FilterBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: active ? AppColors.accent : t.surface,
                   borderRadius: AppRadius.pill,
-                  border: active
-                      ? null
-                      : Border.all(color: t.border),
+                  border: active ? null : Border.all(color: t.border),
                 ),
                 child: Text(
-                  labels[i],
+                  f.label,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -271,12 +459,12 @@ class _FilterBar extends StatelessWidget {
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({required this.message});
 
-  final _Message message;
+  final ChatMessageTableData message;
 
   @override
   Widget build(BuildContext context) {
     final t = ThemeTokens.of(context);
-    final isUser = message.isUser;
+    final isUser = message.role == 'user';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xl),
@@ -308,78 +496,30 @@ class _MessageBubble extends StatelessWidget {
             ),
           ],
           Flexible(
-            child: Column(
-              crossAxisAlignment: isUser
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    color: isUser ? t.accentTint : t.surface,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(AppRadius.lg),
-                      topRight: const Radius.circular(AppRadius.lg),
-                      bottomLeft: Radius.circular(
-                          isUser ? AppRadius.lg : AppRadius.xs),
-                      bottomRight: Radius.circular(
-                          isUser ? AppRadius.xs : AppRadius.lg),
-                    ),
-                    border: isUser
-                        ? null
-                        : Border.all(color: t.borderSoft),
-                  ),
-                  child: Text(
-                    message.text,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isUser ? t.accentPress : t.text1,
-                      height: 1.5,
-                    ),
-                  ),
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: isUser ? t.accentTint : t.surface,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(AppRadius.lg),
+                  topRight: const Radius.circular(AppRadius.lg),
+                  bottomLeft: Radius.circular(
+                      isUser ? AppRadius.lg : AppRadius.xs),
+                  bottomRight: Radius.circular(
+                      isUser ? AppRadius.xs : AppRadius.lg),
                 ),
-                if (message.card != null) ...[
-                  const SizedBox(height: 8),
-                  _InlineCardWidget(card: message.card!),
-                ],
-              ],
+                border: isUser ? null : Border.all(color: t.borderSoft),
+              ),
+              child: Text(
+                message.content,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isUser ? t.accentPress : t.text1,
+                  height: 1.5,
+                ),
+              ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Inline card ────────────────────────────────────────────
-
-class _InlineCardWidget extends StatelessWidget {
-  const _InlineCardWidget({required this.card});
-
-  final _InlineCard card;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = ThemeTokens.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: t.surfaceSunken,
-        borderRadius: AppRadius.mdAll,
-        border: Border.all(color: t.borderSoft),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(card.title,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: t.text2)),
-          const SizedBox(height: 6),
-          Text(card.body,
-              style: AppTypography.mono(
-                  fontSize: 13, color: t.text1)),
         ],
       ),
     );
@@ -389,8 +529,7 @@ class _InlineCardWidget extends StatelessWidget {
 // ─── Suggestion chip ────────────────────────────────────────
 
 class _SuggestionChip extends StatelessWidget {
-  const _SuggestionChip(
-      {required this.label, required this.onTap});
+  const _SuggestionChip({required this.label, required this.onTap});
 
   final String label;
   final VoidCallback onTap;
@@ -403,8 +542,7 @@ class _SuggestionChip extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
             color: t.surface,
             borderRadius: AppRadius.pill,
@@ -420,3 +558,4 @@ class _SuggestionChip extends StatelessWidget {
     );
   }
 }
+
