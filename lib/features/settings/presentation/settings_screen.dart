@@ -40,6 +40,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   static const _groqModels = [
     'llama-3.3-70b-versatile',
+    'deepseek-r1-distill-llama-70b',
     'llama-3.1-8b-instant',
     'mixtral-8x7b-32768',
   ];
@@ -290,6 +291,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final c = (color ?? t.text1).withValues(alpha: enabled ? 1.0 : 0.4);
     return InkWell(
       onTap: onTap,
+      mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       borderRadius: AppRadius.lgAll,
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -328,14 +330,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   style: TextStyle(fontSize: 14, color: t.text1)),
               const Spacer(),
               if (hasKey) ...[
-                GestureDetector(
-                  onTap: () => setState(() => _obscureKey = !_obscureKey),
-                  child: Icon(
-                    _obscureKey
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 16,
-                    color: t.text3,
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _obscureKey = !_obscureKey),
+                    child: Icon(
+                      _obscureKey
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      size: 16,
+                      color: t.text3,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 14),

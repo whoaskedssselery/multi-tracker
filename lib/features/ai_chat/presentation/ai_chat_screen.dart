@@ -97,7 +97,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
       // Compose prompt with context preamble + user message
       final prompt =
-          'Контекст из приложения (${_filter.label}):\n$contextStr\n\nВопрос: $text';
+          'Данные из приложения (фильтр: ${_filter.label}):\n$contextStr\n\nВопрос пользователя: $text';
 
       // Call Groq
       final client = ref.read(groqClientProvider);
@@ -106,10 +106,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         history: history,
         systemInstruction:
             'Ты персональный фитнес- и продуктивность-тренер в приложении Multi-tracker. '
-            'Будь лаконичен, основывайся на данных и будь дружелюбен. '
+            'ВАЖНО: используй ТОЛЬКО данные из предоставленного контекста. '
+            'Не придумывай и не предполагай факты, периоды или цифры, которых нет в данных. '
+            'Если данных мало — честно скажи об этом. '
+            'Будь лаконичен, конкретен и дружелюбен. '
             'Отвечай на том же языке, на котором пишет пользователь. '
-            'При цитировании данных указывай даты и цифры. '
-            'Не превышай 200 слов, если пользователь не просит подробнее.',
+            'При ссылке на данные называй точные даты и цифры из контекста. '
+            'Не превышай 150 слов, если пользователь не просит подробнее.',
       );
 
       // Persist assistant response

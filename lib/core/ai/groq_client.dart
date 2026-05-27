@@ -77,7 +77,7 @@ class GroqClient {
         data: {
           'model': model ?? _defaultModel,
           'messages': messages,
-          'temperature': 0.7,
+          'temperature': 0.5,
           'max_tokens': 1024,
         },
       );
@@ -98,10 +98,14 @@ class GroqClient {
       throw const GroqException('No choices in response');
     }
     final choice = choices.first as Map<String, dynamic>;
-    final text = choice['message']?['content'] as String? ?? '';
+    final raw    = choice['message']?['content'] as String? ?? '';
     final finish = choice['finish_reason'] as String? ?? 'stop';
-    return GroqResponse(text: text.trim(), finishReason: finish);
+    return GroqResponse(text: _clean(raw), finishReason: finish);
   }
+
+  // Strip <think>…</think> blocks emitted by reasoning models (DeepSeek R1).
+  static String _clean(String text) =>
+      text.replaceAll(RegExp(r'<think>[\s\S]*?</think>'), '').trim();
 }
 
 // ─────────────────────────────────────────────────────────────

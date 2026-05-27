@@ -16,12 +16,15 @@ class ContextBuilder {
   final AppDatabase _db;
 
   Future<String> build(String filter) async {
-    return switch (filter) {
-      'train' => await _trainContext(),
-      'weight' => await _weightContext(),
-      'tasks' => await _tasksContext(),
-      _ => await _allContext(),
+    final today = DateTime.now();
+    final todayStr = 'Сегодня: ${_fmt(today)} (${_weekday(today.weekday)})';
+    final ctx = await switch (filter) {
+      'train'  => _trainContext(),
+      'weight' => _weightContext(),
+      'tasks'  => _tasksContext(),
+      _        => _allContext(),
     };
+    return '$todayStr\n\n$ctx';
   }
 
   Future<String> _weightContext() async {
@@ -29,14 +32,9 @@ class ContextBuilder {
           ..orderBy([(t) => OrderingTerm.desc(t.date)])
           ..limit(30))
         .get();
-    if (entries.isEmpty) return 'Нет данных о весе.';
-    final lines = entries.map((e) {
-      final d = '${e.date.year}-'
-          '${e.date.month.toString().padLeft(2, '0')}-'
-          '${e.date.day.toString().padLeft(2, '0')}';
-      return '$d: ${e.value} кг';
-    });
-    return 'Вес (последние ${entries.length} записей, от новых к старым):\n'
+    if (entries.isEmpty) return 'Данных о весе нет.';
+    final lines = entries.map((e) => '${_fmt(e.date)}: ${e.value} кг');
+    return 'Вес (последние ${entries.length} записей, новые первыми):\n'
         '${lines.join('\n')}';
   }
 
@@ -48,13 +46,10 @@ class ContextBuilder {
             (t) => OrderingTerm.asc(t.createdAt),
           ]))
         .get();
-    if (tasks.isEmpty) return 'Нет активных задач.';
+    if (tasks.isEmpty) return 'Активных задач нет.';
     final lines = tasks.map((t) {
       final prio = t.priority == 'none' ? '' : '[${t.priority}] ';
-      final due = t.dueAt != null
-          ? ' (до ${t.dueAt!.day}.${t.dueAt!.month.toString().padLeft(2, '0')})'
-          : '';
-      return '- $prio${t.body}$due';
+      return '- $prio${t.body}';
     });
     return 'Активные задачи (${tasks.length}):\n${lines.join('\n')}';
   }
@@ -68,7 +63,14 @@ class ContextBuilder {
             (t) => OrderingTerm.asc(t.setIndex),
           ]))
         .get();
-    if (sets.isEmpty) return 'Нет тренировочных данных за последние 4 недели.';
+    if (sets.isEmpty) {
+      return 'Тренировочных данных нет (нет записанных подходов за последние 28 дней).';
+    }
+
+    // Actual date range of logged data
+    final dates = sets.map((s) => s.date).toList();
+    final earliest = dates.reduce((a, b) => a.isBefore(b) ? a : b);
+    final latest   = dates.reduce((a, b) => a.isAfter(b)  ? a : b);
 
     final exerciseIds = sets.map((s) => s.exerciseTemplateId).toSet().toList();
     final exercises = await (_db.select(_db.exerciseTemplateTable)
@@ -79,9 +81,7 @@ class ContextBuilder {
     // Group: exerciseId → date → sets
     final byEx = <int, Map<String, List<String>>>{};
     for (final s in sets) {
-      final d = '${s.date.year}-'
-          '${s.date.month.toString().padLeft(2, '0')}-'
-          '${s.date.day.toString().padLeft(2, '0')}';
+      final d = _fmt(s.date);
       final w = s.weightKg == s.weightKg.roundToDouble()
           ? s.weightKg.toInt().toString()
           : s.weightKg.toStringAsFixed(1);
@@ -99,7 +99,8 @@ class ContextBuilder {
         lines.add('  ${session.key}: ${session.value.join(', ')}');
       }
     }
-    return 'Тренировки за последние 4 недели:\n${lines.join('\n')}';
+    return 'Тренировки (данные с ${_fmt(earliest)} по ${_fmt(latest)}, '
+        'всего ${_uniqueDays(sets)} тренировочных дней):\n${lines.join('\n')}';
   }
 
   Future<String> _allContext() async {
@@ -109,5 +110,23 @@ class ContextBuilder {
       _trainContext(),
     ]);
     return results.join('\n\n');
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────
+
+  static String _fmt(DateTime d) =>
+      '${d.year}-${_p(d.month)}-${_p(d.day)}';
+
+  static String _p(int v) => v.toString().padLeft(2, '0');
+
+  static String _weekday(int iso) => const [
+        '', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'
+      ][iso];
+
+  static int _uniqueDays(List<SetEntryTableData> sets) {
+    return sets
+        .map((s) => '${s.date.year}-${s.date.month}-${s.date.day}')
+        .toSet()
+        .length;
   }
 }

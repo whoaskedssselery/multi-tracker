@@ -92,6 +92,11 @@ ThemeData buildDarkTheme() {
       titleTextStyle: text.headlineMedium?.copyWith(color: AppColors.darkText1),
       iconTheme: const IconThemeData(color: AppColors.darkText2),
     ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: const ButtonStyle(
+        mouseCursor: WidgetStatePropertyAll(SystemMouseCursors.click),
+      ),
+    ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: AppColors.darkAccent,
@@ -100,7 +105,33 @@ ThemeData buildDarkTheme() {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-      ),
+      ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.darkText1,
+        side: const BorderSide(color: AppColors.darkBorder),
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.darkText2,
+        minimumSize: const Size(0, 36),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        foregroundColor: AppColors.darkText2,
+        backgroundColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+      ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((s) =>

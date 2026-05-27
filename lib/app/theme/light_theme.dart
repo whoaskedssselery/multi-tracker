@@ -121,9 +121,14 @@ ThemeData buildLightTheme() {
         foregroundColor: AppColors.text2,
         backgroundColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+      ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
+    ),
+    // Elevated / filled / outlined / text buttons — cursor forced globally
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: const ButtonStyle(
+        mouseCursor: WidgetStatePropertyAll(SystemMouseCursors.click),
       ),
     ),
-    // Elevated / filled buttons
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: AppColors.accent,
@@ -132,7 +137,7 @@ ThemeData buildLightTheme() {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-      ),
+      ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
@@ -142,7 +147,7 @@ ThemeData buildLightTheme() {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-      ),
+      ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
@@ -151,7 +156,7 @@ ThemeData buildLightTheme() {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-      ),
+      ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
     // Chips
     chipTheme: ChipThemeData(
