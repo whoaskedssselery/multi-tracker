@@ -92,7 +92,6 @@ class _BlurredTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bottom = MediaQuery.of(context).padding.bottom;
 
     return ClipRect(
       child: BackdropFilter(
@@ -312,13 +311,11 @@ class _SidebarItem extends StatelessWidget {
     required this.destination,
     required this.active,
     required this.onTap,
-    this.isFooter = false,
   });
 
   final AdaptiveDestination destination;
   final bool active;
   final VoidCallback onTap;
-  final bool isFooter;
 
   @override
   Widget build(BuildContext context) {

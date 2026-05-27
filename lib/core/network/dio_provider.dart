@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dio_provider.g.dart';
@@ -15,10 +16,9 @@ Dio dio(DioRef ref) {
   );
 
   d.interceptors.add(_RetryInterceptor(d));
-  d.interceptors.add(LogInterceptor(
-    requestBody: false,
-    responseBody: false,
-  ));
+  if (kDebugMode) {
+    d.interceptors.add(LogInterceptor(requestBody: false, responseBody: false));
+  }
 
   return d;
 }
