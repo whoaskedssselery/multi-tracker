@@ -60,6 +60,11 @@ Stream<List<ChatMessageTableData>> chatMessages(ChatMessagesRef ref) =>
     ref.watch(dbProvider).watchChatMessages();
 
 @riverpod
+Stream<List<ChatMessageTableData>> chatMessagesForFilter(
+        ChatMessagesForFilterRef ref, String filter) =>
+    ref.watch(dbProvider).watchChatMessagesForFilter(filter);
+
+@riverpod
 Stream<List<NoteItemTableData>> notes(NotesRef ref) =>
     ref.watch(dbProvider).watchNotes();
 

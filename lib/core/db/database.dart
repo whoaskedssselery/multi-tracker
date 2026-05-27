@@ -553,6 +553,14 @@ class AppDatabase extends _$AppDatabase {
             ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
           .watch();
 
+  /// Streams only messages with the given [filter] ('all' | 'train' | 'weight' | 'tasks').
+  Stream<List<ChatMessageTableData>> watchChatMessagesForFilter(
+          String filter) =>
+      (select(chatMessageTable)
+            ..where((t) => t.contextFilter.equals(filter))
+            ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+          .watch();
+
   Future<void> addChatMessage({
     required String role,
     required String content,
@@ -574,7 +582,26 @@ class AppDatabase extends _$AppDatabase {
     return rows.reversed.toList();
   }
 
+  /// Returns the last [limit] messages for the given [filter], chronological order.
+  Future<List<ChatMessageTableData>> getLastChatMessagesForFilter(
+    String filter, {
+    int limit = 20,
+  }) async {
+    final rows = await (select(chatMessageTable)
+          ..where((t) => t.contextFilter.equals(filter))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(limit))
+        .get();
+    return rows.reversed.toList();
+  }
+
   Future<void> clearChatHistory() => delete(chatMessageTable).go();
+
+  /// Clears only messages belonging to [filter].
+  Future<void> clearChatHistoryForFilter(String filter) =>
+      (delete(chatMessageTable)
+            ..where((t) => t.contextFilter.equals(filter)))
+          .go();
 
   // ── Notes DAO ────────────────────────────────────────────────────────────
 

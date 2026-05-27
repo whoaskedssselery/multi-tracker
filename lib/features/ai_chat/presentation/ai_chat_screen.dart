@@ -88,12 +88,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       );
       _scrollToBottom();
 
-      // Build context and history
+      // Build context and history (scoped to current filter)
       final contextStr =
           await ref.read(contextBuilderProvider).build(_filter.key);
-      final history = (await database.getLastChatMessages(limit: 20))
-          .map((m) => ChatTurn(role: m.role, text: m.content))
-          .toList();
+      final history =
+          (await database.getLastChatMessagesForFilter(_filter.key, limit: 20))
+              .map((m) => ChatTurn(role: m.role, text: m.content))
+              .toList();
 
       // Compose prompt with context preamble + user message
       final prompt =
@@ -148,7 +149,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   @override
   Widget build(BuildContext context) {
     final t = ThemeTokens.of(context);
-    _msgs = ref.watch(chatMessagesProvider).valueOrNull ?? [];
+    _msgs = ref.watch(chatMessagesForFilterProvider(_filter.key)).valueOrNull ?? [];
 
     return Scaffold(
       backgroundColor: t.bg,
@@ -181,7 +182,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           const SizedBox(width: 12),
           if (_msgs.isNotEmpty)
             _ClearButton(onTap: () async {
-              await database.clearChatHistory();
+              await database.clearChatHistoryForFilter(_filter.key);
             }),
         ],
       ),
