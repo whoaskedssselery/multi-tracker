@@ -34,3 +34,6 @@ gemini_key.txt
 
 # Coverage
 coverage/
+
+# codegraph local index
+.codegraph/

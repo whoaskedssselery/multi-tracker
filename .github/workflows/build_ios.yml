@@ -17,23 +17,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-
-      - name: Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: /opt/hostedtoolcache/flutter
-          key: flutter-${{ runner.os }}-stable
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            .dart_tool
-            .flutter-plugins
-            .flutter-plugins-dependencies
-            .packages
-            pubspec.lock
-          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.yaml') }}
+          flutter-version: '3.44.0'
 
       - name: Flutter doctor
         run: flutter doctor -v
@@ -44,53 +28,27 @@ jobs:
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build iOS without signing
-        run: |
-          cd ios
-          
-          # Чистим предыдущие сборки
-          rm -rf ../build/ios
-          
-          # Запускаем pod install вручную
-          pod install
-          
-          # Собираем через xcodebuild с отключённой подписью
-          xcodebuild \
-            -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Debug \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath ../build/ios \
-            -archivePath ../build/ios/Runner.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            ONLY_ACTIVE_ARCH=NO \
-            -allowProvisioningUpdates
+      # RELEASE + no codesign — this is the combination AltStore needs.
+      # (Debug builds use JIT and won't launch when sideloaded; they also
+      #  produce a bundle AltStore can fail to read → NSCocoaErrorDomain 3840.)
+      - name: Build iOS (release, unsigned)
+        run: flutter build ios --release --no-codesign
 
-      - name: Find and package IPA
+      # AltStore requires a zip whose ROOT contains a `Payload/` folder with
+      # the .app inside. Anything else → "data couldn't be read" (3840).
+      - name: Package unsigned IPA
         run: |
-          # Ищем Runner.app в DerivedData
-          APP_PATH=$(find build/ios -name "Runner.app" -type d | head -1)
-          echo "Found app at: $APP_PATH"
-          
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR: Runner.app not found!"
-            find build/ios -name "*.app" -type d
-            exit 1
-          fi
-          
-          cd "$(dirname "$APP_PATH")"
+          set -e
+          cd build/ios/iphoneos
+          rm -rf Payload App.ipa
           mkdir Payload
-          cp -r Runner.app Payload/
-          zip -r App.ipa Payload
-          rm -rf Payload
-          
-          mkdir -p $GITHUB_WORKSPACE/output
-          mv App.ipa $GITHUB_WORKSPACE/output/
+          cp -R Runner.app Payload/
+          # -X strips macOS extended attributes / resource forks that can
+          #  corrupt the archive for AltStore.
+          zip -r -X App.ipa Payload -x "*.DS_Store"
+          unzip -l App.ipa | head -20
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          mv App.ipa "$GITHUB_WORKSPACE/output/App.ipa"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4

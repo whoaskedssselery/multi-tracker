@@ -69,7 +69,9 @@ class _MobileLayout extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.colorScheme.surfaceContainerLow,
       floatingActionButton: fab,
-      body: body,
+      // Keep screen content (page headers) clear of the iOS notch / status bar.
+      // Bottom is handled by the tab bar's own SafeArea.
+      body: SafeArea(bottom: false, child: body),
       bottomNavigationBar: _BlurredTabBar(
         selectedIndex: selectedIndex,
         destinations: destinations,
