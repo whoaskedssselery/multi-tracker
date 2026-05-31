@@ -45,32 +45,57 @@ jobs:
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build iOS (debug mode)
+      - name: Build iOS without signing
         run: |
-          # Убираем Development Team из project.pbxproj
-          sed -i '' 's/DevelopmentTeam = .*/DevelopmentTeam = "";/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = "";/g' ios/Runner.xcodeproj/project.pbxproj 2>/dev/null || true
+          cd ios
           
-          # Билдим без подписи
-          flutter build ios --debug --no-codesign
+          # Чистим предыдущие сборки
+          rm -rf ../build/ios
           
-          # Пакуем IPA
-          cd build/ios/iphoneos
+          # Запускаем pod install вручную
+          pod install
+          
+          # Собираем через xcodebuild с отключённой подписью
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Debug \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath ../build/ios \
+            -archivePath ../build/ios/Runner.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            ONLY_ACTIVE_ARCH=NO \
+            -allowProvisioningUpdates
+
+      - name: Find and package IPA
+        run: |
+          # Ищем Runner.app в DerivedData
+          APP_PATH=$(find build/ios -name "Runner.app" -type d | head -1)
+          echo "Found app at: $APP_PATH"
+          
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: Runner.app not found!"
+            find build/ios -name "*.app" -type d
+            exit 1
+          fi
+          
+          cd "$(dirname "$APP_PATH")"
           mkdir Payload
           cp -r Runner.app Payload/
           zip -r App.ipa Payload
           rm -rf Payload
+          
+          mkdir -p $GITHUB_WORKSPACE/output
+          mv App.ipa $GITHUB_WORKSPACE/output/
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: iOS-App
-          path: build/ios/iphoneos/App.ipa
-          retention-days: 7
-
-      - name: Upload Runner.app (fallback)
-        uses: actions/upload-artifact@v4
-        with:
-          name: iOS-App-Files
-          path: build/ios/iphoneos/Runner.app
+          path: output/App.ipa
           retention-days: 7
