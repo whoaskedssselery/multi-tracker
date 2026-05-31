@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/theme/spacing.dart';
 import '../../app/theme/theme_tokens.dart';
@@ -28,7 +29,12 @@ class AppPageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = ThemeTokens.of(context);
-    return Container(
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // Status-bar icons: light on the dark theme, dark on the light theme.
+      value: (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+          .copyWith(statusBarColor: Colors.transparent),
+      child: Container(
       height: height,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl3),
       decoration: BoxDecoration(
@@ -66,6 +72,7 @@ class AppPageHeader extends StatelessWidget {
             ...actions,
           ],
         ],
+      ),
       ),
     );
   }
