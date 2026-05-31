@@ -47,7 +47,14 @@ jobs:
 
       - name: Build iOS (debug mode)
         run: |
+          # Убираем Development Team из project.pbxproj
+          sed -i '' 's/DevelopmentTeam = .*/DevelopmentTeam = "";/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = "";/g' ios/Runner.xcodeproj/project.pbxproj 2>/dev/null || true
+          
+          # Билдим без подписи
           flutter build ios --debug --no-codesign
+          
+          # Пакуем IPA
           cd build/ios/iphoneos
           mkdir Payload
           cp -r Runner.app Payload/
