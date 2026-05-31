@@ -44,7 +44,7 @@ dependencies:
 
 
   # Intl
-  intl: ^0.19.0
+  intl: ^0.20.2
 
   # Note: fonts (Inter + JetBrains Mono) are bundled locally under
   # assets/fonts and declared in the `flutter:` section below.

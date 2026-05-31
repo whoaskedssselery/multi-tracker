@@ -22,7 +22,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /opt/hostedtoolcache/flutter
-          key: flutter-${{ runner.os }}-3.24.0
+          key: flutter-${{ runner.os }}-stable
 
       - name: Cache pub dependencies
         uses: actions/cache@v4
