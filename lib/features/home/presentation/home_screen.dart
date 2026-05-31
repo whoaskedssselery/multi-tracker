@@ -14,6 +14,7 @@ import '../../../app/theme/theme_tokens.dart';
 import '../../../app/theme/typography.dart';
 import '../../../core/db/database.dart';
 import '../../../main.dart';
+import '../../../shared/widgets/page_header.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -25,6 +26,10 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   _Period _period = _Period.week;
 
+  // Inline weight recorder (numpad expands in the hero card — design DTWeightRecorder).
+  bool _recordingWeight = false;
+  String _weightDraft = '0';
+
   // Populated from providers in build().
   List<WeightEntryTableData> _entries = [];
   ProfileTableData? _profile;
@@ -35,7 +40,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   List<DateTime> _workoutDates = [];
 
   // Dialog controllers — owned by state so they outlive dialog close animations.
-  final _weightCtrl      = TextEditingController();
   final _goalLabelCtrl   = TextEditingController();
   final _goalStartCtrl   = TextEditingController();
   final _goalCurrentCtrl = TextEditingController();
@@ -43,7 +47,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
-    _weightCtrl.dispose();
     _goalLabelCtrl.dispose();
     _goalStartCtrl.dispose();
     _goalCurrentCtrl.dispose();
@@ -179,66 +182,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // ── Dialogs ───────────────────────────────────────────────────
 
-  Future<void> _showLogWeight() async {
+  void _startRecordWeight() {
     final last = _entries.isNotEmpty ? _entries.first.value : null;
-    _weightCtrl.text = last != null ? last.toStringAsFixed(1) : '';
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        final t = ThemeTokens.of(ctx);
-        return AlertDialog(
-          backgroundColor: t.surface,
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
-          title: Text('Записать вес',
-              style: Theme.of(ctx).textTheme.titleLarge),
-          content: TextField(
-            controller: _weightCtrl,
-            autofocus: true,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-            ],
-            decoration: InputDecoration(
-              suffixText: 'кг',
-              hintText: '80.0',
-              border: OutlineInputBorder(
-                borderRadius: AppRadius.mdAll,
-                borderSide: BorderSide(color: t.border),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Отмена'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                side: BorderSide.none,
-                shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.mdAll),
-              ),
-              onPressed: () {
-                final raw = _weightCtrl.text.replaceAll(',', '.');
-                final v = double.tryParse(raw);
-                if (v != null && v > 0 && v < 500) {
-                  final now = DateTime.now();
-                  database.addWeightEntry(
-                      value: v,
-                      date: DateTime(now.year, now.month, now.day));
-                }
-                Navigator.pop(ctx);
-              },
-              child: const Text('Сохранить'),
-            ),
-          ],
-        );
-      },
-    );
+    setState(() {
+      _recordingWeight = true;
+      _weightDraft = last != null ? last.toStringAsFixed(1) : '0';
+    });
+  }
+
+  void _weightKey(String k) {
+    setState(() {
+      switch (k) {
+        case 'back':
+          _weightDraft = _weightDraft.length > 1
+              ? _weightDraft.substring(0, _weightDraft.length - 1)
+              : '0';
+        case '+0.5':
+          _weightDraft =
+              ((double.tryParse(_weightDraft) ?? 0) + 0.5).toStringAsFixed(1);
+        case '-0.5':
+          final v = (double.tryParse(_weightDraft) ?? 0) - 0.5;
+          _weightDraft = (v < 0 ? 0.0 : v).toStringAsFixed(1);
+        case '.':
+          if (!_weightDraft.contains('.')) _weightDraft = '$_weightDraft.';
+        default: // digit
+          _weightDraft = _weightDraft == '0' ? k : _weightDraft + k;
+      }
+    });
+  }
+
+  void _commitWeight() {
+    final v = double.tryParse(_weightDraft.replaceAll(',', '.'));
+    if (v != null && v > 0 && v < 500) {
+      final now = DateTime.now();
+      database.addWeightEntry(
+          value: v, date: DateTime(now.year, now.month, now.day));
+    }
+    setState(() => _recordingWeight = false);
   }
 
   Future<void> _showGoalDialog({GoalTableData? editing}) async {
@@ -335,15 +315,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text('Отмена'),
               ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  side: BorderSide.none,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdAll),
-                ),
+              FilledButton(
                 onPressed: () async {
                   final label = _goalLabelCtrl.text.trim();
                   final start = double.tryParse(
@@ -419,8 +391,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: AppRadius.mdAll,
-              borderSide:
-                  const BorderSide(color: AppColors.accent, width: 1.5),
+              borderSide: BorderSide(color: t.accent, width: 1.5),
             ),
           ),
         ),
@@ -441,54 +412,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _templates = ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
     _workoutDates = ref.watch(workoutDatesProvider).valueOrNull ?? [];
 
-    final wide = MediaQuery.sizeOf(context).width >= 800;
-    return Scaffold(
-      backgroundColor: t.bg,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          horizontal: wide ? AppSpacing.xl3 : AppSpacing.lg,
-          vertical: AppSpacing.xl2,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _header(context, t),
-            const SizedBox(height: AppSpacing.xl2),
-            wide ? _desktopBody(context, t) : _mobileBody(context, t),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Header ────────────────────────────────────────────────────
-
-  Widget _header(BuildContext context, ThemeTokens t) {
     final name = _profile?.name.trim() ?? '';
     final greeting =
         name.isEmpty || name == 'User' ? 'Привет' : 'Привет, $name';
-    return Row(
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(greeting,
-                style: Theme.of(context).textTheme.headlineLarge),
-            const SizedBox(height: 3),
-            Text(_headerDate(DateTime.now()),
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: t.text3)),
-          ],
-        ),
-        const Spacer(),
-        IconButton(
-          icon: const Icon(Icons.settings_outlined, size: 22),
-          color: t.text3,
-          onPressed: () => context.go('/settings'),
-        ),
-      ],
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: greeting,
+            subtitle: _headerDate(DateTime.now()),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings_outlined, size: 22),
+                color: t.text3,
+                onPressed: () => context.go('/settings'),
+              ),
+            ],
+          ),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (ctx, c) {
+                // Decide by REAL available width (not full window — the sidebar
+                // already took 260px), so the two-column body never overflows.
+                final wide = c.maxWidth >= 980;
+                return SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: wide ? AppSpacing.xl3 : AppSpacing.lg,
+                    vertical: AppSpacing.xl2,
+                  ),
+                  child: wide
+                      ? _desktopBody(context, t)
+                      : _mobileBody(context, t),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -498,26 +459,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Left column — design grid 1.4fr (flex 7)
         Expanded(
-          flex: 5,
+          flex: 7,
           child: Column(children: [
             _weightEntryCard(context, t),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             _weightChartCard(context, t),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             _historyCard(context, t),
           ]),
         ),
-        const SizedBox(width: 16),
-        SizedBox(
-          width: 300,
+        const SizedBox(width: 20),
+        // Right column — design grid 1fr (flex 5). Proportional, not fixed,
+        // so it never overflows the viewport on wide windows.
+        Expanded(
+          flex: 5,
           child: Column(children: [
             _goalsCard(context, t),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             _streaksCard(context, t),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             _todayPlanCard(context, t),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             _tasksSummaryCard(context, t),
           ]),
         ),
@@ -563,11 +527,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     } else {
       subtitle = 'нет записей';
     }
+    if (_recordingWeight) return _weightRecorderCard(context, t);
     return _card(
       t: t,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Column(
+          Expanded(
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('ЗАПИСАТЬ ВЕС',
@@ -578,11 +545,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 textBaseline: TextBaseline.alphabetic,
                 children: [
                   Text(currentStr,
-                      style: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.w700,
-                          color: t.text1,
-                          height: 1.0)),
+                      style: AppTypography.mono(
+                              fontSize: 48,
+                              weight: FontWeight.w700,
+                              color: t.text1)
+                          .copyWith(height: 1.0)),
                   if (latest != null) ...[
                     const SizedBox(width: 6),
                     Text(units,
@@ -597,33 +564,214 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 6),
               Text(subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
                       ?.copyWith(color: t.text3)),
             ],
           ),
-          const Spacer(),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: ElevatedButton(
-              onPressed: _showLogWeight,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                minimumSize: const Size(0, 44),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20),
-                shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.mdAll),
-                textStyle: const TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-              child: const Text('Записать'),
-            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton.icon(
+            onPressed: _startRecordWeight,
+            icon: const Icon(Icons.check, size: 16),
+            label: const Text('Записать'),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Inline weight recorder (numpad) ───────────────────────────
+
+  Widget _weightRecorderCard(BuildContext context, ThemeTokens t) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _onRecorderKey,
+      child: _card(
+      t: t,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('ЗАПИСАТЬ ВЕС',
+                  style: AppTypography.caps(color: t.text3)),
+              const Spacer(),
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => setState(() => _recordingWeight = false),
+                  child: Icon(Icons.close, size: 18, color: t.text3),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(builder: (ctx, c) {
+            final number = Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(_weightDraft,
+                    style: AppTypography.mono(
+                            fontSize: 56,
+                            weight: FontWeight.w700,
+                            color: t.accentPress)
+                        .copyWith(height: 1.0)),
+                const SizedBox(width: 8),
+                Text('кг',
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineMedium
+                        ?.copyWith(
+                            color: t.text3, fontWeight: FontWeight.w400)),
+              ],
+            );
+            if (c.maxWidth >= 460) {
+              return Row(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: FittedBox(
+                          fit: BoxFit.scaleDown, child: number),
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      child: _numpad(t)),
+                ],
+              );
+            }
+            return Column(
+              children: [
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: number),
+                _numpad(t),
+              ],
+            );
+          }),
+        ],
+      ),
+    ),
+    );
+  }
+
+  KeyEventResult _onRecorderKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.backspace) {
+      _weightKey('back');
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      _commitWeight();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape) {
+      setState(() => _recordingWeight = false);
+      return KeyEventResult.handled;
+    }
+    final ch = event.character;
+    if (ch != null && ch.isNotEmpty) {
+      if (RegExp(r'^[0-9]$').hasMatch(ch)) {
+        _weightKey(ch);
+        return KeyEventResult.handled;
+      }
+      if (ch == '.' || ch == ',') {
+        _weightKey('.');
+        return KeyEventResult.handled;
+      }
+      if (ch == '+' || ch == '=') {
+        _weightKey('+0.5');
+        return KeyEventResult.handled;
+      }
+      if (ch == '-' || ch == '_') {
+        _weightKey('-0.5');
+        return KeyEventResult.handled;
+      }
+    }
+    return KeyEventResult.ignored;
+  }
+
+  Widget _numpad(ThemeTokens t) {
+    Widget r(List<Widget> kids) => Padding(
+        padding: const EdgeInsets.only(bottom: 8), child: Row(children: kids));
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        r([
+          _numpadKey(t, '7'),
+          _numpadKey(t, '8'),
+          _numpadKey(t, '9'),
+          _numpadKey(t, '',
+              icon: Icons.backspace_outlined,
+              onTap: () => _weightKey('back')),
+        ]),
+        r([
+          _numpadKey(t, '4'),
+          _numpadKey(t, '5'),
+          _numpadKey(t, '6'),
+          _numpadKey(t, '+0.5', onTap: () => _weightKey('+0.5'), alt: true),
+        ]),
+        r([
+          _numpadKey(t, '1'),
+          _numpadKey(t, '2'),
+          _numpadKey(t, '3'),
+          _numpadKey(t, '−0.5', onTap: () => _weightKey('-0.5'), alt: true),
+        ]),
+        r([
+          _numpadKey(t, '.'),
+          _numpadKey(t, '0'),
+          const Expanded(child: SizedBox()),
+          _numpadKey(t, '', go: true, onTap: _commitWeight),
+        ]),
+      ],
+    );
+  }
+
+  Widget _numpadKey(ThemeTokens t, String label,
+      {VoidCallback? onTap, bool alt = false, bool go = false, IconData? icon}) {
+    final Widget child;
+    if (go) {
+      child = Icon(Icons.check,
+          color: Theme.of(context).colorScheme.onPrimary, size: 22);
+    } else if (icon != null) {
+      child = Icon(icon, size: 20, color: t.text2);
+    } else {
+      child = Text(label,
+          style: alt
+              ? TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w500, color: t.text2)
+              : AppTypography.mono(fontSize: 20, color: t.text1));
+    }
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: onTap ?? () => _weightKey(label),
+            child: Container(
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: go ? t.accent : t.surface,
+                borderRadius: AppRadius.smAll,
+                border: go ? null : Border.all(color: t.borderSoft),
+              ),
+              child: child,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -660,47 +808,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('ВЕС', style: AppTypography.caps(color: t.text3)),
-                  const SizedBox(height: 4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                          latest != null
-                              ? latest.value.toStringAsFixed(1)
-                              : '—',
-                          style: TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.w700,
-                              color: t.text1,
-                              height: 1.0)),
-                      if (latest != null) ...[
-                        const SizedBox(width: 5),
-                        Text('кг',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: t.text3)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('ВЕС', style: AppTypography.caps(color: t.text3)),
+                    const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                            latest != null
+                                ? latest.value.toStringAsFixed(1)
+                                : '—',
+                            style: AppTypography.mono(
+                                    fontSize: 30,
+                                    weight: FontWeight.w700,
+                                    color: t.text1)
+                                .copyWith(height: 1.0)),
+                        if (latest != null) ...[
+                          const SizedBox(width: 5),
+                          Text('кг',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(color: t.text3)),
+                        ],
+                        if (trendIcon != null) ...[
+                          const SizedBox(width: 12),
+                          Icon(trendIcon, size: 13, color: trendColor),
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(trendStr,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(color: trendColor)),
+                          ),
+                        ],
                       ],
-                      if (trendIcon != null) ...[
-                        const SizedBox(width: 12),
-                        Icon(trendIcon, size: 13, color: trendColor),
-                        const SizedBox(width: 2),
-                        Text(trendStr,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: trendColor)),
-                      ],
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 12),
               _PeriodSelector(
                   value: _period,
                   onChanged: (p) => setState(() => _period = p)),
@@ -800,15 +954,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           spots: spots,
           isCurved: true,
           curveSmoothness: 0.25,
-          color: AppColors.accent,
+          color: t.accent,
           barWidth: 2,
           dotData: FlDotData(
             show: true,
             getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
               radius: 3.5,
-              color: AppColors.accent,
+              color: t.accent,
               strokeWidth: 1.5,
-              strokeColor: Colors.white,
+              strokeColor: t.surface,
             ),
           ),
           belowBarData: BarAreaData(
@@ -817,8 +971,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                AppColors.accent.withValues(alpha: 0.18),
-                AppColors.accent.withValues(alpha: 0.0),
+                t.accent.withValues(alpha: 0.18),
+                t.accent.withValues(alpha: 0.0),
               ],
             ),
           ),
@@ -831,7 +985,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (_) =>
-              AppColors.accentPress.withValues(alpha: 0.9),
+              t.accentPress.withValues(alpha: 0.9),
           getTooltipItems: (spots) => spots
               .map((s) => LineTooltipItem(
                     s.y.toStringAsFixed(1),
@@ -913,24 +1067,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Row(
         children: [
           Text(_historyLabel(entry.date),
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: t.text2)),
+              style: AppTypography.mono(fontSize: 12, color: t.text3)),
           const Spacer(),
           Text(entry.value.toStringAsFixed(1),
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: t.text1)),
+              style: AppTypography.mono(
+                  fontSize: 15, weight: FontWeight.w600, color: t.text1)),
           const SizedBox(width: 10),
           SizedBox(
-            width: 38,
+            width: 40,
             child: Text(ds,
-                style: TextStyle(
-                    fontSize: 13,
-                    color: dc,
-                    fontWeight: FontWeight.w500),
+                style: AppTypography.mono(fontSize: 13, color: dc),
                 textAlign: TextAlign.right),
           ),
           const SizedBox(width: 6),
@@ -1011,13 +1157,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       fontWeight: FontWeight.w500, color: t.text1)),
             ),
             Text(label,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: t.text3)),
+                style: AppTypography.mono(fontSize: 13, color: t.text3)),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         ClipRRect(
           borderRadius: AppRadius.pill,
           child: LinearProgressIndicator(
@@ -1025,15 +1168,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             minHeight: 4,
             backgroundColor: t.surfaceSunken,
             valueColor: AlwaysStoppedAnimation<Color>(
-                progress >= 1.0 ? t.success : AppColors.accentPress),
+                progress >= 1.0 ? t.success : t.accent),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text('${(progress * 100).round()}%',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: t.text3)),
+            style: AppTypography.mono(fontSize: 11, color: t.text3)),
       ],
     );
   }
@@ -1087,22 +1227,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _streakChip(String label, ThemeTokens t) {
     return Container(
       padding:
-          const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: t.accentTint,
+        color: t.surface,
         borderRadius: AppRadius.pill,
         border: Border.all(color: t.borderSoft),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🔥', style: TextStyle(fontSize: 12)),
-          const SizedBox(width: 5),
+          Icon(Icons.local_fire_department_outlined,
+              size: 14, color: t.accent),
+          const SizedBox(width: 6),
           Text(label,
               style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: t.accentPress)),
+                  color: t.text1)),
         ],
       ),
     );
@@ -1142,34 +1283,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       child: Row(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: AppTypography.caps(color: t.text3)),
-              const SizedBox(height: 4),
-              Text(value,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(color: t.text1)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: AppTypography.caps(color: t.text3)),
+                const SizedBox(height: 4),
+                Text(value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(color: t.text1)),
+              ],
+            ),
           ),
-          const Spacer(),
+          const SizedBox(width: 12),
           MouseRegion(
             cursor: SystemMouseCursors.click,
-            child: OutlinedButton(
+            child: OutlinedButton.icon(
               onPressed: onOpen,
               style: OutlinedButton.styleFrom(
                 foregroundColor: t.text1,
+                backgroundColor: t.surface,
                 side: BorderSide(color: t.border),
                 shape: RoundedRectangleBorder(
                     borderRadius: AppRadius.mdAll),
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 11),
                 textStyle: const TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w600),
+                    fontSize: 14, fontWeight: FontWeight.w500),
               ),
-              child: const Text('Открыть'),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.arrow_forward, size: 16),
+              label: const Text('Открыть'),
             ),
           ),
         ],

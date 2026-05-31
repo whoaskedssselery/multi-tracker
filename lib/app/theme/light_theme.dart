@@ -38,6 +38,7 @@ ThemeData buildLightTheme() {
     useMaterial3: true,
     colorScheme: cs,
     textTheme: text,
+    fontFamily: AppTypography.fontSans,
     scaffoldBackgroundColor: AppColors.bg,
     dividerColor: AppColors.divider,
     dividerTheme: const DividerThemeData(
@@ -136,7 +137,7 @@ ThemeData buildLightTheme() {
         minimumSize: const Size(0, 44),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -146,16 +147,18 @@ ThemeData buildLightTheme() {
         minimumSize: const Size(0, 44),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
     textButtonTheme: TextButtonThemeData(
+      // Same height + padding as filled/outlined so dialog "Отмена" has the
+      // same hover/tap area as the primary action next to it.
       style: TextButton.styleFrom(
         foregroundColor: AppColors.text2,
-        minimumSize: const Size(0, 36),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
     // Chips

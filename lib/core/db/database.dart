@@ -1,4 +1,6 @@
 // ignore_for_file: type=lint
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
@@ -71,6 +73,7 @@ class WorkoutTemplateTable extends Table {
 
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
+  IntColumn get color => integer().withDefault(const Constant(0xFF6B8F71))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
@@ -218,7 +221,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -231,6 +234,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) {
         await m.createTable(appPreferencesTable);
         await _seedDefaultPreferences();
+      }
+      if (from < 3) {
+        await m.addColumn(workoutTemplateTable, workoutTemplateTable.color);
       }
     },
     beforeOpen: (details) async {
@@ -423,9 +429,66 @@ class AppDatabase extends _$AppDatabase {
         .join(' · ');
   }
 
-  Future<int> addWorkoutTemplate(String name) =>
-      into(workoutTemplateTable)
-          .insert(WorkoutTemplateTableCompanion.insert(name: name));
+  Future<int> addWorkoutTemplate(String name, {int color = 0xFF6B8F71}) =>
+      into(workoutTemplateTable).insert(
+          WorkoutTemplateTableCompanion.insert(
+              name: name, color: Value(color)));
+
+  Future<void> updateWorkoutTemplate(int id,
+      {String? name, int? color}) async {
+    await (update(workoutTemplateTable)..where((t) => t.id.equals(id))).write(
+      WorkoutTemplateTableCompanion(
+        name: name == null ? const Value.absent() : Value(name),
+        color: color == null ? const Value.absent() : Value(color),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  /// Reconciles a template's exercises with [exs] (id==null → insert,
+  /// id!=null → update, existing-but-absent → delete with its set log).
+  /// Each exercise stores [sets] empty rows of [reps] in defaultSetsJson.
+  Future<void> setTemplateExercises(
+      int templateId,
+      List<({int? id, String name, int sets, int reps})> exs) async {
+    final existing = await (select(exerciseTemplateTable)
+          ..where((t) => t.workoutTemplateId.equals(templateId)))
+        .get();
+    final keepIds = exs.where((e) => e.id != null).map((e) => e.id).toSet();
+    for (final ex in existing) {
+      if (!keepIds.contains(ex.id)) {
+        await (delete(setEntryTable)
+              ..where((t) => t.exerciseTemplateId.equals(ex.id)))
+            .go();
+        await (delete(exerciseTemplateTable)..where((t) => t.id.equals(ex.id)))
+            .go();
+      }
+    }
+    for (var i = 0; i < exs.length; i++) {
+      final e = exs[i];
+      final n = e.sets < 1 ? 1 : e.sets;
+      final setsJson = jsonEncode(
+          List.generate(n, (_) => {'weight': 0.0, 'reps': e.reps}));
+      if (e.id != null) {
+        await (update(exerciseTemplateTable)..where((t) => t.id.equals(e.id!)))
+            .write(ExerciseTemplateTableCompanion(
+          name: Value(e.name),
+          sortOrder: Value(i),
+          defaultSetsJson: Value(setsJson),
+          updatedAt: Value(DateTime.now()),
+        ));
+      } else {
+        await into(exerciseTemplateTable).insert(
+          ExerciseTemplateTableCompanion.insert(
+            workoutTemplateId: templateId,
+            name: e.name,
+            sortOrder: Value(i),
+            defaultSetsJson: Value(setsJson),
+          ),
+        );
+      }
+    }
+  }
 
   /// Deletes template and all its exercises + their set entries.
   Future<void> deleteWorkoutTemplate(int id) async {

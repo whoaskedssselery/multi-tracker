@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/breakpoints.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/radius.dart';
+import '../../app/theme/theme_tokens.dart';
 
 class AdaptiveScaffold extends StatelessWidget {
   const AdaptiveScaffold({
@@ -92,6 +93,7 @@ class _BlurredTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final t = ThemeTokens.of(context);
 
     return ClipRect(
       child: BackdropFilter(
@@ -129,14 +131,14 @@ class _BlurredTabBar extends StatelessWidget {
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
                                 color: active
-                                    ? AppColors.accentTint
+                                    ? t.accentTint
                                     : Colors.transparent,
                                 borderRadius: AppRadius.smAll,
                               ),
                               child: IconTheme(
                                 data: IconThemeData(
                                   color: active
-                                      ? AppColors.accentPress
+                                      ? t.accentPress
                                       : theme.colorScheme.onSurfaceVariant,
                                   size: 22,
                                 ),
@@ -151,7 +153,7 @@ class _BlurredTabBar extends StatelessWidget {
                                 fontWeight: FontWeight.w500,
                                 letterSpacing: 0.02 * 10,
                                 color: active
-                                    ? AppColors.accent
+                                    ? t.accent
                                     : theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
@@ -320,7 +322,8 @@ class _SidebarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final iconColor = active ? AppColors.accentPress : AppColors.text2;
+    final t = ThemeTokens.of(context);
+    final iconColor = active ? t.accentPress : t.text2;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -330,7 +333,7 @@ class _SidebarItem extends StatelessWidget {
         duration: const Duration(milliseconds: 120),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: active ? AppColors.accentTint : Colors.transparent,
+          color: active ? t.accentTint : Colors.transparent,
           borderRadius: AppRadius.smAll,
         ),
         child: Row(
@@ -345,7 +348,7 @@ class _SidebarItem extends StatelessWidget {
                 destination.label,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontSize: 14,
-                  color: active ? AppColors.accentPress : AppColors.text2,
+                  color: active ? t.accentPress : t.text2,
                   fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
@@ -355,9 +358,7 @@ class _SidebarItem extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: active
-                      ? AppColors.accent
-                      : AppColors.surfaceSunken,
+                  color: active ? t.accent : t.surfaceRaised,
                   borderRadius: AppRadius.pill,
                 ),
                 child: Text(
@@ -365,8 +366,7 @@ class _SidebarItem extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color:
-                        active ? Colors.white : AppColors.text3,
+                    color: active ? Colors.white : t.text3,
                   ),
                 ),
               ),

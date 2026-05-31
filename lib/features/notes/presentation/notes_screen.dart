@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../app/providers/providers.dart';
 import '../../../app/theme/colors.dart';
@@ -33,7 +34,52 @@ class NotesPaneState extends ConsumerState<NotesPane> {
   Timer? _saveTimer;
   List<NoteItemTableData> _notes = [];
 
+  // Resizable list pane — dragged by the user and persisted.
+  static const _kPaneWidthKey = 'notes_list_pane_width';
+  static const double _kPaneMin = 180;
+  static const double _kPaneMax = 460;
+  final _storage = const FlutterSecureStorage();
+  double _listPaneWidth = 240;
+
   ThemeTokens get _t => ThemeTokens.of(context);
+
+  @override
+  void initState() {
+    super.initState();
+    _storage.read(key: _kPaneWidthKey).then((v) {
+      final w = double.tryParse(v ?? '');
+      if (w != null && mounted) {
+        setState(() => _listPaneWidth = w.clamp(_kPaneMin, _kPaneMax));
+      }
+    });
+  }
+
+  void _persistPaneWidth() {
+    _storage.write(
+        key: _kPaneWidthKey, value: _listPaneWidth.toStringAsFixed(1));
+  }
+
+  Widget _buildResizeHandle(ThemeTokens t) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeLeftRight,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragUpdate: (d) {
+          setState(() {
+            _listPaneWidth =
+                (_listPaneWidth + d.delta.dx).clamp(_kPaneMin, _kPaneMax);
+          });
+        },
+        onHorizontalDragEnd: (_) => _persistPaneWidth(),
+        child: Container(
+          width: 9,
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: t.divider)),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -127,7 +173,7 @@ class NotesPaneState extends ConsumerState<NotesPane> {
       children: [
         // ── Sidebar ──
         SizedBox(
-          width: 240,
+          width: _listPaneWidth,
           child: Column(
             children: [
               _buildSearch(t),
@@ -136,7 +182,7 @@ class NotesPaneState extends ConsumerState<NotesPane> {
             ],
           ),
         ),
-        VerticalDivider(width: 1, color: t.divider),
+        _buildResizeHandle(t),
         // ── Editor ──
         Expanded(
           child: selected == null
@@ -416,13 +462,10 @@ class NotesPaneState extends ConsumerState<NotesPane> {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Отмена'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              side: BorderSide.none,
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Удалить'),

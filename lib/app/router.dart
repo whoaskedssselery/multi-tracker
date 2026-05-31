@@ -123,7 +123,7 @@ class _AppShell extends StatelessWidget {
         ),
         AdaptiveDestination(
           icon: Icon(Icons.auto_awesome_outlined),
-          label: 'AI',
+          label: 'ИИ',
         ),
         AdaptiveDestination(
           icon: Icon(Icons.settings_outlined),

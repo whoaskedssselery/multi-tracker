@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../app/providers/providers.dart';
 import '../../../app/theme/colors.dart';
 import '../../../app/theme/radius.dart';
@@ -11,6 +12,8 @@ import '../../../app/theme/typography.dart';
 import '../../../core/db/database.dart';
 import '../../../core/notifications/notifications_service.dart';
 import '../../../main.dart';
+import '../../../shared/widgets/app_modal.dart';
+import '../../../shared/widgets/page_header.dart';
 import '../../notes/presentation/notes_screen.dart';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -53,16 +56,39 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   final _taskBodyCtrl = TextEditingController();
   final _notesPaneKey = GlobalKey<NotesPaneState>();
 
+  // Resizable folder pane — width is dragged by the user and persisted.
+  static const _kPaneWidthKey = 'tasks_folder_pane_width';
+  static const double _kPaneMin = 160;
+  static const double _kPaneMax = 420;
+  final _storage = const FlutterSecureStorage();
+  double _folderPaneWidth = 200;
+
   // Populated from provider each build.
   List<TaskItemTableData> _allTasks = [];
 
   ThemeTokens get _t => ThemeTokens.of(context);
 
   @override
+  void initState() {
+    super.initState();
+    _storage.read(key: _kPaneWidthKey).then((v) {
+      final w = double.tryParse(v ?? '');
+      if (w != null && mounted) {
+        setState(() => _folderPaneWidth = w.clamp(_kPaneMin, _kPaneMax));
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _searchCtrl.dispose();
     _taskBodyCtrl.dispose();
     super.dispose();
+  }
+
+  void _persistPaneWidth() {
+    _storage.write(
+        key: _kPaneWidthKey, value: _folderPaneWidth.toStringAsFixed(1));
   }
 
   // ── Filtering ─────────────────────────────────────────────────────────────
@@ -157,29 +183,46 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             date.year, date.month, date.day, time.hour, time.minute));
     }
 
-    await showDialog<void>(
-      context: context,
+    await showAppModal<void>(
+      context,
+      maxWidth: 480,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlg) {
           final t = ThemeTokens.of(ctx);
           final notifLabel = notifyAt == null
               ? 'Без напоминания'
               : _formatDateTime(notifyAt!);
-          return AlertDialog(
-            backgroundColor: t.surface,
-            shape: RoundedRectangleBorder(
-                borderRadius: AppRadius.lgAll),
-            title: Text(
-              editing == null ? 'Новая задача' : 'Изменить задачу',
-              style: Theme.of(ctx).textTheme.titleLarge,
-            ),
-            content: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 360, maxHeight: 450),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+          return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 16, 12, 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            editing == null
+                                ? 'Новая задача'
+                                : 'Изменить задачу',
+                            style: Theme.of(ctx).textTheme.headlineMedium,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          color: t.text3,
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: t.divider),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                     TextField(
                       controller: _taskBodyCtrl,
                       autofocus: true,
@@ -297,25 +340,23 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                         ],
                       ),
                     ],
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Отмена'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  side: BorderSide.none,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdAll),
-                ),
-                onPressed: () async {
+                        ],
+                      ),
+                    ),
+                  ),
+                  Divider(height: 1, color: t.divider),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
+                    child: Row(
+                      children: [
+                        const Spacer(),
+                        OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Отмена'),
+                        ),
+                        const SizedBox(width: 12),
+                        FilledButton(
+                          onPressed: () async {
                   final body = _taskBodyCtrl.text.trim();
                   if (body.isEmpty) return;
                   if (editing == null) {
@@ -341,11 +382,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                   }
                   if (ctx.mounted) Navigator.pop(ctx);
                 },
-                child: Text(
-                    editing == null ? 'Создать' : 'Сохранить'),
-              ),
-            ],
-          );
+                          child: Text(
+                              editing == null ? 'Создать' : 'Сохранить'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
         },
       ),
     );
@@ -378,8 +422,10 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
       backgroundColor: t.bg,
       body: Column(
         children: [
-          _buildTopBar(context, t, visible.length, noteCount),
-          Divider(height: 1, color: t.divider),
+          AppPageHeader(
+            title: _activeTab == _Tab.tasks ? 'Задачи' : 'Заметки',
+            actions: _buildHeaderActions(context, t, noteCount),
+          ),
           Expanded(
             child: IndexedStack(
               index: _activeTab == _Tab.tasks ? 0 : 1,
@@ -388,9 +434,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SizedBox(
-                        width: 200,
+                        width: _folderPaneWidth,
                         child: _buildFolderList(context, t)),
-                    VerticalDivider(width: 1, color: t.divider),
+                    _buildResizeHandle(t),
                     Expanded(
                         child: _buildTaskList(context, t, visible)),
                     if (wide && selectedTask != null) ...[
@@ -413,83 +459,70 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
   // ── Top bar ───────────────────────────────────────────────────────────────
 
-  Widget _buildTopBar(
-      BuildContext context, ThemeTokens t, int visibleCount, int noteCount) {
-    final totalActive =
-        _allTasks.where((t) => !t.isDone).length;
+  static const double _kHeaderControlH = 40;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl3, vertical: AppSpacing.xl),
-      child: Row(
-        children: [
-          Text('Задачи',
-              style: Theme.of(context).textTheme.headlineLarge),
-          const Spacer(),
-          Container(
-            height: 44,
-            decoration: BoxDecoration(
-              border: Border.all(color: t.border),
-              borderRadius: AppRadius.smAll,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _activeTab = _Tab.tasks),
-                    child: _tabPill(context, 'Задачи', totalActive,
-                        _activeTab == _Tab.tasks, t),
-                  ),
-                ),
-                Container(width: 1, height: 44, color: t.border),
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _activeTab = _Tab.notes),
-                    child: _tabPill(context, 'Заметки', noteCount,
-                        _activeTab == _Tab.notes, t),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: SizedBox(
-              height: 44,
-              child: ElevatedButton(
-                onPressed: _activeTab == _Tab.tasks
-                    ? () => _showTaskForm()
-                    : () => _notesPaneKey.currentState?.newNote(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdAll),
-                  textStyle: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                child: Text(_activeTab == _Tab.tasks
-                    ? 'Новая задача'
-                    : 'Новая заметка'),
+  List<Widget> _buildHeaderActions(
+      BuildContext context, ThemeTokens t, int noteCount) {
+    final totalActive = _allTasks.where((t) => !t.isDone).length;
+
+    return [
+      // Segmented switcher — height matches the button next to it.
+      Container(
+        height: _kHeaderControlH,
+        decoration: BoxDecoration(
+          border: Border.all(color: t.border),
+          borderRadius: AppRadius.smAll,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => setState(() => _activeTab = _Tab.tasks),
+                child: _tabPill(context, 'Задачи', totalActive,
+                    _activeTab == _Tab.tasks, t),
               ),
             ),
-          ),
-        ],
+            Container(width: 1, height: _kHeaderControlH, color: t.border),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => setState(() => _activeTab = _Tab.notes),
+                child: _tabPill(context, 'Заметки', noteCount,
+                    _activeTab == _Tab.notes, t),
+              ),
+            ),
+          ],
+        ),
       ),
-    );
+      const SizedBox(width: 12),
+      // Fixed width so switching задача/заметка never shifts the switcher.
+      SizedBox(
+        width: 176,
+        height: _kHeaderControlH,
+        child: FilledButton.icon(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(176, _kHeaderControlH),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          onPressed: _activeTab == _Tab.tasks
+              ? () => _showTaskForm()
+              : () => _notesPaneKey.currentState?.newNote(),
+          icon: const Icon(Icons.add, size: 16),
+          label: Text(_activeTab == _Tab.tasks
+              ? 'Новая задача'
+              : 'Новая заметка'),
+        ),
+      ),
+    ];
   }
 
   Widget _tabPill(BuildContext context, String label, int count,
       bool active, ThemeTokens t) {
     return Container(
-      height: 44,
+      height: _kHeaderControlH,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       alignment: Alignment.center,
       color: active ? t.surfaceSunken : Colors.transparent,
@@ -499,6 +532,30 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             fontSize: 13,
             fontWeight: FontWeight.w500,
             color: active ? t.text1 : t.text3),
+      ),
+    );
+  }
+
+  // ── Resizable handle between folder pane and list ──────────────────────────
+
+  Widget _buildResizeHandle(ThemeTokens t) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeLeftRight,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragUpdate: (d) {
+          setState(() {
+            _folderPaneWidth = (_folderPaneWidth + d.delta.dx)
+                .clamp(_kPaneMin, _kPaneMax);
+          });
+        },
+        onHorizontalDragEnd: (_) => _persistPaneWidth(),
+        child: Container(
+          width: 9,
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: t.divider)),
+          ),
+        ),
       ),
     );
   }

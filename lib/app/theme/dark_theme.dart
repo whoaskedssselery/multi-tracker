@@ -8,14 +8,14 @@ ThemeData buildDarkTheme() {
   final cs = ColorScheme(
     brightness: Brightness.dark,
     primary: AppColors.darkAccent,
-    onPrimary: Colors.white,
+    onPrimary: AppColors.darkBg,
     primaryContainer: AppColors.darkAccentTint,
     onPrimaryContainer: AppColors.darkAccentPress,
     secondary: AppColors.darkAccentSoft,
     onSecondary: AppColors.darkAccentPress,
     secondaryContainer: AppColors.darkAccentTint,
     onSecondaryContainer: AppColors.darkAccentPress,
-    error: AppColors.danger,
+    error: AppColors.darkDanger,
     onError: Colors.white,
     surface: AppColors.darkSurface,
     onSurface: AppColors.darkText1,
@@ -25,8 +25,8 @@ ThemeData buildDarkTheme() {
     onSurfaceVariant: AppColors.darkText3,
     outline: AppColors.darkBorder,
     outlineVariant: AppColors.darkBorderSoft,
-    shadow: const Color(0x1A000000),
-    scrim: const Color(0x66000000),
+    shadow: const Color(0x00000000),
+    scrim: const Color(0x80000000),
     inverseSurface: AppColors.surface,
     onInverseSurface: AppColors.text1,
     inversePrimary: AppColors.accentPress,
@@ -38,6 +38,7 @@ ThemeData buildDarkTheme() {
     useMaterial3: true,
     colorScheme: cs,
     textTheme: text,
+    fontFamily: AppTypography.fontSans,
     scaffoldBackgroundColor: AppColors.darkBg,
     dividerColor: AppColors.darkDivider,
     dividerTheme: const DividerThemeData(
@@ -72,6 +73,7 @@ ThemeData buildDarkTheme() {
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       hintStyle: text.bodyLarge?.copyWith(color: AppColors.darkText4),
     ),
+    // Bottom navigation
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: AppColors.darkSurface.withValues(alpha: 0.92),
       indicatorColor: AppColors.darkAccentTint,
@@ -81,8 +83,30 @@ ThemeData buildDarkTheme() {
         }
         return const IconThemeData(color: AppColors.darkText3);
       }),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return text.labelSmall
+              ?.copyWith(color: AppColors.darkAccentPress, letterSpacing: 0.02 * 10);
+        }
+        return text.labelSmall
+            ?.copyWith(color: AppColors.darkText3, letterSpacing: 0.02 * 10);
+      }),
       elevation: 0,
     ),
+    // Navigation rail (desktop)
+    navigationRailTheme: NavigationRailThemeData(
+      backgroundColor: AppColors.darkBg,
+      indicatorColor: AppColors.darkAccentTint,
+      selectedIconTheme: const IconThemeData(color: AppColors.darkAccentPress),
+      unselectedIconTheme: const IconThemeData(color: AppColors.darkText3),
+      selectedLabelTextStyle: text.bodyMedium?.copyWith(
+        color: AppColors.darkAccentPress,
+        fontWeight: FontWeight.w600,
+      ),
+      unselectedLabelTextStyle: text.bodyMedium?.copyWith(color: AppColors.darkText2),
+      elevation: 0,
+    ),
+    // App bar
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.darkBg,
       surfaceTintColor: Colors.transparent,
@@ -92,6 +116,7 @@ ThemeData buildDarkTheme() {
       titleTextStyle: text.headlineMedium?.copyWith(color: AppColors.darkText1),
       iconTheme: const IconThemeData(color: AppColors.darkText2),
     ),
+    // Buttons
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: const ButtonStyle(
         mouseCursor: WidgetStatePropertyAll(SystemMouseCursors.click),
@@ -100,11 +125,11 @@ ThemeData buildDarkTheme() {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: AppColors.darkAccent,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.darkBg,
         minimumSize: const Size(0, 44),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -114,16 +139,18 @@ ThemeData buildDarkTheme() {
         minimumSize: const Size(0, 44),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
     textButtonTheme: TextButtonThemeData(
+      // Same height + padding as filled/outlined so dialog "Отмена" has the
+      // same hover/tap area as the primary action next to it.
       style: TextButton.styleFrom(
         foregroundColor: AppColors.darkText2,
-        minimumSize: const Size(0, 36),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
     iconButtonTheme: IconButtonThemeData(
@@ -133,6 +160,16 @@ ThemeData buildDarkTheme() {
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
       ).copyWith(mouseCursor: WidgetStateMouseCursor.clickable),
     ),
+    // Chips
+    chipTheme: ChipThemeData(
+      backgroundColor: AppColors.darkSurfaceRaised,
+      selectedColor: AppColors.darkAccent,
+      labelStyle: text.bodyMedium?.copyWith(color: AppColors.darkText2),
+      side: BorderSide.none,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.pill),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    ),
+    // Switches
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((s) =>
           s.contains(WidgetState.selected) ? Colors.white : AppColors.darkText4),
@@ -141,12 +178,31 @@ ThemeData buildDarkTheme() {
               ? AppColors.darkAccent
               : AppColors.darkSurfaceRaised),
     ),
+    // Bottom sheet
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: AppColors.darkBg,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       elevation: 0,
+    ),
+    // Dialogs
+    dialogTheme: DialogThemeData(
+      backgroundColor: AppColors.darkSurface,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+      elevation: 0,
+    ),
+    // Progress indicator
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: AppColors.darkAccent,
+      linearTrackColor: AppColors.darkSurfaceRaised,
+    ),
+    // Snack bar
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.darkSurfaceOverlay,
+      contentTextStyle: text.bodyMedium?.copyWith(color: AppColors.darkText1),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+      behavior: SnackBarBehavior.floating,
     ),
   );
 }

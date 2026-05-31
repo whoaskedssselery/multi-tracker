@@ -11,6 +11,7 @@ import '../../../core/ai/context_builder.dart';
 import '../../../core/ai/groq_client.dart';
 import '../../../core/db/database.dart';
 import '../../../main.dart';
+import '../../../shared/widgets/page_header.dart';
 
 // ─── Filter enum ────────────────────────────────────────────
 
@@ -156,35 +157,24 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       backgroundColor: t.bg,
       body: Column(
         children: [
-          _buildHeader(context, t),
-          Divider(height: 1, color: t.divider),
+          AppPageHeader(
+            title: 'ИИ',
+            actions: [
+              _FilterBar(
+                  value: _filter,
+                  onChanged: (f) => setState(() => _filter = f)),
+              if (_msgs.isNotEmpty) ...[
+                const SizedBox(width: 12),
+                _ClearButton(onTap: () async {
+                  await database.clearChatHistoryForFilter(_filter.key);
+                }),
+              ],
+            ],
+          ),
           Expanded(child: _buildMessages(context, t)),
           if (_sending) _buildTypingIndicator(t),
           _buildSuggestions(context),
           _buildInput(context, t),
-        ],
-      ),
-    );
-  }
-
-  // ── Header ────────────────────────────────────────────────
-
-  Widget _buildHeader(BuildContext context, ThemeTokens t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl3, vertical: AppSpacing.xl),
-      child: Row(
-        children: [
-          Text('AI', style: Theme.of(context).textTheme.headlineLarge),
-          const Spacer(),
-          _FilterBar(
-              value: _filter,
-              onChanged: (f) => setState(() => _filter = f)),
-          const SizedBox(width: 12),
-          if (_msgs.isNotEmpty)
-            _ClearButton(onTap: () async {
-              await database.clearChatHistoryForFilter(_filter.key);
-            }),
         ],
       ),
     );
@@ -210,7 +200,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 borderRadius: AppRadius.mdAll,
               ),
               child: const Center(
-                child: Text('AI',
+                child: Text('ИИ',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -218,7 +208,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Привет! Я твой AI-тренер.',
+            Text('Привет! Я твой ИИ-тренер.',
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -502,7 +492,7 @@ class _MessageBubble extends StatelessWidget {
                 borderRadius: AppRadius.smAll,
               ),
               child: const Center(
-                child: Text('AI',
+                child: Text('ИИ',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 10,

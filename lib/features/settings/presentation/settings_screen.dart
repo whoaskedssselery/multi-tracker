@@ -16,6 +16,7 @@ import '../../../app/theme/theme_tokens.dart';
 import '../../../app/theme/typography.dart';
 import '../../../core/db/database.dart';
 import '../../../main.dart';
+import '../../../shared/widgets/page_header.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -57,16 +58,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       backgroundColor: t.bg,
-      body: SingleChildScrollView(
+      body: Column(
+        children: [
+          const AppPageHeader(title: 'Настройки'),
+          Expanded(
+            child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xl3, vertical: AppSpacing.xl2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Настройки',
-                style: Theme.of(context).textTheme.headlineLarge),
-            const SizedBox(height: AppSpacing.xl3),
-
             // ── Profile ──────────────────────────────────────
             _sectionLabel('ПРОФИЛЬ'),
             _card([
@@ -193,6 +194,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: AppSpacing.xl4),
           ],
         ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -380,29 +384,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           if (hasKey) ...[
             const SizedBox(height: 12),
-            SizedBox(
-              height: 34,
-              child: ElevatedButton(
-                onPressed:
-                    _pingLoading ? null : () => _pingGroq(apiKey, model),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdAll),
-                  textStyle: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-                child: _pingLoading
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Проверить'),
+            FilledButton(
+              onPressed:
+                  _pingLoading ? null : () => _pingGroq(apiKey, model),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                textStyle: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600),
               ),
+              child: _pingLoading
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Text('Проверить'),
             ),
           ],
         ],
