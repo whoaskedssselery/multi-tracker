@@ -28,31 +28,18 @@ jobs:
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      # RELEASE + no codesign — this is the combination AltStore needs.
-      # (Debug builds use JIT and won't launch when sideloaded; they also
-      #  produce a bundle AltStore can fail to read → NSCocoaErrorDomain 3840.)
-      - name: Build iOS (release, unsigned)
-        run: flutter build ios --release --no-codesign
-
-      # AltStore requires a zip whose ROOT contains a `Payload/` folder with
-      # the .app inside. Anything else → "data couldn't be read" (3840).
-      - name: Package unsigned IPA
-        run: |
-          set -e
-          cd build/ios/iphoneos
-          rm -rf Payload App.ipa
-          mkdir Payload
-          cp -R Runner.app Payload/
-          # -X strips macOS extended attributes / resource forks that can
-          #  corrupt the archive for AltStore.
-          zip -r -X App.ipa Payload -x "*.DS_Store"
-          unzip -l App.ipa | head -20
-          mkdir -p "$GITHUB_WORKSPACE/output"
-          mv App.ipa "$GITHUB_WORKSPACE/output/App.ipa"
+      # flutter build ipa --no-codesign runs the full Xcode Archive + exportArchive
+      # pipeline, which strips ALL existing code signatures (including those
+      # pre-baked into Flutter.framework / App.framework) before packaging.
+      # The old "flutter build ios + manual zip" left those frameworks signed by
+      # Apple/Flutter while Runner and plugin binaries were unsigned — mixed
+      # signing state causes AltStore to throw NSCocoaErrorDomain 3840.
+      - name: Build IPA (release, unsigned — correct for AltStore)
+        run: flutter build ipa --no-codesign
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: iOS-App
-          path: output/App.ipa
+          path: build/ios/ipa/*.ipa
           retention-days: 7
