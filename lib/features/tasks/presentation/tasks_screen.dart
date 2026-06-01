@@ -412,6 +412,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     _allTasks = ref.watch(tasksProvider).valueOrNull ?? [];
     final noteCount = ref.watch(notesProvider).valueOrNull?.length ?? 0;
 
+    if (Platform.isIOS) return _buildMobile(context, t, noteCount);
+
     final visible    = _forFolder(_folderIndex);
     final selectedTask = _selectedTaskId == null
         ? null
@@ -453,6 +455,170 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Mobile build ─────────────────────────────────────────────────────────
+
+  static const _kMobileGroups = [
+    ('today',    'СЕГОДНЯ'),
+    ('tomorrow', 'ЗАВТРА'),
+    ('week',     'ЭТА НЕДЕЛЯ'),
+    ('later',    'ПОЗЖЕ'),
+    ('none',     'БЕЗ ДАТЫ'),
+  ];
+
+  Widget _buildMobile(BuildContext context, ThemeTokens t, int noteCount) {
+    final totalActive = _allTasks.where((t) => !t.isDone).length;
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: _activeTab == _Tab.tasks ? 'Задачи' : 'Заметки',
+            actions: [
+              IconButton(
+                icon: Icon(Icons.add, size: 22, color: t.text2),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: _activeTab == _Tab.tasks
+                    ? () => _showTaskForm()
+                    : () => _notesPaneKey.currentState?.newNote(),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: _mobileTabSwitcher(t, totalActive, noteCount),
+          ),
+          Expanded(
+            child: _activeTab == _Tab.tasks
+                ? _buildMobileTaskGroups(t)
+                : NotesPane(key: _notesPaneKey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mobileTabSwitcher(ThemeTokens t, int taskCount, int noteCount) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: t.surfaceSunken,
+        borderRadius: AppRadius.smAll,
+      ),
+      child: Row(children: [
+        _mobileTabPill('Tasks · $taskCount', _activeTab == _Tab.tasks,
+            () => setState(() => _activeTab = _Tab.tasks), t),
+        _mobileTabPill('Notes · $noteCount', _activeTab == _Tab.notes,
+            () => setState(() => _activeTab = _Tab.notes), t),
+      ]),
+    );
+  }
+
+  Widget _mobileTabPill(
+      String label, bool active, VoidCallback onTap, ThemeTokens t) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? t.surface : Colors.transparent,
+            borderRadius: AppRadius.smAll,
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 2,
+                        offset: const Offset(0, 1))
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: active ? t.text1 : t.text3,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileTaskGroups(ThemeTokens t) {
+    final done = _allTasks.where((t) => t.isDone).toList();
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+      children: [
+        for (final (key, label) in _kMobileGroups) ...[
+          _mobileGroup(t, key, label),
+        ],
+        if (done.isNotEmpty) ...[
+          _mobileGroupHeader(t, 'ВЫПОЛНЕНО'),
+          _mobileGroupCard(t, done),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+
+  Widget _mobileGroup(ThemeTokens t, String groupKey, String label) {
+    final tasks = _allTasks
+        .where((t) => !t.isDone && t.group == groupKey)
+        .toList();
+    if (tasks.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _mobileGroupHeader(t, label),
+        _mobileGroupCard(t, tasks),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _mobileGroupHeader(ThemeTokens t, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 6, left: 4),
+      child: Text(label, style: AppTypography.caps(color: t.text3)),
+    );
+  }
+
+  Widget _mobileGroupCard(ThemeTokens t, List<TaskItemTableData> tasks) {
+    return Container(
+      decoration: BoxDecoration(
+        color: t.surface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: t.borderSoft),
+      ),
+      child: Column(
+        children: tasks.asMap().entries.map((e) {
+          final i = e.key;
+          final task = e.value;
+          final isLast = i == tasks.length - 1;
+          return _MobileTaskRow(
+            task: task,
+            isLast: isLast,
+            t: t,
+            onToggle: () async {
+              final done = !task.isDone;
+              await database.toggleTaskDone(task.id, done: done);
+              if (done && task.notificationId != null) {
+                await NotificationsService.instance
+                    .cancel(task.notificationId!);
+                await database.setTaskNotificationId(task.id, null);
+              }
+            },
+            onTap: () => _showTaskForm(editing: task),
+          );
+        }).toList(),
       ),
     );
   }
@@ -953,6 +1119,106 @@ class _DetailButtonState extends State<_DetailButton> {
       ),
     );
   }
+}
+
+// ─── Mobile task row ──────────────────────────────────────────────────────────
+
+class _MobileTaskRow extends StatelessWidget {
+  const _MobileTaskRow({
+    required this.task,
+    required this.isLast,
+    required this.t,
+    required this.onToggle,
+    required this.onTap,
+  });
+
+  final TaskItemTableData task;
+  final bool isLast;
+  final ThemeTokens t;
+  final VoidCallback onToggle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final timeLabel = task.notifyAt != null
+        ? '${task.notifyAt!.hour.toString().padLeft(2, '0')}:'
+          '${task.notifyAt!.minute.toString().padLeft(2, '0')}'
+        : null;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          border: isLast
+              ? null
+              : Border(bottom: BorderSide(color: t.divider)),
+        ),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: onToggle,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: task.isDone ? t.accent : Colors.transparent,
+                  border: Border.all(
+                    color: task.isDone ? t.accent : t.border,
+                    width: 1.75,
+                  ),
+                ),
+                child: task.isDone
+                    ? const Icon(Icons.check, size: 13, color: Colors.white)
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 10),
+            if (task.priority != 'none')
+              Container(
+                width: 6,
+                height: 6,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _prioColor(task.priority, t),
+                ),
+              ),
+            Expanded(
+              child: Text(
+                task.body,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: task.isDone ? t.text3 : t.text1,
+                  decoration:
+                      task.isDone ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ),
+            if (timeLabel != null) ...[
+              const SizedBox(width: 8),
+              Text(
+                timeLabel,
+                style: TextStyle(
+                  fontFamily: 'IBM Plex Mono',
+                  fontSize: 12,
+                  color: t.text3,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Color _prioColor(String p, ThemeTokens t) => switch (p) {
+        'high' => t.danger,
+        'mid'  => t.warning,
+        _      => t.text3,
+      };
 }
 
 // ─── Task row ─────────────────────────────────────────────────────────────────

@@ -112,7 +112,9 @@ class _BlurredTabBar extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(
-                children: destinations.asMap().entries.map((e) {
+                children: destinations.asMap().entries
+                    .where((e) => !e.value.isFooter)
+                    .map((e) {
                   final i = e.key;
                   final d = e.value;
                   final active = i == selectedIndex;

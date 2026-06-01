@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -194,8 +195,11 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
             ],
           ),
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl3),
-            child: _buildWeekGrid(context, t, days),
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl3, AppSpacing.lg, AppSpacing.xl3, AppSpacing.md),
+            child: Platform.isIOS
+                ? _buildDayStrip(context, t, days)
+                : _buildWeekGrid(context, t, days),
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -206,6 +210,72 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── Mobile day strip (horizontal chip row) ────────────────────────────────
+
+  Widget _buildDayStrip(
+      BuildContext context, ThemeTokens t, List<_DayItem> days) {
+    return Row(
+      children: List.generate(7, (i) {
+        final day = days[i];
+        final selected = day.dow == _selectedDow;
+        return Expanded(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _selectedDow = day.dow),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: selected ? t.accentTint : Colors.transparent,
+                borderRadius: AppRadius.smAll,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _wdLabels[i],
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.04 * 11,
+                      color: selected ? t.accentPress : t.text3,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${day.date.day}',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'IBM Plex Mono',
+                      color: day.isToday
+                          ? t.accentPress
+                          : selected
+                              ? t.accentPress
+                              : t.text1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (day.isToday)
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: t.accent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    )
+                  else
+                    const SizedBox(height: 4),
+                ],
+              ),
+            ),
+          ),
+        );
+      }),
     );
   }
 
