@@ -33,10 +33,19 @@ class NotificationsService {
       requestSoundPermission: true,
     );
 
-    await _plugin.initialize(
-      const InitializationSettings(iOS: ios),
-      onDidReceiveNotificationResponse: _onTap,
-    );
+    try {
+      await _plugin.initialize(
+        const InitializationSettings(iOS: ios),
+        onDidReceiveNotificationResponse: _onTap,
+      );
+    } catch (e) {
+      // NSCocoaErrorDomain 3840: UserDefaults contains corrupt pending-notification
+      // data from a previous install. Mark as initialized so the app doesn't
+      // retry on every call; notifications will silently no-op this session.
+      debugPrint('flutter_local_notifications init failed (corrupt cache?): $e');
+      _initialized = true;
+      return;
+    }
 
     _initialized = true;
   }
