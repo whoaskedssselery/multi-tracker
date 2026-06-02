@@ -28,40 +28,63 @@ jobs:
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      # Build unsigned release app.
-      # --no-codesign: Runner binary stays unsigned;
-      # pre-built Flutter frameworks keep their SDK signatures.
-      # AltStore re-signs everything with --force on install.
       - name: Build iOS release (unsigned)
         run: flutter build ios --release --no-codesign
 
-      # Verify the built Info.plist is a valid plist before packaging.
-      - name: Verify Info.plist
+      # Xcode compiles Info.plist to binary format.
+      # AltServer on Windows uses its own plist parser which can fail on
+      # binary plists (NSCocoaErrorDomain 3840). Convert to XML1 so that
+      # every plist reader — macOS, Windows, iOS — can parse it without issues.
+      - name: Convert Info.plist to XML (AltServer Windows compat)
         run: |
-          PLIST="build/ios/iphoneos/Runner.app/Info.plist"
-          echo "=== Info.plist (human-readable) ==="
-          plutil -p "$PLIST"
-          echo ""
-          echo "=== Runner.app top-level ==="
-          ls -la build/ios/iphoneos/Runner.app/ | head -20
+          APP="build/ios/iphoneos/Runner.app"
+          PLIST="$APP/Info.plist"
 
-      # Package: Payload/Runner.app → App.ipa
-      # No codesign --remove-signature — that command modifies files before
-      # erroring on non-Mach-O inputs, which can corrupt Info.plist and
-      # trigger NSCocoaErrorDomain 3840 in AltStore.
+          echo "=== Before conversion ==="
+          file "$PLIST"
+
+          plutil -convert xml1 "$PLIST"
+
+          echo "=== After conversion ==="
+          file "$PLIST"
+          plutil -lint "$PLIST" && echo "✓ Info.plist valid"
+          plutil -p "$PLIST"
+
+          # Also convert any other binary plists inside the bundle
+          find "$APP" -name "*.plist" | while read -r p; do
+            if file "$p" | grep -q "binary"; then
+              plutil -convert xml1 "$p" 2>/dev/null || true
+              echo "converted: $p"
+            fi
+          done
+
       - name: Package IPA
         run: |
           set -e
+          APP="build/ios/iphoneos/Runner.app"
+
           cd build/ios/iphoneos
           rm -rf Payload
           mkdir Payload
+          # -R preserves symlinks inside frameworks
           cp -R Runner.app Payload/
-          zip -qr App.ipa Payload \
+
+          # -X: no extra macOS attributes (UID/GID/timestamps) in zip headers
+          # This prevents AltServer from choking on macOS-specific zip extensions
+          zip -r -X App.ipa Payload \
             -x "*.DS_Store" \
             -x "__MACOSX/*"
+
           echo "IPA size: $(du -sh App.ipa)"
-          echo "IPA top entries:"
-          unzip -l App.ipa | head -12
+
+          echo ""
+          echo "=== IPA zip TOC (first 20 entries) ==="
+          unzip -l App.ipa | head -22
+
+          echo ""
+          echo "=== Info.plist inside IPA ==="
+          unzip -p App.ipa "Payload/Runner.app/Info.plist" | plutil -lint - && echo "✓ plist in IPA is valid"
+          unzip -p App.ipa "Payload/Runner.app/Info.plist" | plutil -p -
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
