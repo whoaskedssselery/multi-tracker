@@ -101,7 +101,7 @@ class _BlurredTabBar extends StatelessWidget {
     // the icon+label row is centred across that full height, so it never
     // sticks to the top.
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    const contentH = 54.0;
+    const contentH = 46.0;
 
     return ClipRect(
       child: BackdropFilter(
