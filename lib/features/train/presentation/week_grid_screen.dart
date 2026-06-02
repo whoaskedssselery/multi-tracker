@@ -224,103 +224,85 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
       orElse: () => selected,
     );
 
-    return Scaffold(
-      backgroundColor: t.bg,
-      body: CustomScrollView(
-        slivers: [
-          // ── Header: title + week nav ──
-          SliverToBoxAdapter(
-            child: IosPageHeader(
-              title: 'Тренировки',
-              subtitle: _fmtWeekRange(weekStart),
-              action: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _iosNavBtn(context, t, Icons.chevron_left,
-                      () => setState(() => _weekOffset--)),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () => setState(() {
-                      _weekOffset  = 0;
-                      _selectedDow = DateTime.now().weekday;
-                    }),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: t.surface,
-                        border: Border.all(color: t.border),
-                        borderRadius: AppRadius.smAll,
-                      ),
-                      child: Text('Сегодня',
+    // No inner Scaffold — Column only; _MobileLayout.Scaffold is the parent.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        IosPageHeader(
+          title: 'Тренировки',
+          subtitle: _fmtWeekRange(weekStart),
+          action: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _iosNavBtn(context, t, Icons.chevron_left,
+                  () => setState(() => _weekOffset--)),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () => setState(() {
+                  _weekOffset  = 0;
+                  _selectedDow = DateTime.now().weekday;
+                }),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: t.surface,
+                    border: Border.all(color: t.border),
+                    borderRadius: AppRadius.smAll,
+                  ),
+                  child: Text('Сегодня',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: t.text1)),
+                ),
+              ),
+              const SizedBox(width: 4),
+              _iosNavBtn(context, t, Icons.chevron_right,
+                  () => setState(() => _weekOffset++)),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: _buildDayStrip(context, t, days),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _iosTodayCard(context, t, todayItem),
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(children: [
+                    Text('ВСЯ НЕДЕЛЯ',
+                        style: AppTypography.caps(color: t.text3)),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _showProgramDialog,
+                      child: Text('Программа →',
                           style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: t.text1)),
+                              color: t.accent)),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  _iosNavBtn(context, t, Icons.chevron_right,
-                      () => setState(() => _weekOffset++)),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Day strip ──
-          SliverToBoxAdapter(
-            child: Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _buildDayStrip(context, t, days),
-            ),
-          ),
-
-          // ── Today workout card ──
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _iosTodayCard(context, t, todayItem),
-            ),
-          ),
-
-          // ── Whole week section ──
-          SliverToBoxAdapter(
-            child: Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(20, 24, 20, 4),
-              child: Row(children: [
-                Text('ВСЯ НЕДЕЛЯ',
-                    style: AppTypography.caps(color: t.text3)),
-                const Spacer(),
-                GestureDetector(
-                  onTap: _showProgramDialog,
-                  child: Text(
-                    'Программа →',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: t.accent),
+                  ]),
+                ),
+                ...List.generate(
+                  7,
+                  (i) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _iosWeekRow(context, t, days[i]),
                   ),
                 ),
-              ]),
+              ],
             ),
           ),
-
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _iosWeekRow(context, t, days[i]),
-                ),
-                childCount: 7,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

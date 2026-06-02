@@ -413,14 +413,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _templates = ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
     _workoutDates = ref.watch(workoutDatesProvider).valueOrNull ?? [];
 
-    if (Platform.isIOS) return _buildIos(context, t);
+    final body = Platform.isIOS
+        ? _buildIos(context, t)
+        : _buildDesktop(context, t);
+    return Scaffold(backgroundColor: t.bg, body: body);
+  }
 
+  Widget _buildDesktop(BuildContext context, ThemeTokens t) {
     final name = _profile?.name.trim() ?? '';
     final greeting =
         name.isEmpty || name == 'User' ? 'Привет' : 'Привет, $name';
-    return Scaffold(
-      backgroundColor: t.bg,
-      body: Column(
+    return Column(
         children: [
           AppPageHeader(
             title: greeting,
@@ -452,7 +455,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
         ],
-      ),
     );
   }
 
@@ -462,28 +464,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final name = _profile?.name.trim() ?? '';
     final greeting =
         name.isEmpty || name == 'User' ? 'Привет' : 'Привет, $name';
-    return Scaffold(
-      backgroundColor: t.bg,
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: IosPageHeader(
-              title: greeting,
-              subtitle: _headerDate(DateTime.now()),
-              action: GestureDetector(
-                onTap: () => context.go('/settings'),
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(Icons.settings_outlined,
-                      size: 22, color: t.text3),
-                ),
-              ),
+    // No inner Scaffold — _MobileLayout.Scaffold is the only Scaffold.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        IosPageHeader(
+          title: greeting,
+          subtitle: _headerDate(DateTime.now()),
+          action: GestureDetector(
+            onTap: () => context.go('/settings'),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(Icons.settings_outlined, size: 22, color: t.text3),
             ),
           ),
-          SliverPadding(
+        ),
+        Expanded(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 _iosGoalsCard(context, t),
                 const SizedBox(height: 14),
                 _iosTodayWeightCard(context, t),
@@ -493,11 +494,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _iosChartCard(context, t),
                 const SizedBox(height: 20),
                 _iosHistorySection(context, t),
-              ]),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
