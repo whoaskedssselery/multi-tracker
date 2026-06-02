@@ -412,7 +412,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     _allTasks = ref.watch(tasksProvider).valueOrNull ?? [];
     final noteCount = ref.watch(notesProvider).valueOrNull?.length ?? 0;
 
-    if (MediaQuery.sizeOf(context).width < 600) return _buildMobile(context, t, noteCount);
+    if (Platform.isIOS) return _buildMobile(context, t, noteCount);
 
     final visible    = _forFolder(_folderIndex);
     final selectedTask = _selectedTaskId == null

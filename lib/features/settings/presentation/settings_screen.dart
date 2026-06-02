@@ -56,19 +56,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final safeModel =
         _groqModels.contains(currentModel) ? currentModel : _groqModels.first;
 
-    final isCompact = MediaQuery.sizeOf(context).width < 600;
     return Scaffold(
       backgroundColor: t.bg,
       body: Column(
         children: [
-          if (isCompact)
+          if (Platform.isIOS)
             const IosPageHeader(title: 'Настройки')
           else
             const AppPageHeader(title: 'Настройки'),
           Expanded(
             child: SingleChildScrollView(
         padding: EdgeInsets.symmetric(
-            horizontal: isCompact ? 20 : AppSpacing.xl3,
+            horizontal: Platform.isIOS ? 20 : AppSpacing.xl3,
             vertical: AppSpacing.xl2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

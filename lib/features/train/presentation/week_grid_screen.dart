@@ -166,7 +166,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
 
     final selected = days[_selectedDow - 1];
 
-    if (MediaQuery.sizeOf(context).width < 600) {
+    if (Platform.isIOS) {
       return _buildIos(context, t, days, selected, weekStart);
     }
 

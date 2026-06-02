@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -153,7 +155,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final t = ThemeTokens.of(context);
     _msgs = ref.watch(chatMessagesForFilterProvider(_filter.key)).valueOrNull ?? [];
 
-    if (MediaQuery.sizeOf(context).width < 600) return _buildIos(context, t);
+    if (Platform.isIOS) return _buildIos(context, t);
 
     return Scaffold(
       backgroundColor: t.bg,
