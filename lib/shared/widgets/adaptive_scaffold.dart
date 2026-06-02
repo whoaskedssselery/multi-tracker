@@ -109,8 +109,8 @@ class _BlurredTabBar extends StatelessWidget {
           ),
           child: SafeArea(
             top: false,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 0),
+            child: SizedBox(
+              height: 48, // fixed compact height above safe-area inset
               child: Row(
                 children: destinations.asMap().entries
                     .where((e) => !e.value.isFooter)
@@ -122,49 +122,49 @@ class _BlurredTabBar extends StatelessWidget {
                     child: MouseRegion(
                       cursor: SystemMouseCursors.click,
                       child: GestureDetector(
-                      onTap: () => onSelected?.call(i),
-                      behavior: HitTestBehavior.opaque,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: Column(
-                          key: ValueKey(active),
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: active
-                                    ? t.accentTint
-                                    : Colors.transparent,
-                                borderRadius: AppRadius.smAll,
-                              ),
-                              child: IconTheme(
-                                data: IconThemeData(
-                                  color: active
-                                      ? t.accentPress
-                                      : theme.colorScheme.onSurfaceVariant,
-                                  size: 24,
+                        onTap: () => onSelected?.call(i),
+                        behavior: HitTestBehavior.opaque,
+                        // Center the icon+label block as one unit
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? t.accentTint
+                                  : Colors.transparent,
+                              borderRadius: AppRadius.smAll,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconTheme(
+                                  data: IconThemeData(
+                                    color: active
+                                        ? t.accentPress
+                                        : theme.colorScheme.onSurfaceVariant,
+                                    size: 24,
+                                  ),
+                                  child: d.icon,
                                 ),
-                                child: d.icon,
-                              ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  d.label,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: 0.02 * 10,
+                                    color: active
+                                        ? t.accent
+                                        : theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              d.label,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.02 * 10,
-                                color: active
-                                    ? t.accent
-                                    : theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
                     ),
                   );
                 }).toList(),
