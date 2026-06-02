@@ -110,7 +110,9 @@ class _BlurredTabBar extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              // 6px top / 2px bottom — keeps content height ~50px so total
+              // bar (incl. 34px home-indicator safe-area) ≈ 84px on iPhone.
+              padding: const EdgeInsets.only(top: 6, bottom: 2),
               child: Row(
                 children: destinations.asMap().entries
                     .where((e) => !e.value.isFooter)
@@ -132,7 +134,9 @@ class _BlurredTabBar extends StatelessWidget {
                           children: [
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.all(6),
+                              // Smaller pill padding: 5px instead of 6
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 5),
                               decoration: BoxDecoration(
                                 color: active
                                     ? t.accentTint
@@ -149,7 +153,7 @@ class _BlurredTabBar extends StatelessWidget {
                                 child: d.icon,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
                               d.label,
                               style: TextStyle(
