@@ -128,43 +128,35 @@ class _BlurredTabBar extends StatelessWidget {
                     child: GestureDetector(
                       onTap: () => onSelected?.call(i),
                       behavior: HitTestBehavior.opaque,
+                      // No background pill — just tint the icon+label
+                      // accent when active (matches the design mockup).
                       child: Center(
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: active
-                                ? t.accentTint
-                                : Colors.transparent,
-                            borderRadius: AppRadius.smAll,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconTheme(
-                                data: IconThemeData(
-                                  color: active
-                                      ? t.accentPress
-                                      : theme.colorScheme.onSurfaceVariant,
-                                  size: 24,
-                                ),
-                                child: d.icon,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconTheme(
+                              data: IconThemeData(
+                                color: active
+                                    ? t.accent
+                                    : theme.colorScheme.onSurfaceVariant,
+                                size: 24,
                               ),
-                              const SizedBox(height: 3),
-                              Text(
-                                d.label,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 0.02 * 10,
-                                  color: active
-                                      ? t.accent
-                                      : theme.colorScheme.onSurfaceVariant,
-                                ),
+                              child: d.icon,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              d.label,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight:
+                                    active ? FontWeight.w600 : FontWeight.w500,
+                                letterSpacing: 0.02 * 10,
+                                color: active
+                                    ? t.accent
+                                    : theme.colorScheme.onSurfaceVariant,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
