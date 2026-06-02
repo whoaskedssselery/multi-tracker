@@ -191,20 +191,25 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       backgroundColor: t.bg,
       body: Column(
         children: [
+          // Large title header with filter chips below
           IosPageHeader(
             title: 'AI',
             action: _msgs.isNotEmpty
                 ? GestureDetector(
                     onTap: () async {
-                      await database.clearChatHistoryForFilter(_filter.key);
+                      await database
+                          .clearChatHistoryForFilter(_filter.key);
                     },
                     child: Padding(
                       padding: const EdgeInsets.all(4),
-                      child: Text('Очистить',
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: t.accent,
-                              fontWeight: FontWeight.w500)),
+                      child: Text(
+                        'Очистить',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: t.accent,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   )
                 : null,
@@ -217,6 +222,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           Expanded(child: _buildMessages(context, t)),
           if (_sending) _buildTypingIndicator(t),
           _buildSuggestions(context),
+          const SizedBox(height: 10),
           _buildIosInput(context, t),
         ],
       ),

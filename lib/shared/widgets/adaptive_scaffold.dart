@@ -110,8 +110,7 @@ class _BlurredTabBar extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              // 4px top / 0 bottom — content ~48px + 34px home-indicator ≈ 82px.
-              padding: const EdgeInsets.only(top: 4, bottom: 0),
+              padding: const EdgeInsets.only(top: 6, bottom: 2),
               child: Row(
                 children: destinations.asMap().entries
                     .where((e) => !e.value.isFooter)
@@ -133,9 +132,7 @@ class _BlurredTabBar extends StatelessWidget {
                           children: [
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
-                              // Smaller pill padding: 5px instead of 6
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 5),
+                              padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
                                 color: active
                                     ? t.accentTint
@@ -152,7 +149,7 @@ class _BlurredTabBar extends StatelessWidget {
                                 child: d.icon,
                               ),
                             ),
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 4),
                             Text(
                               d.label,
                               style: TextStyle(

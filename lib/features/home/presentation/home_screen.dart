@@ -405,31 +405,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final t = _t;
-    _entries   = ref.watch(weightEntriesProvider).valueOrNull ?? [];
-    _profile   = ref.watch(profileProvider).valueOrNull;
-    _goals     = ref.watch(goalsProvider).valueOrNull ?? [];
-    _tasks     = ref.watch(tasksProvider).valueOrNull ?? [];
-    _slots     = ref.watch(scheduleSlotsProvider).valueOrNull ?? [];
+    _entries = ref.watch(weightEntriesProvider).valueOrNull ?? [];
+    _profile = ref.watch(profileProvider).valueOrNull;
+    _goals = ref.watch(goalsProvider).valueOrNull ?? [];
+    _tasks = ref.watch(tasksProvider).valueOrNull ?? [];
+    _slots = ref.watch(scheduleSlotsProvider).valueOrNull ?? [];
     _templates = ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
     _workoutDates = ref.watch(workoutDatesProvider).valueOrNull ?? [];
 
-    final name     = _profile?.name.trim() ?? '';
-    final greeting = name.isEmpty || name == 'User' ? 'Привет' : 'Привет, $name';
+    if (Platform.isIOS) return _buildIos(context, t);
 
-    // On iOS swap to large-title header; body stays identical.
-    final Widget header = Platform.isIOS
-        ? IosPageHeader(
-            title: greeting,
-            subtitle: _headerDate(DateTime.now()),
-            action: GestureDetector(
-              onTap: () => context.go('/settings'),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(Icons.settings_outlined, size: 22, color: t.text3),
-              ),
-            ),
-          )
-        : AppPageHeader(
+    final name = _profile?.name.trim() ?? '';
+    final greeting =
+        name.isEmpty || name == 'User' ? 'Привет' : 'Привет, $name';
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: Column(
+        children: [
+          AppPageHeader(
             title: greeting,
             subtitle: _headerDate(DateTime.now()),
             actions: [
@@ -439,16 +432,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onPressed: () => context.go('/settings'),
               ),
             ],
-          );
-
-    return Scaffold(
-      backgroundColor: t.bg,
-      body: Column(
-        children: [
-          header,
+          ),
           Expanded(
             child: LayoutBuilder(
               builder: (ctx, c) {
+                // Decide by REAL available width (not full window — the sidebar
+                // already took 260px), so the two-column body never overflows.
                 final wide = c.maxWidth >= 980;
                 return SingleChildScrollView(
                   padding: EdgeInsets.symmetric(
@@ -460,6 +449,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       : _mobileBody(context, t),
                 );
               },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── iOS build ─────────────────────────────────────────────────
+
+  Widget _buildIos(BuildContext context, ThemeTokens t) {
+    final name = _profile?.name.trim() ?? '';
+    final greeting =
+        name.isEmpty || name == 'User' ? 'Привет' : 'Привет, $name';
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: IosPageHeader(
+              title: greeting,
+              subtitle: _headerDate(DateTime.now()),
+              action: GestureDetector(
+                onTap: () => context.go('/settings'),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.settings_outlined,
+                      size: 22, color: t.text3),
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _iosGoalsCard(context, t),
+                const SizedBox(height: 14),
+                _iosTodayWeightCard(context, t),
+                const SizedBox(height: 20),
+                _iosWeightSectionHeader(context, t),
+                const SizedBox(height: 10),
+                _iosChartCard(context, t),
+                const SizedBox(height: 20),
+                _iosHistorySection(context, t),
+              ]),
             ),
           ),
         ],

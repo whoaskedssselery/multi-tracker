@@ -60,15 +60,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       backgroundColor: t.bg,
       body: Column(
         children: [
-          if (Platform.isIOS)
-            const IosPageHeader(title: 'Настройки')
-          else
-            const AppPageHeader(title: 'Настройки'),
+          const AppPageHeader(title: 'Настройки'),
           Expanded(
             child: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-            horizontal: Platform.isIOS ? 20 : AppSpacing.xl3,
-            vertical: AppSpacing.xl2),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl3, vertical: AppSpacing.xl2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
