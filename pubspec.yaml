@@ -38,9 +38,13 @@ dependencies:
   # HTTP / AI (Groq)
   dio: ^5.8.0+1
 
+  # Cloud sync (Supabase — auth + Postgres)
+  supabase_flutter: ^2.8.0
+
   # Export & file handling
   path_provider: ^2.1.5
   share_plus: ^10.1.4
+  file_picker: ^8.1.4
 
 
   # Intl

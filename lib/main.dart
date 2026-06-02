@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
 import 'core/db/database.dart';
 import 'core/notifications/notifications_service.dart';
+import 'core/sync/supabase_config.dart';
 
 /// Global database instance — passed to providers via ProviderScope override
 late final AppDatabase database;
@@ -31,6 +33,18 @@ Future<void> main() async {
 
   // 4. Init notifications (no permission prompt yet — we ask later in Settings)
   await NotificationsService.instance.init();
+
+  // 5. Init Supabase (cloud sync) if configured. Safe no-op when keys are blank.
+  if (SupabaseConfig.isConfigured) {
+    try {
+      await Supabase.initialize(
+        url: SupabaseConfig.url,
+        anonKey: SupabaseConfig.anonKey,
+      );
+    } catch (_) {
+      // Offline or misconfigured — app still runs fully local.
+    }
+  }
 
   runApp(
     ProviderScope(

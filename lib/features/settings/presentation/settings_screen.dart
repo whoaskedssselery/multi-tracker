@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,6 +16,8 @@ import '../../../app/theme/spacing.dart';
 import '../../../app/theme/theme_tokens.dart';
 import '../../../app/theme/typography.dart';
 import '../../../core/db/database.dart';
+import '../../../core/sync/supabase_config.dart';
+import '../../../core/sync/sync_service.dart';
 import '../../../main.dart';
 import '../../../shared/widgets/page_header.dart';
 
@@ -144,6 +147,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ], t: t),
             const SizedBox(height: AppSpacing.xl2),
 
+            // ── Sync ─────────────────────────────────────────
+            if (SupabaseConfig.isConfigured) ...[
+              _sectionLabel('СИНХРОНИЗАЦИЯ'),
+              _card([_syncSection(t)], t: t),
+              const SizedBox(height: AppSpacing.xl2),
+            ],
+
             // ── Notifications ────────────────────────────────
             _sectionLabel('УВЕДОМЛЕНИЯ'),
             _card([
@@ -170,6 +180,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _actionRow('Экспорт данных (JSON)',
                   Icons.code_outlined,
                   _exportLoading ? null : _exportJson,
+                  t: t),
+              _divider(t),
+              _actionRow('Импорт данных (JSON)',
+                  Icons.upload_file_outlined,
+                  _exportLoading ? null : _importJson,
                   t: t),
               _divider(t),
               _actionRow(
@@ -311,6 +326,191 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // ── Sync section ─────────────────────────────────────────────
+
+  Widget _syncSection(ThemeTokens t) {
+    final sync = ref.watch(syncControllerProvider);
+
+    final children = <Widget>[];
+
+    if (!sync.signedIn) {
+      children.add(Padding(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.sm),
+        child: Text(
+          'Войди, чтобы данные синхронизировались между Windows и iPhone.',
+          style: TextStyle(fontSize: 13, color: t.text3, height: 1.4),
+        ),
+      ));
+      children.add(_actionRow(
+        sync.busy ? 'Вход…' : 'Войти',
+        Icons.login_outlined,
+        sync.busy ? null : () => _showSyncSignIn(t),
+        t: t,
+      ));
+    } else {
+      children.add(_infoRow('Аккаунт', sync.email ?? '—', t: t));
+      children.add(_divider(t));
+      children.add(Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+        child: Row(
+          children: [
+            Icon(
+              sync.busy ? Icons.sync : Icons.cloud_done_outlined,
+              size: 18,
+              color: sync.busy ? t.accent : t.success,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                sync.busy
+                    ? (sync.status ?? 'Синхронизация…')
+                    : (sync.lastSynced != null
+                        ? 'Синхронизировано ${_fmtSyncTime(sync.lastSynced!)}'
+                        : 'Готово к синхронизации'),
+                style: TextStyle(fontSize: 14, color: t.text1),
+              ),
+            ),
+          ],
+        ),
+      ));
+      children.add(_divider(t));
+      children.add(_actionRow(
+        'Синхронизировать сейчас',
+        Icons.sync_outlined,
+        sync.busy
+            ? null
+            : () => ref.read(syncControllerProvider.notifier).syncNow(),
+        t: t,
+      ));
+      children.add(_divider(t));
+      children.add(_actionRow(
+        'Выйти',
+        Icons.logout_outlined,
+        sync.busy
+            ? null
+            : () => ref.read(syncControllerProvider.notifier).signOut(),
+        color: AppColors.danger,
+        t: t,
+      ));
+    }
+
+    if (sync.error != null) {
+      children.add(Padding(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.lg),
+        child: Text(sync.error!,
+            style: TextStyle(fontSize: 12, color: AppColors.danger)),
+      ));
+    }
+
+    return Column(children: children);
+  }
+
+  static String _fmtSyncTime(DateTime ts) {
+    final d = DateTime.now().difference(ts.toLocal());
+    if (d.inSeconds < 60) return 'только что';
+    if (d.inMinutes < 60) return '${d.inMinutes} мин назад';
+    if (d.inHours < 24) return '${d.inHours} ч назад';
+    final l = ts.toLocal();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(l.day)}.${two(l.month)} ${two(l.hour)}:${two(l.minute)}';
+  }
+
+  Future<void> _showSyncSignIn(ThemeTokens t) async {
+    final emailCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setDlg) {
+          final sync = ref.watch(syncControllerProvider);
+          return AlertDialog(
+            backgroundColor: t.surface,
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+            title: Text('Вход', style: Theme.of(ctx).textTheme.titleLarge),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _syncField(ctx, emailCtrl, 'Email', t,
+                    keyboardType: TextInputType.emailAddress),
+                const SizedBox(height: 12),
+                _syncField(ctx, passCtrl, 'Пароль', t, obscure: true),
+                if (sync.error != null) ...[
+                  const SizedBox(height: 10),
+                  Text(sync.error!,
+                      style: TextStyle(
+                          fontSize: 12, color: AppColors.danger)),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Отмена'),
+              ),
+              FilledButton(
+                onPressed: sync.busy
+                    ? null
+                    : () async {
+                        await ref
+                            .read(syncControllerProvider.notifier)
+                            .signIn(emailCtrl.text, passCtrl.text);
+                        if (ref.read(syncControllerProvider).signedIn &&
+                            ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                      },
+                child: Text(sync.busy ? '…' : 'Войти'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  Widget _syncField(BuildContext ctx, TextEditingController ctrl, String label,
+      ThemeTokens t,
+      {bool obscure = false, TextInputType? keyboardType}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: TextStyle(
+                fontSize: 12, color: t.text3, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: ctrl,
+          obscureText: obscure,
+          keyboardType: keyboardType,
+          autocorrect: false,
+          enableSuggestions: false,
+          style: TextStyle(fontSize: 14, color: t.text1),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            border: OutlineInputBorder(
+              borderRadius: AppRadius.mdAll,
+              borderSide: BorderSide(color: t.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: AppRadius.mdAll,
+              borderSide: BorderSide(color: t.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: AppRadius.mdAll,
+              borderSide: BorderSide(color: t.accent, width: 1.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -640,7 +840,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _exportJson() async {
     setState(() => _exportLoading = true);
     try {
-      final data = await ref.read(dbProvider).exportAllData();
+      // Lossless full snapshot — pairs with "Импорт данных (JSON)".
+      final data = await ref.read(dbProvider).exportSnapshot();
       final json = const JsonEncoder.withIndent('  ').convert(data);
       await _saveOrShare(
         bytes: utf8.encode(json),
@@ -651,6 +852,77 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _exportLoading = false);
+    }
+  }
+
+  Future<void> _importJson() async {
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+      withData: true,
+    );
+    if (picked == null || picked.files.isEmpty) return;
+
+    Map<String, dynamic> parsed;
+    try {
+      final file = picked.files.first;
+      final bytes = file.bytes ??
+          (file.path != null ? await File(file.path!).readAsBytes() : null);
+      if (bytes == null) throw 'Не удалось прочитать файл';
+      parsed = (jsonDecode(utf8.decode(bytes)) as Map).cast<String, dynamic>();
+      if (parsed['tables'] is! Map) {
+        throw 'Файл не похож на снапшот Multi-tracker';
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    final t = _t;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: t.surface,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+        title: Text('Импортировать данные?',
+            style: Theme.of(ctx).textTheme.titleLarge),
+        content: Text(
+          'Текущие данные будут полностью заменены содержимым файла. '
+          'Это действие нельзя отменить.',
+          style: TextStyle(fontSize: 14, color: t.text2),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Импортировать'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _exportLoading = true);
+    try {
+      await ref.read(dbProvider).importSnapshot(parsed);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Данные импортированы')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Ошибка импорта: $e')));
       }
     } finally {
       if (mounted) setState(() => _exportLoading = false);

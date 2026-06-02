@@ -785,6 +785,146 @@ class AppDatabase extends _$AppDatabase {
     };
   }
 
+  // ── Full lossless snapshot (cloud sync / backup) ──────────────────────────
+  //
+  // Unlike exportAllData() (human-readable, lossy), these capture EVERY table
+  // and column with primary keys intact, so importing reproduces the database
+  // byte-for-byte. Used by the Supabase sync layer and JSON import.
+
+  static const int snapshotVersion = 1;
+
+  Future<Map<String, dynamic>> exportSnapshot() async {
+    return {
+      'snapshotVersion': snapshotVersion,
+      'schemaVersion': schemaVersion,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'tables': {
+        'profile':
+            (await select(profileTable).get()).map((r) => r.toJson()).toList(),
+        'app_preferences': (await select(appPreferencesTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+        'goals':
+            (await select(goalTable).get()).map((r) => r.toJson()).toList(),
+        'weight_entries': (await select(weightEntryTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+        'workout_templates': (await select(workoutTemplateTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+        'exercise_templates': (await select(exerciseTemplateTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+        'schedule_slots': (await select(scheduleSlotTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+        'set_entries': (await select(setEntryTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+        'workout_notes': (await select(workoutNoteTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+        'ai_analyses': (await select(aiAnalysisTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+        'task_items': (await select(taskItemTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+        'note_items': (await select(noteItemTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+        'chat_messages': (await select(chatMessageTable).get())
+            .map((r) => r.toJson())
+            .toList(),
+      },
+    };
+  }
+
+  /// Replaces the entire database with [snapshot]. Atomic (transaction).
+  /// Rows are deleted children→parents and re-inserted parents→children so
+  /// foreign-key constraints stay satisfied without toggling PRAGMA.
+  Future<void> importSnapshot(Map<String, dynamic> snapshot) async {
+    final tables =
+        ((snapshot['tables'] as Map?) ?? const {}).cast<String, dynamic>();
+    List<Map<String, dynamic>> rows(String key) =>
+        ((tables[key] as List?) ?? const [])
+            .map((e) => (e as Map).cast<String, dynamic>())
+            .toList();
+
+    await transaction(() async {
+      // Delete children → parents.
+      await delete(chatMessageTable).go();
+      await delete(aiAnalysisTable).go();
+      await delete(workoutNoteTable).go();
+      await delete(setEntryTable).go();
+      await delete(scheduleSlotTable).go();
+      await delete(exerciseTemplateTable).go();
+      await delete(workoutTemplateTable).go();
+      await delete(noteItemTable).go();
+      await delete(taskItemTable).go();
+      await delete(goalTable).go();
+      await delete(weightEntryTable).go();
+      await delete(appPreferencesTable).go();
+      await delete(profileTable).go();
+
+      // Insert parents → children.
+      for (final j in rows('profile')) {
+        await into(profileTable)
+            .insert(ProfileTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('app_preferences')) {
+        await into(appPreferencesTable).insert(
+            AppPreferencesTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('goals')) {
+        await into(goalTable)
+            .insert(GoalTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('weight_entries')) {
+        await into(weightEntryTable).insert(
+            WeightEntryTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('workout_templates')) {
+        await into(workoutTemplateTable).insert(
+            WorkoutTemplateTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('exercise_templates')) {
+        await into(exerciseTemplateTable).insert(
+            ExerciseTemplateTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('schedule_slots')) {
+        await into(scheduleSlotTable).insert(
+            ScheduleSlotTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('set_entries')) {
+        await into(setEntryTable).insert(
+            SetEntryTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('workout_notes')) {
+        await into(workoutNoteTable).insert(
+            WorkoutNoteTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('ai_analyses')) {
+        await into(aiAnalysisTable).insert(
+            AiAnalysisTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('task_items')) {
+        await into(taskItemTable).insert(
+            TaskItemTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('note_items')) {
+        await into(noteItemTable).insert(
+            NoteItemTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+      for (final j in rows('chat_messages')) {
+        await into(chatMessageTable).insert(
+            ChatMessageTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+      }
+    });
+  }
+
   /// Overwrites all sets for [exerciseId] on [date] with [sets].
   Future<void> logSets({
     required int exerciseId,
