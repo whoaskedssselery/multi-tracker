@@ -96,79 +96,81 @@ class _BlurredTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final t = ThemeTokens.of(context);
+    // Home-indicator inset. We DON'T let SafeArea reserve it above the
+    // content — instead the whole bar is `contentH + bottomInset` tall and
+    // the icon+label row is centred across that full height, so it never
+    // sticks to the top.
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    const contentH = 54.0;
 
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
+          height: contentH + bottomInset,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface.withValues(alpha: 0.88),
             border: Border(
               top: BorderSide(color: theme.colorScheme.outlineVariant),
             ),
           ),
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              height: 48, // fixed compact height above safe-area inset
-              child: Row(
-                children: destinations.asMap().entries
-                    .where((e) => !e.value.isFooter)
-                    .map((e) {
-                  final i = e.key;
-                  final d = e.value;
-                  final active = i == selectedIndex;
-                  return Expanded(
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        onTap: () => onSelected?.call(i),
-                        behavior: HitTestBehavior.opaque,
-                        // Center the icon+label block as one unit
-                        child: Center(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: active
-                                  ? t.accentTint
-                                  : Colors.transparent,
-                              borderRadius: AppRadius.smAll,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconTheme(
-                                  data: IconThemeData(
-                                    color: active
-                                        ? t.accentPress
-                                        : theme.colorScheme.onSurfaceVariant,
-                                    size: 24,
-                                  ),
-                                  child: d.icon,
+          child: Center(
+            child: Row(
+              children: destinations.asMap().entries
+                  .where((e) => !e.value.isFooter)
+                  .map((e) {
+                final i = e.key;
+                final d = e.value;
+                final active = i == selectedIndex;
+                return Expanded(
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => onSelected?.call(i),
+                      behavior: HitTestBehavior.opaque,
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: active
+                                ? t.accentTint
+                                : Colors.transparent,
+                            borderRadius: AppRadius.smAll,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconTheme(
+                                data: IconThemeData(
+                                  color: active
+                                      ? t.accentPress
+                                      : theme.colorScheme.onSurfaceVariant,
+                                  size: 24,
                                 ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  d.label,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: 0.02 * 10,
-                                    color: active
-                                        ? t.accent
-                                        : theme.colorScheme.onSurfaceVariant,
-                                  ),
+                                child: d.icon,
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                d.label,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.02 * 10,
+                                  color: active
+                                      ? t.accent
+                                      : theme.colorScheme.onSurfaceVariant,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ),
