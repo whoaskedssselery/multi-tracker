@@ -114,7 +114,11 @@ class _BlurredTabBar extends StatelessWidget {
               top: BorderSide(color: theme.colorScheme.outlineVariant),
             ),
           ),
-          child: Center(
+          // Shift the row up by ~half the home-indicator inset so it sits
+          // a bit higher than dead-centre (closer to the design).
+          child: Padding(
+            padding: EdgeInsets.only(bottom: bottomInset * 0.5),
+            child: Center(
             child: Row(
               children: destinations.asMap().entries
                   .where((e) => !e.value.isFooter)
@@ -164,6 +168,7 @@ class _BlurredTabBar extends StatelessWidget {
                 );
               }).toList(),
             ),
+          ),
           ),
         ),
       ),
