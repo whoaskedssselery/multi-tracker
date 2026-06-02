@@ -675,6 +675,7 @@ class _SuggestionChip extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
+          alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
             color: t.surface,

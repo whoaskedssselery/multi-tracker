@@ -110,7 +110,7 @@ class _BlurredTabBar extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.only(top: 6, bottom: 2),
+              padding: const EdgeInsets.only(top: 4, bottom: 0),
               child: Row(
                 children: destinations.asMap().entries
                     .where((e) => !e.value.isFooter)
@@ -144,7 +144,7 @@ class _BlurredTabBar extends StatelessWidget {
                                   color: active
                                       ? t.accentPress
                                       : theme.colorScheme.onSurfaceVariant,
-                                  size: 22,
+                                  size: 24,
                                 ),
                                 child: d.icon,
                               ),
