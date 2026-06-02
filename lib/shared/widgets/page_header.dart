@@ -48,7 +48,7 @@ class IosPageHeader extends StatelessWidget {
                       Text(
                         title,
                         style: TextStyle(
-                          fontSize: 26,
+                          fontSize: 32,
                           fontWeight: FontWeight.w700,
                           color: t.text1,
                           height: 1.1,

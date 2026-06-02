@@ -22,73 +22,48 @@ jobs:
           channel: 'stable'
           flutter-version: '3.44.0'
 
+      - name: Flutter doctor
+        run: flutter doctor -v
+
       - name: Get dependencies
         run: flutter pub get
 
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build iOS release (unsigned)
-        run: flutter build ios --release --no-codesign
-
-      # Xcode compiles Info.plist to binary format.
-      # AltServer on Windows uses its own plist parser which can fail on
-      # binary plists (NSCocoaErrorDomain 3840). Convert to XML1 so that
-      # every plist reader — macOS, Windows, iOS — can parse it without issues.
-      - name: Convert Info.plist to XML (AltServer Windows compat)
-        run: |
-          APP="build/ios/iphoneos/Runner.app"
-          PLIST="$APP/Info.plist"
-
-          echo "=== Before conversion ==="
-          file "$PLIST"
-
-          plutil -convert xml1 "$PLIST"
-
-          echo "=== After conversion ==="
-          file "$PLIST"
-          plutil -lint "$PLIST" && echo "✓ Info.plist valid"
-          plutil -p "$PLIST"
-
-          # Also convert any other binary plists inside the bundle
-          find "$APP" -name "*.plist" | while read -r p; do
-            if file "$p" | grep -q "binary"; then
-              plutil -convert xml1 "$p" 2>/dev/null || true
-              echo "converted: $p"
-            fi
-          done
-
-      - name: Package IPA
+      # flutter build ipa --no-codesign requires xcodebuild -exportArchive which
+      # fails in CI without a developer team/certificate. Instead we:
+      #   1. Build the .app with flutter build ios (no export step needed)
+      #   2. Strip ALL existing signatures — Flutter SDK pre-signs Flutter.framework,
+      #      App.framework, objective_c.framework; leaving mixed-signed binaries
+      #      (some signed, Runner unsigned) causes AltStore NSCocoaErrorDomain 3840
+      #   3. Package manually: Payload/Runner.app → App.ipa
+      - name: Build IPA for AltStore
         run: |
           set -e
+
+          flutter build ios --release --no-codesign
+
           APP="build/ios/iphoneos/Runner.app"
 
+          # Strip every existing code signature so AltStore re-signs the whole
+          # bundle uniformly (no mixed-signed state).
+          find "$APP" -type f | while IFS= read -r f; do
+            codesign --remove-signature "$f" 2>/dev/null || true
+          done
+
+          mkdir -p build/ios/ipa
           cd build/ios/iphoneos
           rm -rf Payload
           mkdir Payload
-          # -R preserves symlinks inside frameworks
           cp -R Runner.app Payload/
-
-          # -X: no extra macOS attributes (UID/GID/timestamps) in zip headers
-          # This prevents AltServer from choking on macOS-specific zip extensions
-          zip -r -X App.ipa Payload \
-            -x "*.DS_Store" \
-            -x "__MACOSX/*"
-
-          echo "IPA size: $(du -sh App.ipa)"
-
-          echo ""
-          echo "=== IPA zip TOC (first 20 entries) ==="
-          unzip -l App.ipa | head -22
-
-          echo ""
-          echo "=== Info.plist inside IPA ==="
-          unzip -p App.ipa "Payload/Runner.app/Info.plist" | plutil -lint - && echo "✓ plist in IPA is valid"
-          unzip -p App.ipa "Payload/Runner.app/Info.plist" | plutil -p -
+          zip -r -X "$GITHUB_WORKSPACE/build/ios/ipa/App.ipa" Payload \
+            -x "*.DS_Store"
+          echo "IPA: $(du -sh "$GITHUB_WORKSPACE/build/ios/ipa/App.ipa")"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: iOS-App
-          path: build/ios/iphoneos/App.ipa
+          path: build/ios/ipa/App.ipa
           retention-days: 7
