@@ -110,9 +110,8 @@ class _BlurredTabBar extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              // 6px top / 2px bottom — keeps content height ~50px so total
-              // bar (incl. 34px home-indicator safe-area) ≈ 84px on iPhone.
-              padding: const EdgeInsets.only(top: 6, bottom: 2),
+              // 4px top / 0 bottom — content ~48px + 34px home-indicator ≈ 82px.
+              padding: const EdgeInsets.only(top: 4, bottom: 0),
               child: Row(
                 children: destinations.asMap().entries
                     .where((e) => !e.value.isFooter)

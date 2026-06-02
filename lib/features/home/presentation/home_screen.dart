@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
@@ -413,7 +412,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _templates = ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
     _workoutDates = ref.watch(workoutDatesProvider).valueOrNull ?? [];
 
-    if (Platform.isIOS) return _buildIos(context, t);
+    if (MediaQuery.sizeOf(context).width < 600) return _buildIos(context, t);
 
     final name = _profile?.name.trim() ?? '';
     final greeting =

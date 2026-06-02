@@ -166,7 +166,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
 
     final selected = days[_selectedDow - 1];
 
-    if (Platform.isIOS) {
+    if (MediaQuery.sizeOf(context).width < 600) {
       return _buildIos(context, t, days, selected, weekStart);
     }
 
@@ -504,9 +504,11 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     _wdLabels[i],
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
@@ -517,6 +519,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
                   const SizedBox(height: 2),
                   Text(
                     '${day.date.day}',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
