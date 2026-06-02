@@ -22,48 +22,50 @@ jobs:
           channel: 'stable'
           flutter-version: '3.44.0'
 
-      - name: Flutter doctor
-        run: flutter doctor -v
-
       - name: Get dependencies
         run: flutter pub get
 
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      # flutter build ipa --no-codesign requires xcodebuild -exportArchive which
-      # fails in CI without a developer team/certificate. Instead we:
-      #   1. Build the .app with flutter build ios (no export step needed)
-      #   2. Strip ALL existing signatures — Flutter SDK pre-signs Flutter.framework,
-      #      App.framework, objective_c.framework; leaving mixed-signed binaries
-      #      (some signed, Runner unsigned) causes AltStore NSCocoaErrorDomain 3840
-      #   3. Package manually: Payload/Runner.app → App.ipa
-      - name: Build IPA for AltStore
+      # Build unsigned release app.
+      # --no-codesign: Runner binary stays unsigned;
+      # pre-built Flutter frameworks keep their SDK signatures.
+      # AltStore re-signs everything with --force on install.
+      - name: Build iOS release (unsigned)
+        run: flutter build ios --release --no-codesign
+
+      # Verify the built Info.plist is a valid plist before packaging.
+      - name: Verify Info.plist
+        run: |
+          PLIST="build/ios/iphoneos/Runner.app/Info.plist"
+          echo "=== Info.plist (human-readable) ==="
+          plutil -p "$PLIST"
+          echo ""
+          echo "=== Runner.app top-level ==="
+          ls -la build/ios/iphoneos/Runner.app/ | head -20
+
+      # Package: Payload/Runner.app → App.ipa
+      # No codesign --remove-signature — that command modifies files before
+      # erroring on non-Mach-O inputs, which can corrupt Info.plist and
+      # trigger NSCocoaErrorDomain 3840 in AltStore.
+      - name: Package IPA
         run: |
           set -e
-
-          flutter build ios --release --no-codesign
-
-          APP="build/ios/iphoneos/Runner.app"
-
-          # Strip every existing code signature so AltStore re-signs the whole
-          # bundle uniformly (no mixed-signed state).
-          find "$APP" -type f | while IFS= read -r f; do
-            codesign --remove-signature "$f" 2>/dev/null || true
-          done
-
-          mkdir -p build/ios/ipa
           cd build/ios/iphoneos
           rm -rf Payload
           mkdir Payload
           cp -R Runner.app Payload/
-          zip -r -X "$GITHUB_WORKSPACE/build/ios/ipa/App.ipa" Payload \
-            -x "*.DS_Store"
-          echo "IPA: $(du -sh "$GITHUB_WORKSPACE/build/ios/ipa/App.ipa")"
+          zip -qr App.ipa Payload \
+            -x "*.DS_Store" \
+            -x "__MACOSX/*"
+          echo "IPA size: $(du -sh App.ipa)"
+          echo "IPA top entries:"
+          unzip -l App.ipa | head -12
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: iOS-App
-          path: build/ios/ipa/App.ipa
+          path: build/ios/iphoneos/App.ipa
           retention-days: 7
