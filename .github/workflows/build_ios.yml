@@ -39,15 +39,10 @@ jobs:
       #      (some signed, Runner unsigned) causes AltStore NSCocoaErrorDomain 3840
       #   3. Package manually: Payload/Runner.app → App.ipa
       - name: Build IPA for AltStore
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           set -e
 
-          flutter build ios --release --no-codesign \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          flutter build ios --release --no-codesign
 
           APP="build/ios/iphoneos/Runner.app"
 

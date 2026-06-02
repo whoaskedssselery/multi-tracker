@@ -13,12 +13,14 @@ class SupabaseConfig {
 
   static const String url = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: '', // ← paste Project URL here (or pass --dart-define)
+    defaultValue: 'https://oninslcjnvsttuzctmms.supabase.co',
   );
 
+  // "Publishable" key (new Supabase format) — the public/anon client key.
+  // Safe to embed: access is governed by Row Level Security, not the key.
   static const String anonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: '', // ← paste anon public key here
+    defaultValue: 'sb_publishable_uKrEjRASD6pspDjgYU1Xiw_d6tNF0M4',
   );
 
   /// Whether sync is configured at all.
