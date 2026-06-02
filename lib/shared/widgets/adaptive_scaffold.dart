@@ -110,7 +110,7 @@ class _BlurredTabBar extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.only(top: 6, bottom: 2),
               child: Row(
                 children: destinations.asMap().entries
                     .where((e) => !e.value.isFooter)

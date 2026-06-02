@@ -222,6 +222,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           Expanded(child: _buildMessages(context, t)),
           if (_sending) _buildTypingIndicator(t),
           _buildSuggestions(context),
+          const SizedBox(height: 8),
           _buildIosInput(context, t),
         ],
       ),

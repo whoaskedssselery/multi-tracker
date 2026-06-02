@@ -482,7 +482,10 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             action: GestureDetector(
               onTap: _activeTab == _Tab.tasks
                   ? () => _showTaskForm()
-                  : () => _notesPaneKey.currentState?.newNote(),
+                  : () async {
+                      final id = await database.addNote();
+                      if (mounted) setState(() => _mobileSelectedNoteId = id);
+                    },
               child: Padding(
                 padding: const EdgeInsets.all(4),
                 child: Icon(Icons.add, size: 26, color: t.text2),
