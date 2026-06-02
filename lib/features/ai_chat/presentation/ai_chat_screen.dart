@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -153,6 +155,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final t = ThemeTokens.of(context);
     _msgs = ref.watch(chatMessagesForFilterProvider(_filter.key)).valueOrNull ?? [];
 
+    if (Platform.isIOS) return _buildIos(context, t);
+
     return Scaffold(
       backgroundColor: t.bg,
       body: Column(
@@ -175,6 +179,131 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           if (_sending) _buildTypingIndicator(t),
           _buildSuggestions(context),
           _buildInput(context, t),
+        ],
+      ),
+    );
+  }
+
+  // ── iOS layout ─────────────────────────────────────────────────
+
+  Widget _buildIos(BuildContext context, ThemeTokens t) {
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: Column(
+        children: [
+          // Large title header with filter chips below
+          IosPageHeader(
+            title: 'AI',
+            action: _msgs.isNotEmpty
+                ? GestureDetector(
+                    onTap: () async {
+                      await database
+                          .clearChatHistoryForFilter(_filter.key);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Text(
+                        'Очистить',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: t.accent,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  )
+                : null,
+            bottom: _FilterBar(
+              value: _filter,
+              onChanged: (f) => setState(() => _filter = f),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(child: _buildMessages(context, t)),
+          if (_sending) _buildTypingIndicator(t),
+          _buildSuggestions(context),
+          _buildIosInput(context, t),
+        ],
+      ),
+    );
+  }
+
+  // ── iOS input bar ──────────────────────────────────────────────
+
+  Widget _buildIosInput(BuildContext context, ThemeTokens t) {
+    return Container(
+      decoration: BoxDecoration(
+        color: t.bg,
+        border: Border(top: BorderSide(color: t.borderSoft)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 10,
+        bottom: MediaQuery.of(context).padding.bottom > 0
+            ? MediaQuery.of(context).padding.bottom
+            : 14,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 40),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: t.surface,
+                borderRadius: AppRadius.lgAll,
+                border: Border.all(color: t.border),
+              ),
+              child: Focus(
+                onKeyEvent: (_, event) {
+                  if (event is KeyDownEvent &&
+                      event.logicalKey == LogicalKeyboardKey.enter &&
+                      !HardwareKeyboard.instance.isShiftPressed) {
+                    if (!_sending) _sendMessage();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: TextField(
+                  controller: _inputCtrl,
+                  maxLines: 4,
+                  minLines: 1,
+                  style: TextStyle(fontSize: 15, color: t.text1),
+                  decoration: InputDecoration(
+                    hintText: 'Спросить...',
+                    hintStyle: TextStyle(fontSize: 15, color: t.text4),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: _sending ? null : _sendMessage,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _sending
+                    ? AppColors.accent.withAlpha(120)
+                    : AppColors.accent,
+                borderRadius: AppRadius.mdAll,
+              ),
+              child: const Icon(Icons.send_rounded,
+                  size: 18, color: Colors.white),
+            ),
+          ),
         ],
       ),
     );
@@ -282,20 +411,18 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
   Widget _buildSuggestions(BuildContext context) {
     if (_msgs.isNotEmpty) return const SizedBox.shrink();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl3, vertical: AppSpacing.md),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: _suggestions
-            .map((s) => _SuggestionChip(
-                label: s,
-                onTap: () {
-                  _inputCtrl.text = s;
-                }))
-            .toList(),
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl3),
+        itemCount: _suggestions.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) => _SuggestionChip(
+          label: _suggestions[i],
+          onTap: () => _inputCtrl.text = _suggestions[i],
+        ),
       ),
     );
   }

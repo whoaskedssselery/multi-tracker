@@ -166,6 +166,10 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
 
     final selected = days[_selectedDow - 1];
 
+    if (Platform.isIOS) {
+      return _buildIos(context, t, days, selected, weekStart);
+    }
+
     return Scaffold(
       backgroundColor: t.bg,
       body: Column(
@@ -197,9 +201,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(
                 AppSpacing.xl3, AppSpacing.lg, AppSpacing.xl3, AppSpacing.md),
-            child: Platform.isIOS
-                ? _buildDayStrip(context, t, days)
-                : _buildWeekGrid(context, t, days),
+            child: _buildWeekGrid(context, t, days),
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -209,6 +211,274 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── iOS layout ────────────────────────────────────────────────────────────
+
+  Widget _buildIos(BuildContext context, ThemeTokens t,
+      List<_DayItem> days, _DayItem selected, DateTime weekStart) {
+    final todayItem = days.firstWhere(
+      (d) => d.isToday,
+      orElse: () => selected,
+    );
+
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: CustomScrollView(
+        slivers: [
+          // ── Header: title + week nav ──
+          SliverToBoxAdapter(
+            child: IosPageHeader(
+              title: 'Тренировки',
+              subtitle: _fmtWeekRange(weekStart),
+              action: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _iosNavBtn(context, t, Icons.chevron_left,
+                      () => setState(() => _weekOffset--)),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      _weekOffset  = 0;
+                      _selectedDow = DateTime.now().weekday;
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: t.surface,
+                        border: Border.all(color: t.border),
+                        borderRadius: AppRadius.smAll,
+                      ),
+                      child: Text('Сегодня',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: t.text1)),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  _iosNavBtn(context, t, Icons.chevron_right,
+                      () => setState(() => _weekOffset++)),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Day strip ──
+          SliverToBoxAdapter(
+            child: Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: _buildDayStrip(context, t, days),
+            ),
+          ),
+
+          // ── Today workout card ──
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: _iosTodayCard(context, t, todayItem),
+            ),
+          ),
+
+          // ── Whole week section ──
+          SliverToBoxAdapter(
+            child: Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(20, 24, 20, 4),
+              child: Row(children: [
+                Text('ВСЯ НЕДЕЛЯ',
+                    style: AppTypography.caps(color: t.text3)),
+                const Spacer(),
+                GestureDetector(
+                  onTap: _showProgramDialog,
+                  child: Text(
+                    'Программа →',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: t.accent),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (ctx, i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _iosWeekRow(context, t, days[i]),
+                ),
+                childCount: 7,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _iosNavBtn(BuildContext context, ThemeTokens t,
+      IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: t.surface,
+          border: Border.all(color: t.border),
+          borderRadius: AppRadius.smAll,
+        ),
+        child: Icon(icon, size: 18, color: t.text2),
+      ),
+    );
+  }
+
+  Widget _iosTodayCard(
+      BuildContext context, ThemeTokens t, _DayItem day) {
+    if (day.template == null) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: t.surface,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: t.borderSoft),
+        ),
+        child: Row(children: [
+          Icon(Icons.self_improvement_outlined, size: 22, color: t.text4),
+          const SizedBox(width: 10),
+          Text('День отдыха',
+              style: TextStyle(
+                  fontSize: 17, fontWeight: FontWeight.w600, color: t.text2)),
+        ]),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: t.surface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: t.accent, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${_wdLabels[day.dow - 1]} · ${_fmtDate(day.date)}',
+            style: AppTypography.caps(color: t.text3),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            day.template!.name.toUpperCase(),
+            style: const TextStyle(
+                fontSize: 34, fontWeight: FontWeight.w800, height: 1.0),
+          ),
+          const SizedBox(height: 10),
+          _ExercisePreview(templateId: day.template!.id),
+          const SizedBox(height: 16),
+          Row(children: [
+            _ExerciseCountChip(templateId: day.template!.id, t: t),
+            const Spacer(),
+            if (!day.isDone)
+              FilledButton(
+                onPressed: () =>
+                    _showWorkoutDialog(day.template!, day.date),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 12),
+                ),
+                child: const Text('Открыть',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: t.accentTint,
+                  borderRadius: AppRadius.mdAll,
+                ),
+                child: Row(children: [
+                  Icon(Icons.check_circle_outline,
+                      size: 16, color: t.accentPress),
+                  const SizedBox(width: 6),
+                  Text('Выполнено',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: t.accentPress)),
+                ]),
+              ),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _iosWeekRow(
+      BuildContext context, ThemeTokens t, _DayItem day) {
+    final hasWorkout = day.template != null;
+    return GestureDetector(
+      onTap: hasWorkout
+          ? () => _showWorkoutDialog(day.template!, day.date)
+          : null,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: hasWorkout ? t.accentTint : t.surface,
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(
+            color: hasWorkout ? t.accent.withValues(alpha: 0.3) : t.borderSoft,
+          ),
+        ),
+        child: Row(children: [
+          // Date label
+          SizedBox(
+            width: 72,
+            child: Text(
+              '${_wdLabels[day.dow - 1]} · ${_fmtDate(day.date)}',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: t.text3),
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (!hasWorkout)
+            Text('Отдых',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: t.text3))
+          else ...[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(day.template!.name,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: t.text1)),
+                  _ExerciseCountText(
+                      templateId: day.template!.id, t: t),
+                ],
+              ),
+            ),
+            _WorkoutStatusIcon(day: day, t: t),
+            const SizedBox(width: 6),
+            Icon(Icons.chevron_right, size: 18, color: t.text3),
+          ],
+        ]),
       ),
     );
   }
@@ -465,6 +735,123 @@ class _DayItem {
   final WorkoutTemplateTableData? template;
   final bool isDone;
   final bool isToday;
+}
+
+// ─── iOS helper widgets ───────────────────────────────────────────────────────
+
+/// One-line exercise name preview for the today card.
+class _ExercisePreview extends ConsumerWidget {
+  const _ExercisePreview({required this.templateId});
+  final int templateId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = ThemeTokens.of(context);
+    final exercises =
+        ref.watch(exercisesForTemplateProvider(templateId)).valueOrNull ?? [];
+    if (exercises.isEmpty) return const SizedBox.shrink();
+    const maxShow = 3;
+    final names  = exercises.take(maxShow).map((e) => e.name).join(' · ');
+    final extra  = exercises.length > maxShow
+        ? '  · ещё ${exercises.length - maxShow}'
+        : '';
+    return Text(
+      '$names$extra',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: 13, color: t.text3),
+    );
+  }
+}
+
+/// "5 упр. · ≈45 мин" chip.
+class _ExerciseCountChip extends ConsumerWidget {
+  const _ExerciseCountChip({required this.templateId, required this.t});
+  final int templateId;
+  final ThemeTokens t;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count =
+        ref.watch(exercisesForTemplateProvider(templateId)).valueOrNull?.length
+            ?? 0;
+    if (count == 0) return const SizedBox.shrink();
+    final mins = (count * 9).clamp(20, 90);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: t.surfaceSunken,
+        borderRadius: AppRadius.pill,
+        border: Border.all(color: t.borderSoft),
+      ),
+      child: Text(
+        '$count упр.  ·  ≈$mins мин',
+        style: TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w500, color: t.text2),
+      ),
+    );
+  }
+}
+
+/// Small "X упр." text for week row.
+class _ExerciseCountText extends ConsumerWidget {
+  const _ExerciseCountText({required this.templateId, required this.t});
+  final int templateId;
+  final ThemeTokens t;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count =
+        ref.watch(exercisesForTemplateProvider(templateId)).valueOrNull?.length
+            ?? 0;
+    return Text('$count упр.',
+        style: TextStyle(fontSize: 12, color: t.text3));
+  }
+}
+
+/// Trend / done icon shown at the right of a week row.
+class _WorkoutStatusIcon extends StatelessWidget {
+  const _WorkoutStatusIcon({required this.day, required this.t});
+  final _DayItem day;
+  final ThemeTokens t;
+
+  @override
+  Widget build(BuildContext context) {
+    if (day.isDone) {
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: t.accentTint,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(Icons.trending_up, size: 16, color: t.accentPress),
+      );
+    }
+    if (day.isToday) {
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: t.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: t.borderSoft),
+        ),
+        child: Icon(Icons.arrow_forward, size: 14, color: t.text3),
+      );
+    }
+    // future / past without log
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: t.surfaceSunken,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(Icons.trending_down, size: 16,
+          color: t.warning.withValues(alpha: 0.8)),
+    );
+  }
 }
 
 // ─── Exercise list (watches exercises + shows last sets) ──────────────────────

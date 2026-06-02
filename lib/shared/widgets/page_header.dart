@@ -5,6 +5,85 @@ import '../../app/theme/spacing.dart';
 import '../../app/theme/theme_tokens.dart';
 import '../../app/theme/typography.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// iOS large-title style header — NOT a fixed bar, embedded in scroll content.
+// Use this on iOS instead of AppPageHeader.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class IosPageHeader extends StatelessWidget {
+  const IosPageHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.action,
+    this.bottom,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget? action;
+  // Optional widget rendered below the title row (e.g. filter chips)
+  final Widget? bottom;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = ThemeTokens.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+          .copyWith(statusBarColor: Colors.transparent),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w700,
+                          color: t.text1,
+                          height: 1.1,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle!,
+                          style: TextStyle(fontSize: 14, color: t.text3),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (action != null) ...[
+                  const SizedBox(width: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: action!,
+                  ),
+                ],
+              ],
+            ),
+            if (bottom != null) ...[
+              const SizedBox(height: 14),
+              bottom!,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Unified page header bar — fixed height across every screen so the
 /// app chrome lines up (design `.main-head`, 64–72px, bottom divider).
 ///

@@ -471,34 +471,157 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
   Widget _buildMobile(BuildContext context, ThemeTokens t, int noteCount) {
     final totalActive = _allTasks.where((t) => !t.isDone).length;
+    final title = _activeTab == _Tab.tasks ? 'Задачи' : 'Заметки';
     return Scaffold(
       backgroundColor: t.bg,
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppPageHeader(
-            title: _activeTab == _Tab.tasks ? 'Задачи' : 'Заметки',
-            actions: [
-              IconButton(
-                icon: Icon(Icons.add, size: 22, color: t.text2),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                onPressed: _activeTab == _Tab.tasks
-                    ? () => _showTaskForm()
-                    : () => _notesPaneKey.currentState?.newNote(),
+          IosPageHeader(
+            title: title,
+            action: GestureDetector(
+              onTap: _activeTab == _Tab.tasks
+                  ? () => _showTaskForm()
+                  : () => _notesPaneKey.currentState?.newNote(),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.add, size: 26, color: t.text2),
               ),
-            ],
+            ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
             child: _mobileTabSwitcher(t, totalActive, noteCount),
           ),
           Expanded(
             child: _activeTab == _Tab.tasks
                 ? _buildMobileTaskGroups(t)
-                : NotesPane(key: _notesPaneKey),
+                : _buildMobileNotesList(context, t),
           ),
         ],
       ),
+    );
+  }
+
+  // ── Mobile notes list (full-screen, no sidebar) ───────────────────────────
+
+  Widget _buildMobileNotesList(BuildContext context, ThemeTokens t) {
+    final notes = ref.watch(notesProvider).valueOrNull ?? [];
+    // If a note is selected, show full-screen editor instead
+    if (_mobileSelectedNoteId != null) {
+      final note = notes
+          .where((n) => n.id == _mobileSelectedNoteId)
+          .firstOrNull;
+      if (note != null) {
+        return _buildMobileNoteEditor(context, t, note);
+      }
+    }
+
+    return Column(
+      children: [
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          child: Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: t.surface,
+              borderRadius: AppRadius.lgAll,
+              border: Border.all(color: t.borderSoft),
+            ),
+            child: Row(children: [
+              const SizedBox(width: 12),
+              Icon(Icons.search, size: 16, color: t.text3),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                  style: TextStyle(fontSize: 15, color: t.text1),
+                  decoration: InputDecoration(
+                    hintText: 'Поиск',
+                    hintStyle: TextStyle(fontSize: 15, color: t.text4),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+              if (_searchQuery.isNotEmpty) ...[
+                GestureDetector(
+                  onTap: () {
+                    _searchCtrl.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: Icon(Icons.close, size: 14, color: t.text4),
+                  ),
+                ),
+              ] else
+                const SizedBox(width: 12),
+            ]),
+          ),
+        ),
+        Expanded(
+          child: notes.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sticky_note_2_outlined,
+                          size: 40, color: t.text4),
+                      const SizedBox(height: 12),
+                      Text('Нет заметок',
+                          style: TextStyle(fontSize: 15, color: t.text3)),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding:
+                      const EdgeInsets.fromLTRB(20, 4, 20, 100),
+                  itemCount: _filteredNotes(notes).length,
+                  separatorBuilder: (_, __) =>
+                      Divider(height: 1, color: t.borderSoft,
+                          indent: 0, endIndent: 0),
+                  itemBuilder: (ctx, i) {
+                    final note = _filteredNotes(notes)[i];
+                    return _MobileNoteRow(
+                      note: note,
+                      t: t,
+                      onTap: () => setState(
+                          () => _mobileSelectedNoteId = note.id),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  List<NoteItemTableData> _filteredNotes(List<NoteItemTableData> all) {
+    if (_searchQuery.isEmpty) return all;
+    final q = _searchQuery.toLowerCase();
+    return all
+        .where((n) =>
+            n.title.toLowerCase().contains(q) ||
+            n.body.toLowerCase().contains(q))
+        .toList();
+  }
+
+  // Track selected note for mobile editor
+  int? _mobileSelectedNoteId;
+
+  Widget _buildMobileNoteEditor(
+      BuildContext context, ThemeTokens t, NoteItemTableData note) {
+    return _MobileNoteEditorView(
+      key: ValueKey(note.id),
+      note: note,
+      onBack: () => setState(() => _mobileSelectedNoteId = null),
     );
   }
 
@@ -1219,6 +1342,203 @@ class _MobileTaskRow extends StatelessWidget {
         'mid'  => t.warning,
         _      => t.text3,
       };
+}
+
+// ─── Mobile note editor ───────────────────────────────────────────────────────
+
+class _MobileNoteEditorView extends StatefulWidget {
+  const _MobileNoteEditorView({
+    super.key,
+    required this.note,
+    required this.onBack,
+  });
+  final NoteItemTableData note;
+  final VoidCallback onBack;
+
+  @override
+  State<_MobileNoteEditorView> createState() => _MobileNoteEditorViewState();
+}
+
+class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _bodyCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl = TextEditingController(
+        text: widget.note.title == 'Без названия' ? '' : widget.note.title);
+    _bodyCtrl  = TextEditingController(text: widget.note.body);
+  }
+
+  @override
+  void dispose() {
+    _flush();
+    _titleCtrl.dispose();
+    _bodyCtrl.dispose();
+    super.dispose();
+  }
+
+  void _flush() {
+    final id    = widget.note.id;
+    final title = _titleCtrl.text.trim();
+    database.updateNote(id,
+        title: title.isEmpty ? 'Без названия' : title,
+        body:  _bodyCtrl.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = ThemeTokens.of(context);
+    return Column(
+      children: [
+        // Toolbar
+        Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(children: [
+            GestureDetector(
+              onTap: () {
+                _flush();
+                widget.onBack();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 12),
+                child: Icon(Icons.arrow_back_ios,
+                    size: 18, color: t.text2),
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () async {
+                _flush();
+                await database.deleteNote(widget.note.id);
+                widget.onBack();
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Icon(Icons.delete_outline,
+                    size: 20, color: t.text3),
+              ),
+            ),
+          ]),
+        ),
+        Divider(height: 1, color: t.borderSoft),
+        // Title
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: TextField(
+            controller: _titleCtrl,
+            onChanged: (_) => _flush(),
+            style: TextStyle(
+                fontSize: 24, fontWeight: FontWeight.w700, color: t.text1),
+            decoration: InputDecoration(
+              hintText: 'Без названия',
+              hintStyle: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: t.text4),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: true,
+              fillColor: Colors.transparent,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+            child: TextField(
+              controller: _bodyCtrl,
+              onChanged: (_) => _flush(),
+              maxLines: null,
+              expands: true,
+              textAlignVertical: TextAlignVertical.top,
+              style: TextStyle(
+                  fontSize: 15, height: 1.65, color: t.text1),
+              decoration: InputDecoration(
+                hintText: 'Начни писать...',
+                hintStyle: TextStyle(fontSize: 15, color: t.text4),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: true,
+                fillColor: Colors.transparent,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Mobile note row ──────────────────────────────────────────────────────────
+
+class _MobileNoteRow extends StatelessWidget {
+  const _MobileNoteRow({
+    required this.note,
+    required this.t,
+    required this.onTap,
+  });
+  final NoteItemTableData note;
+  final ThemeTokens t;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final title   = note.title.isEmpty ? 'Без названия' : note.title;
+    final preview = note.body.isEmpty
+        ? ''
+        : note.body.replaceAll('\n', ' ').trim();
+    final day = note.updatedAt;
+    final dateStr = '${day.day} ${_mo[day.month - 1]}';
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: t.text1)),
+                  if (preview.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(preview,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 13, color: t.text3)),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(dateStr,
+                style: TextStyle(fontSize: 12, color: t.text3)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static const _mo = [
+    'янв', 'фев', 'мар', 'апр', 'мая', 'июн',
+    'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'
+  ];
 }
 
 // ─── Task row ─────────────────────────────────────────────────────────────────

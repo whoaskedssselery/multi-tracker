@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
@@ -412,6 +413,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _templates = ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
     _workoutDates = ref.watch(workoutDatesProvider).valueOrNull ?? [];
 
+    if (Platform.isIOS) return _buildIos(context, t);
+
     final name = _profile?.name.trim() ?? '';
     final greeting =
         name.isEmpty || name == 'User' ? 'Привет' : 'Привет, $name';
@@ -450,6 +453,347 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── iOS build ─────────────────────────────────────────────────
+
+  Widget _buildIos(BuildContext context, ThemeTokens t) {
+    final name = _profile?.name.trim() ?? '';
+    final greeting =
+        name.isEmpty || name == 'User' ? 'Привет' : 'Привет, $name';
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: IosPageHeader(
+              title: greeting,
+              subtitle: _headerDate(DateTime.now()),
+              action: GestureDetector(
+                onTap: () => context.go('/settings'),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.settings_outlined,
+                      size: 22, color: t.text3),
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _iosGoalsCard(context, t),
+                const SizedBox(height: 14),
+                _iosTodayWeightCard(context, t),
+                const SizedBox(height: 20),
+                _iosWeightSectionHeader(context, t),
+                const SizedBox(height: 10),
+                _iosChartCard(context, t),
+                const SizedBox(height: 20),
+                _iosHistorySection(context, t),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── iOS goals card ─────────────────────────────────────────────
+
+  Widget _iosGoalsCard(BuildContext context, ThemeTokens t) {
+    return _iosCard(
+      t: t,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Text('ЦЕЛИ', style: AppTypography.caps(color: t.text3)),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => _showGoalDialog(),
+              child: Icon(Icons.add, size: 18, color: t.text3),
+            ),
+          ]),
+          if (_goals.isEmpty) ...[
+            const SizedBox(height: 14),
+            Text('Добавьте первую цель',
+                style: TextStyle(fontSize: 14, color: t.text4)),
+          ] else
+            ...List.generate(_goals.length, (i) {
+              final g = _goals[i];
+              return Column(children: [
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () => _showGoalDialog(editing: g),
+                  child: _goalRow(context, g, t),
+                ),
+              ]);
+            }),
+        ],
+      ),
+    );
+  }
+
+  // ── iOS today weight card (accent-bordered, prominent) ─────────
+
+  Widget _iosTodayWeightCard(BuildContext context, ThemeTokens t) {
+    if (_recordingWeight) return _weightRecorderCard(context, t);
+    final latest = _entries.isNotEmpty ? _entries.first : null;
+    final prev   = _entries.length >= 2 ? _entries[1] : null;
+    final delta  = (latest != null && prev != null)
+        ? latest.value - prev.value
+        : null;
+    final currentStr =
+        latest != null ? latest.value.toStringAsFixed(1) : '—';
+    String subLabel;
+    if (delta != null) {
+      final sign = delta >= 0 ? '+' : '';
+      subLabel =
+          'вчера ${prev!.value.toStringAsFixed(1)}  ·  $sign${delta.toStringAsFixed(1)}';
+    } else if (latest != null) {
+      subLabel = 'первая запись';
+    } else {
+      subLabel = 'нет записей';
+    }
+    return GestureDetector(
+      onTap: _startRecordWeight,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          color: t.surface,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: t.accent, width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('СЕГОДНЯ', style: AppTypography.caps(color: t.text3)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Записать вес',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: t.text1,
+                    ),
+                  ),
+                ),
+                Text(
+                  currentStr,
+                  style: AppTypography.mono(
+                    fontSize: 28,
+                    weight: FontWeight.w700,
+                    color: t.accentPress,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.arrow_forward, size: 18, color: t.accentPress),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subLabel,
+              style: TextStyle(fontSize: 13, color: t.text3),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── iOS weight section header (label + period pills in one row) ─
+
+  Widget _iosWeightSectionHeader(BuildContext context, ThemeTokens t) {
+    return Row(
+      children: [
+        Text('ВЕС', style: AppTypography.caps(color: t.text3)),
+        const Spacer(),
+        _PeriodSelector(
+          value: _period,
+          onChanged: (p) => setState(() => _period = p),
+        ),
+      ],
+    );
+  }
+
+  // ── iOS chart card ─────────────────────────────────────────────
+
+  Widget _iosChartCard(BuildContext context, ThemeTokens t) {
+    final chart  = _chartEntries;
+    final latest = _entries.isNotEmpty ? _entries.first : null;
+    final bounds = _yBounds(chart);
+    String trendStr = '';
+    Color  trendColor = t.text3;
+    IconData? trendIcon;
+    if (chart.length >= 2) {
+      final diff = chart.last.value - chart.first.value;
+      trendColor = diff < 0 ? t.success : (diff > 0 ? t.warning : t.text3);
+      trendIcon  = diff < 0
+          ? Icons.arrow_downward
+          : (diff > 0 ? Icons.arrow_upward : Icons.remove);
+      final sign = diff >= 0 ? '+' : '';
+      final lbl  = switch (_period) {
+        _Period.week    => '7д',
+        _Period.month   => '30д',
+        _Period.quarter => '90д',
+        _Period.all     => 'всё',
+      };
+      trendStr = '$sign${diff.toStringAsFixed(1)} за $lbl';
+    }
+    return _iosCard(
+      t: t,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                latest != null ? latest.value.toStringAsFixed(1) : '—',
+                style: AppTypography.mono(
+                    fontSize: 28, weight: FontWeight.w700, color: t.text1),
+              ),
+              const SizedBox(width: 5),
+              Text('кг',
+                  style: TextStyle(fontSize: 15, color: t.text3)),
+              const Spacer(),
+              if (trendIcon != null) ...[
+                Icon(trendIcon, size: 13, color: trendColor),
+                const SizedBox(width: 3),
+                Text(
+                  trendStr,
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: trendColor,
+                      fontWeight: FontWeight.w500),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 160,
+            child: chart.length < 2
+                ? Center(
+                    child: Text(
+                      chart.isEmpty
+                          ? 'Нет данных'
+                          : 'Нужно минимум 2 записи',
+                      style: TextStyle(fontSize: 13, color: t.text4),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : LineChart(_buildChart(chart, bounds, t)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── iOS history section ────────────────────────────────────────
+
+  Widget _iosHistorySection(BuildContext context, ThemeTokens t) {
+    final last6 = _entries.take(6).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('ИСТОРИЯ', style: AppTypography.caps(color: t.text3)),
+        const SizedBox(height: 10),
+        if (last6.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text('Нет записей',
+                style: TextStyle(fontSize: 14, color: t.text4)),
+          )
+        else
+          _iosCard(
+            t: t,
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: List.generate(last6.length, (i) {
+                final entry = last6[i];
+                final prev  = i + 1 < last6.length ? last6[i + 1] : null;
+                final delta = prev != null ? entry.value - prev.value : null;
+                final Color dc;
+                final String ds;
+                if (delta == null) {
+                  dc = t.text3; ds = '—';
+                } else if (delta > 0) {
+                  dc = t.warning; ds = '+${delta.toStringAsFixed(1)}';
+                } else if (delta < 0) {
+                  dc = t.success; ds = delta.toStringAsFixed(1);
+                } else {
+                  dc = t.text3; ds = '0.0';
+                }
+                return Column(
+                  children: [
+                    if (i > 0)
+                      Divider(height: 1, color: t.borderSoft,
+                          indent: 18, endIndent: 18),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 12),
+                      child: Row(children: [
+                        Text(_historyLabel(entry.date),
+                            style: AppTypography.mono(
+                                fontSize: 13, color: t.text3)),
+                        const Spacer(),
+                        Text(entry.value.toStringAsFixed(1),
+                            style: AppTypography.mono(
+                                fontSize: 15,
+                                weight: FontWeight.w600,
+                                color: t.text1)),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 42,
+                          child: Text(ds,
+                              style: AppTypography.mono(
+                                  fontSize: 13, color: dc),
+                              textAlign: TextAlign.right),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () =>
+                              database.deleteWeightEntry(entry.id),
+                          child: Icon(Icons.close,
+                              size: 14, color: t.text4),
+                        ),
+                      ]),
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ── iOS card helper ────────────────────────────────────────────
+
+  Widget _iosCard({
+    required Widget child,
+    required ThemeTokens t,
+    EdgeInsetsGeometry? padding,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: padding ??
+          const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        color: t.surface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: t.borderSoft),
+      ),
+      child: child,
     );
   }
 
