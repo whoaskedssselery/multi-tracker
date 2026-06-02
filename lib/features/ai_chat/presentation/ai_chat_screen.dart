@@ -187,37 +187,39 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   // ── iOS layout ─────────────────────────────────────────────────
 
   Widget _buildIos(BuildContext context, ThemeTokens t) {
-    // No inner Scaffold.
-    return Column(
-      children: [
-        IosPageHeader(
-          title: 'AI',
-          action: _msgs.isNotEmpty
-              ? GestureDetector(
-                  onTap: () async {
-                    await database.clearChatHistoryForFilter(_filter.key);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Text('Очистить',
-                        style: TextStyle(
-                            fontSize: 14,
-                            color: t.accent,
-                            fontWeight: FontWeight.w500)),
-                  ),
-                )
-              : null,
-          bottom: _FilterBar(
-            value: _filter,
-            onChanged: (f) => setState(() => _filter = f),
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: Column(
+        children: [
+          IosPageHeader(
+            title: 'AI',
+            action: _msgs.isNotEmpty
+                ? GestureDetector(
+                    onTap: () async {
+                      await database.clearChatHistoryForFilter(_filter.key);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Text('Очистить',
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: t.accent,
+                              fontWeight: FontWeight.w500)),
+                    ),
+                  )
+                : null,
+            bottom: _FilterBar(
+              value: _filter,
+              onChanged: (f) => setState(() => _filter = f),
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Expanded(child: _buildMessages(context, t)),
-        if (_sending) _buildTypingIndicator(t),
-        _buildSuggestions(context),
-        _buildIosInput(context, t),
-      ],
+          const SizedBox(height: 8),
+          Expanded(child: _buildMessages(context, t)),
+          if (_sending) _buildTypingIndicator(t),
+          _buildSuggestions(context),
+          _buildIosInput(context, t),
+        ],
+      ),
     );
   }
 

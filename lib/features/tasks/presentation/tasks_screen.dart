@@ -472,32 +472,34 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   Widget _buildMobile(BuildContext context, ThemeTokens t, int noteCount) {
     final totalActive = _allTasks.where((t) => !t.isDone).length;
     final title = _activeTab == _Tab.tasks ? 'Задачи' : 'Заметки';
-    // No inner Scaffold — Column only.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        IosPageHeader(
-          title: title,
-          action: GestureDetector(
-            onTap: _activeTab == _Tab.tasks
-                ? () => _showTaskForm()
-                : () => _notesPaneKey.currentState?.newNote(),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(Icons.add, size: 26, color: t.text2),
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          IosPageHeader(
+            title: title,
+            action: GestureDetector(
+              onTap: _activeTab == _Tab.tasks
+                  ? () => _showTaskForm()
+                  : () => _notesPaneKey.currentState?.newNote(),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.add, size: 26, color: t.text2),
+              ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-          child: _mobileTabSwitcher(t, totalActive, noteCount),
-        ),
-        Expanded(
-          child: _activeTab == _Tab.tasks
-              ? _buildMobileTaskGroups(t)
-              : _buildMobileNotesList(context, t),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            child: _mobileTabSwitcher(t, totalActive, noteCount),
+          ),
+          Expanded(
+            child: _activeTab == _Tab.tasks
+                ? _buildMobileTaskGroups(t)
+                : _buildMobileNotesList(context, t),
+          ),
+        ],
+      ),
     );
   }
 

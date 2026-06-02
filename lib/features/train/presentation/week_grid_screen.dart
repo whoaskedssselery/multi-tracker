@@ -166,8 +166,61 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
 
     final selected = days[_selectedDow - 1];
 
+    // iOS: swap to large-title header + day strip; body stays the same.
     if (Platform.isIOS) {
-      return _buildIos(context, t, days, selected, weekStart);
+      return Scaffold(
+        backgroundColor: t.bg,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            IosPageHeader(
+              title: 'Тренировки',
+              subtitle: _fmtWeekRange(weekStart),
+              action: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _iosNavBtn(context, t, Icons.chevron_left,
+                      () => setState(() => _weekOffset--)),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      _weekOffset  = 0;
+                      _selectedDow = DateTime.now().weekday;
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: t.surface,
+                        border: Border.all(color: t.border),
+                        borderRadius: AppRadius.smAll,
+                      ),
+                      child: Text('Сегодня',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: t.text1)),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  _iosNavBtn(context, t, Icons.chevron_right,
+                      () => setState(() => _weekOffset++)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              child: _buildDayStrip(context, t, days),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                child: _buildDayDetail(context, t, selected),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return Scaffold(
