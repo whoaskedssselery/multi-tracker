@@ -187,6 +187,11 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   StreamSubscription<dynamic>? _dbSub;
   StreamSubscription<AuthState>? _authSub;
   bool _applyingRemote = false;
+  // Auto-push is blocked until the first reconcile after sign-in completes.
+  // Otherwise a debounced push scheduled while signed-out (e.g. from startup
+  // DB seeding) could fire right after sign-in and overwrite the cloud with
+  // empty local data before the initial pull runs.
+  bool _initialSyncDone = false;
 
   @override
   SyncState build() {
@@ -219,9 +224,9 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     });
 
     // Auto-push on any local DB change (debounced), unless we're applying a
-    // pulled snapshot right now.
+    // pulled snapshot right now, or the first post-login reconcile hasn't run.
     _dbSub = database.tableUpdates().listen((_) {
-      if (_applyingRemote) return;
+      if (_applyingRemote || !_initialSyncDone) return;
       _schedulePush();
     });
 
@@ -285,6 +290,8 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   }
 
   Future<void> signOut() async {
+    _debounce?.cancel();
+    _initialSyncDone = false; // re-gate auto-push for the next sign-in
     await _svc.signOut();
     // Groq key was wiped from secure storage — refresh its provider.
     ref.invalidate(groqApiKeyProvider);
@@ -302,6 +309,7 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
         ref.invalidate(groqApiKeyProvider);
       }
       await _svc.push();
+      _initialSyncDone = true;
       final ts = await SecureStorageService.instance.lastSyncTs;
       state = state.copyWith(busy: false, lastSynced: ts, status: null);
     } catch (e) {
@@ -317,7 +325,7 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   }
 
   Future<void> _doPush() async {
-    if (!_svc.isSignedIn) return;
+    if (!_svc.isSignedIn || !_initialSyncDone) return;
     try {
       state = state.copyWith(busy: true, status: 'Сохранение…');
       final ts = await _svc.push();
@@ -336,9 +344,13 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
       if (outcome == SyncOutcome.pulled) {
         ref.invalidate(groqApiKeyProvider);
       }
+      // The first reconcile after sign-in is now done — auto-push may run.
+      _initialSyncDone = true;
       final ts = await SecureStorageService.instance.lastSyncTs;
       state = state.copyWith(busy: false, lastSynced: ts, status: null);
     } catch (e) {
+      // Even on error, unblock auto-push so future edits still sync.
+      _initialSyncDone = true;
       state = state.copyWith(busy: false, error: '$e', status: null);
     }
   }
