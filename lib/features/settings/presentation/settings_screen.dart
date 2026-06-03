@@ -807,7 +807,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title: const Text('Сбросить все данные?',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
         content: const Text(
-          'Это действие удалит все записи веса, тренировки, задачи и заметки без возможности восстановления.',
+          'Это действие безвозвратно удалит ВСЕ данные — вес, тренировки, '
+          'задачи, заметки, цели, профиль, API-ключ — и на этом устройстве, '
+          'и в облаке (для всех устройств). Вход в аккаунт сохранится.',
           style: TextStyle(fontSize: 14),
         ),
         actionsPadding: const EdgeInsets.all(16),
@@ -827,7 +829,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
     if (ok == true) {
-      await ref.read(dbProvider).clearAllData();
+      // Full local wipe (every table, profile + preferences reset).
+      await ref.read(dbProvider).wipeLocal();
+      // Clear the Groq key too (updates secure storage + provider state).
+      await ref.read(groqApiKeyProvider.notifier).set(null);
+      // Push the now-empty snapshot so the reset propagates to the cloud and
+      // every other signed-in device.
+      final sync = ref.read(syncServiceProvider);
+      if (sync.isSignedIn) {
+        try {
+          await sync.push();
+        } catch (_) {/* offline — auto-push will retry later */}
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Все данные удалены')));
