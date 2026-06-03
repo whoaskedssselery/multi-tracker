@@ -1,0 +1,114 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+
+env:
+  FLUTTER_VERSION: '3.44.0'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ───────────────────────────────────────────────────────────────
+  # iOS — unsigned IPA for SideStore / AltStore / LiveContainer
+  # ───────────────────────────────────────────────────────────────
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Build unsigned IPA
+        working-directory: flutter
+        run: |
+          set -e
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+          flutter build ios --release --no-codesign
+
+          APP="build/ios/iphoneos/Runner.app"
+          # Strip every existing signature so the sideloader re-signs the whole
+          # bundle uniformly (mixed-signed state → NSCocoaErrorDomain 3840).
+          find "$APP" -type f | while IFS= read -r f; do
+            codesign --remove-signature "$f" 2>/dev/null || true
+          done
+
+          cd build/ios/iphoneos
+          rm -rf Payload && mkdir Payload
+          cp -R Runner.app Payload/
+          zip -r -X App.ipa Payload -x "*.DS_Store"
+          echo "IPA: $(du -sh App.ipa)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iOS-App
+          path: flutter/build/ios/iphoneos/App.ipa
+          retention-days: 7
+
+  # ───────────────────────────────────────────────────────────────
+  # Windows — release .exe bundle, zipped
+  # ───────────────────────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Build Windows release
+        working-directory: flutter
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+          flutter build windows --release
+
+      - name: Package Windows zip
+        working-directory: flutter
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/windows/x64/runner/Release/* `
+            -DestinationPath MultiTracker-Windows.zip -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Windows-App
+          path: flutter/MultiTracker-Windows.zip
+          retention-days: 7
+
+  # ───────────────────────────────────────────────────────────────
+  # Release — publish both binaries when a v* tag is pushed
+  # ───────────────────────────────────────────────────────────────
+  release:
+    needs: [build-ios, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: iOS-App
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: Windows-App
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/App.ipa
+            dist/MultiTracker-Windows.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true

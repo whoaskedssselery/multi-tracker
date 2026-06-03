@@ -1,0 +1,39 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+*.g.dart
+*.freezed.dart
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# iOS
+ios/Pods/
+ios/Runner.xcworkspace/xcuserdata/
+ios/DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Windows
+windows/flutter/ephemeral/
+
+# Secrets / env
+.env
+.env.*
+*.key
+api_keys.dart
+gemini_key.txt
+
+# IntelliJ / AS
+.idea/
+
+# macOS
+.DS_Store
+
+# Coverage
+coverage/
+
+# codegraph local index
+.codegraph/

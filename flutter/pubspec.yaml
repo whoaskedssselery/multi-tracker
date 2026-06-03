@@ -54,6 +54,13 @@ dependencies:
   # assets/fonts and declared in the `flutter:` section below.
   # No runtime font fetching — works offline and identically on every platform.
 
+# path_provider_android 2.3.x pulls jni_flutter (Java interop), whose Dart
+# plugin registrant fails to compile on a clean Windows build
+# ("JObject isn't a type"). We never build Android, so pin path_provider_android
+# to the last pre-jni release to keep the Windows registrant clean.
+dependency_overrides:
+  path_provider_android: 2.2.15
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

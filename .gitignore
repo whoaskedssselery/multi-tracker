@@ -1,39 +1,13 @@
-# Flutter / Dart
-.dart_tool/
-.packages
-build/
-*.g.dart
-*.freezed.dart
-.flutter-plugins
-.flutter-plugins-dependencies
-pubspec.lock
+# Monorepo root .gitignore
+# The Flutter app lives in flutter/ and has its own .gitignore.
+# A website will live in its own folder later.
 
-# iOS
-ios/Pods/
-ios/Runner.xcworkspace/xcuserdata/
-ios/DerivedData/
-*.ipa
-*.dSYM.zip
-*.dSYM
-
-# Windows
-windows/flutter/ephemeral/
-
-# Secrets / env
-.env
-.env.*
-*.key
-api_keys.dart
-gemini_key.txt
-
-# IntelliJ / AS
+# Tooling / IDE
 .idea/
-
-# macOS
-.DS_Store
-
-# Coverage
-coverage/
-
-# codegraph local index
 .codegraph/
+.claude/
+*.iml
+
+# OS junk
+.DS_Store
+Thumbs.db
