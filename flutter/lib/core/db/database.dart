@@ -818,6 +818,23 @@ class AppDatabase extends _$AppDatabase {
 
   static const int snapshotVersion = 1;
 
+  /// True if the local DB holds any real user data (ignores the always-present
+  /// singleton profile / preferences rows). Used by sync to avoid letting an
+  /// empty cloud snapshot overwrite a populated device.
+  Future<bool> hasUserData() async {
+    final res = await customSelect(
+      'SELECT '
+      '(SELECT COUNT(*) FROM weight_entries) + '
+      '(SELECT COUNT(*) FROM task_items) + '
+      '(SELECT COUNT(*) FROM note_items) + '
+      '(SELECT COUNT(*) FROM goals) + '
+      '(SELECT COUNT(*) FROM workout_templates) + '
+      '(SELECT COUNT(*) FROM exercise_templates) + '
+      '(SELECT COUNT(*) FROM set_entries) AS c',
+    ).getSingle();
+    return (res.data['c'] as int) > 0;
+  }
+
   Future<Map<String, dynamic>> exportSnapshot() async {
     return {
       'snapshotVersion': snapshotVersion,

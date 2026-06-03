@@ -69,6 +69,13 @@ class SyncService {
         .maybeSingle();
     if (row == null || row['data'] == null) return false;
     final data = (row['data'] as Map).cast<String, dynamic>();
+    await _applyPulled(data, row['updated_at']);
+    return true;
+  }
+
+  /// Imports a fetched snapshot [data] into the local DB and records its
+  /// [tsRaw] as the last-sync timestamp.
+  Future<void> _applyPulled(Map<String, dynamic> data, dynamic tsRaw) async {
     await _db.importSnapshot(data);
     // Restore secrets that live outside the DB (Groq API key).
     final secrets = (data['secrets'] as Map?)?.cast<String, dynamic>();
@@ -76,12 +83,30 @@ class SyncService {
     if (groq is String && groq.isNotEmpty) {
       await SecureStorageService.instance.setGroqApiKey(groq);
     }
-    final ts = row['updated_at'];
-    if (ts is String) {
-      final dt = DateTime.tryParse(ts);
+    if (tsRaw is String) {
+      final dt = DateTime.tryParse(tsRaw);
       if (dt != null) await SecureStorageService.instance.setLastSyncTs(dt);
     }
-    return true;
+  }
+
+  /// True if the snapshot [data] contains any real user data (ignoring the
+  /// always-present singleton profile / preferences rows).
+  static bool _snapshotHasData(Map<String, dynamic>? data) {
+    final t = (data?['tables'] as Map?)?.cast<String, dynamic>();
+    if (t == null) return false;
+    const meaningful = [
+      'weight_entries',
+      'task_items',
+      'note_items',
+      'goals',
+      'workout_templates',
+      'exercise_templates',
+      'set_entries',
+    ];
+    for (final k in meaningful) {
+      if ((t[k] as List?)?.isNotEmpty ?? false) return true;
+    }
+    return false;
   }
 
   /// Push the local DB up as the snapshot. Returns the new `updated_at`.
@@ -104,18 +129,46 @@ class SyncService {
     return now;
   }
 
-  /// Startup / resume reconcile: pull if the remote is newer than what we last
-  /// synced, push if there's no remote snapshot yet, otherwise do nothing.
+  /// Startup / resume / login reconcile.
+  ///
+  /// Safety rule: an EMPTY cloud snapshot must never overwrite a populated
+  /// local DB. If the remote has no real data but the local does, we push the
+  /// local data up instead of pulling (this both protects and recovers the
+  /// cloud from whichever device still has data). Only when the remote
+  /// actually has data — and it's newer than our last sync — do we pull.
   Future<SyncOutcome> reconcile() async {
-    if (!isSignedIn) return SyncOutcome.notSignedIn;
-    final remote = await remoteUpdatedAt();
-    if (remote == null) {
-      await push();
-      return SyncOutcome.pushedInitial;
+    final user = currentUser;
+    if (user == null) return SyncOutcome.notSignedIn;
+
+    final row = await _sb
+        .from(_table)
+        .select('data, updated_at')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    final remoteData = row?['data'] is Map
+        ? (row!['data'] as Map).cast<String, dynamic>()
+        : null;
+    final remoteHasData = _snapshotHasData(remoteData);
+
+    if (!remoteHasData) {
+      // Cloud is empty/absent. Never wipe local — push local up instead.
+      final localHasData = await _db.hasUserData();
+      if (localHasData || row == null) {
+        await push();
+        return SyncOutcome.pushedInitial;
+      }
+      return SyncOutcome.upToDate;
     }
+
+    // Remote has real data — pull if it's newer than what we last synced
+    // (or we've never synced on this device).
+    final remoteTs = row!['updated_at'] is String
+        ? DateTime.tryParse(row['updated_at'] as String)
+        : null;
     final last = await SecureStorageService.instance.lastSyncTs;
-    if (last == null || remote.isAfter(last)) {
-      await pull();
+    if (last == null || (remoteTs != null && remoteTs.isAfter(last))) {
+      await _applyPulled(remoteData!, row['updated_at']);
       return SyncOutcome.pulled;
     }
     return SyncOutcome.upToDate;
