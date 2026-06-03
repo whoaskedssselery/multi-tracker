@@ -575,11 +575,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onPressed: sync.busy
                           ? null
                           : () async {
-                              await ref
+                              final ok = await ref
                                   .read(syncControllerProvider.notifier)
                                   .signIn(emailCtrl.text, passCtrl.text);
-                              if (ref.read(syncControllerProvider).signedIn &&
-                                  ctx.mounted) {
+                              if (ok && ctx.mounted) {
                                 Navigator.pop(ctx);
                               }
                             },

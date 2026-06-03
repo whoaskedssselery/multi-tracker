@@ -253,16 +253,22 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
 
   // ── Public actions ───────────────────────────────────────────────────────
 
-  Future<void> signIn(String email, String password) async {
+  /// Returns true on success so the caller (dialog) can close immediately,
+  /// without waiting for the async auth listener to update [SyncState].
+  Future<bool> signIn(String email, String password) async {
     state = state.copyWith(busy: true, clearError: true, status: 'Вход…');
     try {
       await _svc.signIn(email, password);
-      // auth listener will fire reconcile.
-      state = state.copyWith(busy: false, status: null);
+      // auth listener will fire reconcile + flip signedIn.
+      state = state.copyWith(
+          busy: false, signedIn: true, email: email.trim(), status: null);
+      return true;
     } on AuthException catch (e) {
       state = state.copyWith(busy: false, error: e.message, status: null);
+      return false;
     } catch (e) {
       state = state.copyWith(busy: false, error: '$e', status: null);
+      return false;
     }
   }
 
