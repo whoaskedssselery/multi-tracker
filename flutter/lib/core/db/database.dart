@@ -833,9 +833,10 @@ class AppDatabase extends _$AppDatabase {
       '(SELECT COUNT(*) FROM set_entries) + '
       // A filled-in profile (custom name / height / target weight / birthdate)
       // is real user data too, even though the profile row always exists.
+      // NB: Drift stores columns in snake_case.
       "(SELECT COUNT(*) FROM profile WHERE "
-      "(name <> '' AND name <> 'User') OR heightCm IS NOT NULL "
-      "OR targetWeightKg IS NOT NULL OR birthDate IS NOT NULL) AS c",
+      "(name <> '' AND name <> 'User') OR height_cm IS NOT NULL "
+      "OR target_weight_kg IS NOT NULL OR birth_date IS NOT NULL) AS c",
     ).getSingle();
     return (res.data['c'] as int) > 0;
   }
