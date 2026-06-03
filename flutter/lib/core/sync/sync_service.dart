@@ -277,15 +277,30 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> signUp(String email, String password) async {
+  /// Returns true if a session is active right after sign-up (email
+  /// confirmation disabled). If confirmation is required, returns false and
+  /// sets a status asking the user to confirm their email.
+  Future<bool> signUp(String email, String password) async {
     state = state.copyWith(busy: true, clearError: true, status: 'Регистрация…');
     try {
       await _svc.signUp(email, password);
-      state = state.copyWith(busy: false, status: null);
+      if (_svc.isSignedIn) {
+        state = state.copyWith(
+            busy: false, signedIn: true, email: email.trim(), status: null);
+        return true;
+      }
+      // No session → email confirmation is on. Tell the user.
+      state = state.copyWith(
+          busy: false,
+          status: null,
+          error: 'Подтвердите email, затем войдите.');
+      return false;
     } on AuthException catch (e) {
       state = state.copyWith(busy: false, error: e.message, status: null);
+      return false;
     } catch (e) {
       state = state.copyWith(busy: false, error: '$e', status: null);
+      return false;
     }
   }
 

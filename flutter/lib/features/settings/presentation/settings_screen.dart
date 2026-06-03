@@ -516,6 +516,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _showSyncSignIn(ThemeTokens t) async {
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
+    var register = false; // false = sign in, true = create account
     await showAppModal<void>(
       context,
       maxWidth: 440,
@@ -523,6 +524,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         builder: (ctx, setDlg) {
           final tt = ThemeTokens.of(ctx);
           final sync = ref.watch(syncControllerProvider);
+          final notifier = ref.read(syncControllerProvider.notifier);
+
+          Future<void> submit() async {
+            final email = emailCtrl.text;
+            final pass = passCtrl.text;
+            final ok = register
+                ? await notifier.signUp(email, pass)
+                : await notifier.signIn(email, pass);
+            if (ok && ctx.mounted) Navigator.pop(ctx);
+          }
+
           return Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -532,7 +544,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text('Вход',
+                      child: Text(register ? 'Регистрация' : 'Вход',
                           style: Theme.of(ctx).textTheme.headlineMedium),
                     ),
                     IconButton(
@@ -541,6 +553,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onPressed: () => Navigator.pop(ctx),
                     ),
                   ],
+                ),
+              ),
+              // Segmented Вход / Регистрация
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: tt.surfaceSunken,
+                    borderRadius: AppRadius.smAll,
+                  ),
+                  child: Row(children: [
+                    _authTab(ctx, tt, 'Вход', !register,
+                        () => setDlg(() => register = false)),
+                    _authTab(ctx, tt, 'Регистрация', register,
+                        () => setDlg(() => register = true)),
+                  ]),
                 ),
               ),
               Padding(
@@ -552,6 +581,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         keyboardType: TextInputType.emailAddress),
                     const SizedBox(height: 12),
                     _syncField(ctx, passCtrl, 'Пароль', tt, obscure: true),
+                    if (register) ...[
+                      const SizedBox(height: 6),
+                      Text('Минимум 6 символов',
+                          style: TextStyle(fontSize: 11, color: tt.text4)),
+                    ],
                     if (sync.error != null) ...[
                       const SizedBox(height: 10),
                       Text(sync.error!,
@@ -572,17 +606,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: sync.busy
-                          ? null
-                          : () async {
-                              final ok = await ref
-                                  .read(syncControllerProvider.notifier)
-                                  .signIn(emailCtrl.text, passCtrl.text);
-                              if (ok && ctx.mounted) {
-                                Navigator.pop(ctx);
-                              }
-                            },
-                      child: Text(sync.busy ? '…' : 'Войти'),
+                      onPressed: sync.busy ? null : submit,
+                      child: Text(sync.busy
+                          ? '…'
+                          : (register ? 'Создать' : 'Войти')),
                     ),
                   ],
                 ),
@@ -590,6 +617,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _authTab(BuildContext ctx, ThemeTokens t, String label, bool active,
+      VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? t.surface : Colors.transparent,
+            borderRadius: AppRadius.smAll,
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: active ? t.text1 : t.text3)),
+        ),
       ),
     );
   }
