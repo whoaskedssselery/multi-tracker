@@ -830,7 +830,12 @@ class AppDatabase extends _$AppDatabase {
       '(SELECT COUNT(*) FROM goals) + '
       '(SELECT COUNT(*) FROM workout_templates) + '
       '(SELECT COUNT(*) FROM exercise_templates) + '
-      '(SELECT COUNT(*) FROM set_entries) AS c',
+      '(SELECT COUNT(*) FROM set_entries) + '
+      // A filled-in profile (custom name / height / target weight / birthdate)
+      // is real user data too, even though the profile row always exists.
+      "(SELECT COUNT(*) FROM profile WHERE "
+      "(name <> '' AND name <> 'User') OR heightCm IS NOT NULL "
+      "OR targetWeightKg IS NOT NULL OR birthDate IS NOT NULL) AS c",
     ).getSingle();
     return (res.data['c'] as int) > 0;
   }

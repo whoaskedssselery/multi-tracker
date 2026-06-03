@@ -89,8 +89,9 @@ class SyncService {
     }
   }
 
-  /// True if the snapshot [data] contains any real user data (ignoring the
-  /// always-present singleton profile / preferences rows).
+  /// True if the snapshot [data] contains any real user data. Counts the data
+  /// tables AND a non-default profile (name / height / target weight), since
+  /// the profile is genuine user data even though its row always exists.
   static bool _snapshotHasData(Map<String, dynamic>? data) {
     final t = (data?['tables'] as Map?)?.cast<String, dynamic>();
     if (t == null) return false;
@@ -105,6 +106,17 @@ class SyncService {
     ];
     for (final k in meaningful) {
       if ((t[k] as List?)?.isNotEmpty ?? false) return true;
+    }
+    final profile = t['profile'] as List?;
+    if (profile != null && profile.isNotEmpty) {
+      final p = (profile.first as Map);
+      final name = p['name'];
+      if ((name is String && name.isNotEmpty && name != 'User') ||
+          p['heightCm'] != null ||
+          p['targetWeightKg'] != null ||
+          p['birthDate'] != null) {
+        return true;
+      }
     }
     return false;
   }
@@ -131,11 +143,13 @@ class SyncService {
 
   /// Startup / resume / login reconcile.
   ///
-  /// Safety rule: an EMPTY cloud snapshot must never overwrite a populated
-  /// local DB. If the remote has no real data but the local does, we push the
-  /// local data up instead of pulling (this both protects and recovers the
-  /// cloud from whichever device still has data). Only when the remote
-  /// actually has data — and it's newer than our last sync — do we pull.
+  /// Decision is TIMESTAMP-driven (LWW): pull when the cloud snapshot is newer
+  /// than what this device last synced (or it has never synced). This covers
+  /// profile/preferences changes too — not just the data tables.
+  ///
+  /// Safety guard: an EMPTY cloud snapshot must never overwrite a populated
+  /// local DB. In that single case we push local up instead (recovering the
+  /// cloud from whichever device still has data).
   Future<SyncOutcome> reconcile() async {
     final user = currentUser;
     if (user == null) return SyncOutcome.notSignedIn;
@@ -146,32 +160,56 @@ class SyncService {
         .eq('user_id', user.id)
         .maybeSingle();
 
-    final remoteData = row?['data'] is Map
-        ? (row!['data'] as Map).cast<String, dynamic>()
-        : null;
-    final remoteHasData = _snapshotHasData(remoteData);
-
-    if (!remoteHasData) {
-      // Cloud is empty/absent. Never wipe local — push local up instead.
-      final localHasData = await _db.hasUserData();
-      if (localHasData || row == null) {
-        await push();
-        return SyncOutcome.pushedInitial;
-      }
-      return SyncOutcome.upToDate;
+    // No cloud snapshot yet → upload local as the initial one.
+    if (row == null) {
+      await push();
+      return SyncOutcome.pushedInitial;
     }
 
-    // Remote has real data — pull if it's newer than what we last synced
-    // (or we've never synced on this device).
-    final remoteTs = row!['updated_at'] is String
+    final remoteData = row['data'] is Map
+        ? (row['data'] as Map).cast<String, dynamic>()
+        : null;
+    final remoteTs = row['updated_at'] is String
         ? DateTime.tryParse(row['updated_at'] as String)
         : null;
     final last = await SecureStorageService.instance.lastSyncTs;
-    if (last == null || (remoteTs != null && remoteTs.isAfter(last))) {
-      await _applyPulled(remoteData!, row['updated_at']);
+
+    final remoteIsNewer =
+        last == null || (remoteTs != null && remoteTs.isAfter(last));
+    if (remoteIsNewer && remoteData != null) {
+      // Guard: empty cloud must not wipe a populated device — push instead.
+      if (!_snapshotHasData(remoteData) && await _db.hasUserData()) {
+        await push();
+        return SyncOutcome.pushedInitial;
+      }
+      await _applyPulled(remoteData, row['updated_at']);
       return SyncOutcome.pulled;
     }
     return SyncOutcome.upToDate;
+  }
+
+  /// Pushes local up — EXCEPT when that would replace a populated cloud
+  /// snapshot with an empty local DB (guards against accidental wipes from a
+  /// manual "sync now" on a device that has no data yet).
+  Future<void> pushSafe() async {
+    final user = currentUser;
+    if (user == null) return;
+    if (await _db.hasUserData()) {
+      await push();
+      return;
+    }
+    // Local is empty — only push if the cloud is also empty/absent.
+    final row = await _sb
+        .from(_table)
+        .select('data')
+        .eq('user_id', user.id)
+        .maybeSingle();
+    final remoteData = row?['data'] is Map
+        ? (row!['data'] as Map).cast<String, dynamic>()
+        : null;
+    if (!_snapshotHasData(remoteData)) {
+      await push();
+    }
   }
 
   static String _deviceLabel() {
@@ -375,8 +413,11 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
       final outcome = await _applyRemote(() => _svc.reconcile());
       if (outcome == SyncOutcome.pulled) {
         ref.invalidate(groqApiKeyProvider);
+      } else {
+        // Didn't pull → flush local changes up, but never clobber a populated
+        // cloud with an empty local DB.
+        await _svc.pushSafe();
       }
-      await _svc.push();
       _initialSyncDone = true;
       final ts = await SecureStorageService.instance.lastSyncTs;
       state = state.copyWith(busy: false, lastSynced: ts, status: null);
