@@ -19,6 +19,7 @@ import '../../../core/db/database.dart';
 import '../../../core/sync/supabase_config.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../../main.dart';
+import '../../../shared/widgets/app_modal.dart';
 import '../../../shared/widgets/page_header.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -333,9 +334,115 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _syncSection(ThemeTokens t) {
     final sync = ref.watch(syncControllerProvider);
+    final desktop = MediaQuery.sizeOf(context).width >= kDesktopBreakpoint;
 
+    final statusText = sync.busy
+        ? (sync.status ?? 'Синхронизация…')
+        : (sync.lastSynced != null
+            ? 'Синхронизировано ${_fmtSyncTime(sync.lastSynced!)}'
+            : 'Готово к синхронизации');
+
+    final errorWidget = sync.error == null
+        ? null
+        : Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.lg),
+            child: Text(sync.error!,
+                style: const TextStyle(fontSize: 12, color: AppColors.danger)),
+          );
+
+    // ── Desktop: compact single-row layout ──────────────────────────────────
+    if (desktop) {
+      final Widget row;
+      if (!sync.signedIn) {
+        row = Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+          child: Row(
+            children: [
+              Icon(Icons.cloud_off_outlined, size: 20, color: t.text3),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Войди, чтобы данные синхронизировались между Windows и iPhone.',
+                  style: TextStyle(fontSize: 13, color: t.text3),
+                ),
+              ),
+              const SizedBox(width: 16),
+              FilledButton.icon(
+                onPressed: sync.busy ? null : () => _showSyncSignIn(t),
+                icon: const Icon(Icons.login_outlined, size: 16),
+                label: Text(sync.busy ? 'Вход…' : 'Войти'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        row = Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+          child: Row(
+            children: [
+              Icon(
+                sync.busy ? Icons.sync : Icons.cloud_done_outlined,
+                size: 22,
+                color: sync.busy ? t.accent : t.success,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      sync.email ?? '—',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: t.text1),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(statusText,
+                        style: TextStyle(fontSize: 12, color: t.text3)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: sync.busy
+                    ? null
+                    : () =>
+                        ref.read(syncControllerProvider.notifier).syncNow(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: t.text1,
+                  side: BorderSide(color: t.border),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                ),
+                icon: const Icon(Icons.sync, size: 16),
+                label: const Text('Синхронизировать'),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: sync.busy
+                    ? null
+                    : () =>
+                        ref.read(syncControllerProvider.notifier).signOut(),
+                style: TextButton.styleFrom(
+                    foregroundColor: AppColors.danger),
+                icon: const Icon(Icons.logout_outlined, size: 16),
+                label: const Text('Выйти'),
+              ),
+            ],
+          ),
+        );
+      }
+      return Column(children: [row, if (errorWidget != null) errorWidget]);
+    }
+
+    // ── Mobile: stacked rows (iOS) ───────────────────────────────────────────
     final children = <Widget>[];
-
     if (!sync.signedIn) {
       children.add(Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -366,14 +473,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                sync.busy
-                    ? (sync.status ?? 'Синхронизация…')
-                    : (sync.lastSynced != null
-                        ? 'Синхронизировано ${_fmtSyncTime(sync.lastSynced!)}'
-                        : 'Готово к синхронизации'),
-                style: TextStyle(fontSize: 14, color: t.text1),
-              ),
+              child: Text(statusText,
+                  style: TextStyle(fontSize: 14, color: t.text1)),
             ),
           ],
         ),
@@ -398,16 +499,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         t: t,
       ));
     }
-
-    if (sync.error != null) {
-      children.add(Padding(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.lg),
-        child: Text(sync.error!,
-            style: TextStyle(fontSize: 12, color: AppColors.danger)),
-      ));
-    }
-
+    if (errorWidget != null) children.add(errorWidget);
     return Column(children: children);
   }
 
@@ -424,54 +516,82 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _showSyncSignIn(ThemeTokens t) async {
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setDlg) {
+    await showAppModal<void>(
+      context,
+      maxWidth: 440,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) {
+          final tt = ThemeTokens.of(ctx);
           final sync = ref.watch(syncControllerProvider);
-          return AlertDialog(
-            backgroundColor: t.surface,
-            shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
-            title: Text('Вход', style: Theme.of(ctx).textTheme.titleLarge),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _syncField(ctx, emailCtrl, 'Email', t,
-                    keyboardType: TextInputType.emailAddress),
-                const SizedBox(height: 12),
-                _syncField(ctx, passCtrl, 'Пароль', t, obscure: true),
-                if (sync.error != null) ...[
-                  const SizedBox(height: 10),
-                  Text(sync.error!,
-                      style: TextStyle(
-                          fontSize: 12, color: AppColors.danger)),
-                ],
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Отмена'),
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 18, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text('Вход',
+                          style: Theme.of(ctx).textTheme.headlineMedium),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      color: tt.text3,
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
               ),
-              FilledButton(
-                onPressed: sync.busy
-                    ? null
-                    : () async {
-                        await ref
-                            .read(syncControllerProvider.notifier)
-                            .signIn(emailCtrl.text, passCtrl.text);
-                        if (ref.read(syncControllerProvider).signedIn &&
-                            ctx.mounted) {
-                          Navigator.pop(ctx);
-                        }
-                      },
-                child: Text(sync.busy ? '…' : 'Войти'),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _syncField(ctx, emailCtrl, 'Email', tt,
+                        keyboardType: TextInputType.emailAddress),
+                    const SizedBox(height: 12),
+                    _syncField(ctx, passCtrl, 'Пароль', tt, obscure: true),
+                    if (sync.error != null) ...[
+                      const SizedBox(height: 10),
+                      Text(sync.error!,
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.danger)),
+                    ],
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 20),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Отмена'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: sync.busy
+                          ? null
+                          : () async {
+                              await ref
+                                  .read(syncControllerProvider.notifier)
+                                  .signIn(emailCtrl.text, passCtrl.text);
+                              if (ref.read(syncControllerProvider).signedIn &&
+                                  ctx.mounted) {
+                                Navigator.pop(ctx);
+                              }
+                            },
+                      child: Text(sync.busy ? '…' : 'Войти'),
+                    ),
+                  ],
+                ),
               ),
             ],
           );
-        });
-      },
+        },
+      ),
     );
   }
 
