@@ -715,6 +715,31 @@ class AppDatabase extends _$AppDatabase {
     // Profile and preferences are intentionally kept.
   }
 
+  /// Full local wipe used on sign-out: clears EVERY table (incl. profile &
+  /// preferences), resets autoincrement counters, then re-seeds fresh default
+  /// profile + preferences so the app's singletons (id = 1) still exist.
+  Future<void> wipeLocal() async {
+    await transaction(() async {
+      await delete(chatMessageTable).go();
+      await delete(aiAnalysisTable).go();
+      await delete(workoutNoteTable).go();
+      await delete(setEntryTable).go();
+      await delete(scheduleSlotTable).go();
+      await delete(exerciseTemplateTable).go();
+      await delete(workoutTemplateTable).go();
+      await delete(noteItemTable).go();
+      await delete(taskItemTable).go();
+      await delete(goalTable).go();
+      await delete(weightEntryTable).go();
+      await delete(appPreferencesTable).go();
+      await delete(profileTable).go();
+      // Reset autoincrement so fresh inserts start at id = 1 again.
+      await customStatement('DELETE FROM sqlite_sequence');
+      await _seedDefaultProfile();
+      await _seedDefaultPreferences();
+    });
+  }
+
   Future<Map<String, dynamic>> exportAllData() async {
     final weights   = await select(weightEntryTable).get();
     final tasks     = await select(taskItemTable).get();

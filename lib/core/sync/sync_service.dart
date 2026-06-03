@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../app/providers/providers.dart';
 import '../../main.dart';
 import '../db/database.dart';
 import '../storage/secure_storage.dart';
@@ -35,8 +36,12 @@ class SyncService {
   Future<void> signUp(String email, String password) =>
       _sb.auth.signUp(email: email.trim(), password: password);
 
+  /// Sign out AND erase all local data (DB + Groq key + sync marker), so the
+  /// device is left clean for the next account.
   Future<void> signOut() async {
     await _sb.auth.signOut();
+    await _db.wipeLocal();
+    await SecureStorageService.instance.clearGroqApiKey();
     await SecureStorageService.instance.clearLastSyncTs();
   }
 
@@ -65,6 +70,12 @@ class SyncService {
     if (row == null || row['data'] == null) return false;
     final data = (row['data'] as Map).cast<String, dynamic>();
     await _db.importSnapshot(data);
+    // Restore secrets that live outside the DB (Groq API key).
+    final secrets = (data['secrets'] as Map?)?.cast<String, dynamic>();
+    final groq = secrets?['groqApiKey'];
+    if (groq is String && groq.isNotEmpty) {
+      await SecureStorageService.instance.setGroqApiKey(groq);
+    }
     final ts = row['updated_at'];
     if (ts is String) {
       final dt = DateTime.tryParse(ts);
@@ -78,6 +89,10 @@ class SyncService {
     final user = currentUser;
     if (user == null) throw StateError('Not signed in');
     final snap = await _db.exportSnapshot();
+    // Include secrets that live outside the DB (Groq API key).
+    snap['secrets'] = {
+      'groqApiKey': await SecureStorageService.instance.groqApiKey,
+    };
     final now = DateTime.now().toUtc();
     await _sb.from(_table).upsert({
       'user_id': user.id,
@@ -265,6 +280,8 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
 
   Future<void> signOut() async {
     await _svc.signOut();
+    // Groq key was wiped from secure storage — refresh its provider.
+    ref.invalidate(groqApiKeyProvider);
     state = state.copyWith(
         signedIn: false, email: null, lastSynced: null, status: null);
   }
@@ -274,7 +291,10 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     if (!_svc.isSignedIn) return;
     state = state.copyWith(busy: true, clearError: true, status: 'Синхронизация…');
     try {
-      await _applyRemote(() => _svc.reconcile());
+      final outcome = await _applyRemote(() => _svc.reconcile());
+      if (outcome == SyncOutcome.pulled) {
+        ref.invalidate(groqApiKeyProvider);
+      }
       await _svc.push();
       final ts = await SecureStorageService.instance.lastSyncTs;
       state = state.copyWith(busy: false, lastSynced: ts, status: null);
@@ -304,7 +324,12 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   Future<void> _reconcile() async {
     state = state.copyWith(busy: true, clearError: true, status: 'Синхронизация…');
     try {
-      await _applyRemote(() => _svc.reconcile());
+      final outcome = await _applyRemote(() => _svc.reconcile());
+      // A pull may have restored the Groq key into secure storage — refresh
+      // its provider so Settings shows it.
+      if (outcome == SyncOutcome.pulled) {
+        ref.invalidate(groqApiKeyProvider);
+      }
       final ts = await SecureStorageService.instance.lastSyncTs;
       state = state.copyWith(busy: false, lastSynced: ts, status: null);
     } catch (e) {
