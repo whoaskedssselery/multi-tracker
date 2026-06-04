@@ -69,9 +69,14 @@ class _MobileLayout extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.colorScheme.surfaceContainerLow,
       floatingActionButton: fab,
-      // Keep screen content (page headers) clear of the iOS notch / status bar.
-      // Bottom is handled by the tab bar's own SafeArea.
-      body: SafeArea(bottom: false, child: body),
+      // Tap anywhere outside a text field to dismiss the keyboard (iOS has no
+      // built-in "done" key, and the keyboard otherwise covers the nav bar).
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        // Keep screen content (page headers) clear of the notch / status bar.
+        child: SafeArea(bottom: false, child: body),
+      ),
       bottomNavigationBar: _BlurredTabBar(
         selectedIndex: selectedIndex,
         destinations: destinations,

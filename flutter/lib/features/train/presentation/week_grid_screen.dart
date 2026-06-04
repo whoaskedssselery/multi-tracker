@@ -85,19 +85,46 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
     }
     if (!mounted) return;
 
-    // Build controllers: exerciseId → list of (weightCtrl, repsCtrl)
+    // Build controllers: exerciseId → list of (weightCtrl, repsCtrl).
+    // Row count + default reps come from the PROGRAM (defaultSetsJson) when the
+    // exercise was never logged, so "6 подходов" in the program shows 6 rows
+    // here. If there are previous logged sets, those drive the rows instead.
     final ctrls = <int, List<(TextEditingController, TextEditingController)>>{};
     for (final ex in exercises) {
       final parts = (lastSets[ex.id] ?? '')
           .split(' · ')
           .where((s) => s.isNotEmpty)
           .toList();
-      ctrls[ex.id] = List.generate(parts.isEmpty ? 3 : parts.length, (i) {
-        final match =
-            RegExp(r'([\d.]+)×(\d+)').firstMatch(i < parts.length ? parts[i] : '');
+
+      // Parse the program's configured sets (list of {weight, reps}).
+      List<Map<String, dynamic>> defaults = const [];
+      try {
+        final decoded = jsonDecode(ex.defaultSetsJson);
+        if (decoded is List) {
+          defaults = decoded
+              .whereType<Map>()
+              .map((m) => m.cast<String, dynamic>())
+              .toList();
+        }
+      } catch (_) {}
+
+      final int rowCount = parts.isNotEmpty
+          ? parts.length
+          : (defaults.isNotEmpty ? defaults.length : 3);
+
+      ctrls[ex.id] = List.generate(rowCount, (i) {
+        if (i < parts.length) {
+          final match = RegExp(r'([\d.]+)×(\d+)').firstMatch(parts[i]);
+          return (
+            TextEditingController(text: match?.group(1) ?? ''),
+            TextEditingController(text: match?.group(2) ?? ''),
+          );
+        }
+        // No prior log for this row → pre-fill reps from the program default.
+        final reps = i < defaults.length ? defaults[i]['reps'] : null;
         return (
-          TextEditingController(text: match?.group(1) ?? ''),
-          TextEditingController(text: match?.group(2) ?? ''),
+          TextEditingController(),
+          TextEditingController(text: reps == null ? '' : '$reps'),
         );
       });
     }
@@ -226,7 +253,17 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
 
     return Scaffold(
       backgroundColor: t.bg,
-      body: CustomScrollView(
+      // Swipe left/right anywhere on the page to change the week.
+      body: GestureDetector(
+        onHorizontalDragEnd: (d) {
+          final v = d.primaryVelocity ?? 0;
+          if (v < -250) {
+            setState(() => _weekOffset++); // swipe left → next week
+          } else if (v > 250) {
+            setState(() => _weekOffset--); // swipe right → previous week
+          }
+        },
+        child: CustomScrollView(
         slivers: [
           // ── Header: title + week nav ──
           SliverToBoxAdapter(
@@ -320,6 +357,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

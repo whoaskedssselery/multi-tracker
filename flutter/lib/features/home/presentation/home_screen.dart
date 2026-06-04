@@ -137,6 +137,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   static DateTime _midnight(DateTime d) =>
       DateTime(d.year, d.month, d.day);
 
+  /// Relative day label vs today (local midnight): сегодня / вчера / dd.MM.
+  static String _relDay(DateTime d) {
+    final diff = _midnight(DateTime.now()).difference(_midnight(d)).inDays;
+    if (diff == 0) return 'сегодня';
+    if (diff == 1) return 'вчера';
+    return '${d.day.toString().padLeft(2, '0')}.'
+        '${d.month.toString().padLeft(2, '0')}';
+  }
+
   int get _weightStreak {
     final dates = _entries.map((e) => _midnight(e.date)).toSet().toList()
       ..sort((a, b) => b.compareTo(a));
@@ -541,20 +550,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _iosTodayWeightCard(BuildContext context, ThemeTokens t) {
     if (_recordingWeight) return _weightRecorderCard(context, t);
+    final today = _midnight(DateTime.now());
+    // The big number resets each day (МСК/local midnight): it shows TODAY's
+    // weight only — '—' until today's weight is recorded.
+    final todayEntry =
+        _entries.where((e) => _midnight(e.date) == today).firstOrNull;
     final latest = _entries.isNotEmpty ? _entries.first : null;
     final prev   = _entries.length >= 2 ? _entries[1] : null;
-    final delta  = (latest != null && prev != null)
-        ? latest.value - prev.value
-        : null;
     final currentStr =
-        latest != null ? latest.value.toStringAsFixed(1) : '—';
+        todayEntry != null ? todayEntry.value.toStringAsFixed(1) : '—';
+
     String subLabel;
-    if (delta != null) {
+    if (latest != null && prev != null) {
+      // Delta between the two most recent entries, with the correct relative
+      // day for the previous one (fixes "вчера" shown for same-day entries).
+      final delta = latest.value - prev.value;
       final sign = delta >= 0 ? '+' : '';
       subLabel =
-          'вчера ${prev!.value.toStringAsFixed(1)}  ·  $sign${delta.toStringAsFixed(1)}';
+          '${_relDay(prev.date)} ${prev.value.toStringAsFixed(1)}  ·  $sign${delta.toStringAsFixed(1)}';
     } else if (latest != null) {
-      subLabel = 'первая запись';
+      subLabel = 'последняя: ${_relDay(latest.date)} '
+          '${latest.value.toStringAsFixed(1)}';
     } else {
       subLabel = 'нет записей';
     }

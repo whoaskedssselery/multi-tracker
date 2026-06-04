@@ -24,6 +24,9 @@ class SyncService {
   final AppDatabase _db;
 
   static const _table = 'app_state';
+  // Hard cap on every network round-trip so a slow/blocked connection (e.g.
+  // behind a proxy) can't leave sync hanging on "Сохранение…" forever.
+  static const Duration _netTimeout = Duration(seconds: 20);
 
   SupabaseClient get _sb => Supabase.instance.client;
 
@@ -66,7 +69,8 @@ class SyncService {
         .from(_table)
         .select('data, updated_at')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .maybeSingle()
+        .timeout(_netTimeout);
     if (row == null || row['data'] == null) return false;
     final data = (row['data'] as Map).cast<String, dynamic>();
     await _applyPulled(data, row['updated_at']);
@@ -136,7 +140,7 @@ class SyncService {
       'data': snap,
       'updated_at': now.toIso8601String(),
       'device': _deviceLabel(),
-    });
+    }).timeout(_netTimeout);
     await SecureStorageService.instance.setLastSyncTs(now);
     return now;
   }
@@ -158,7 +162,8 @@ class SyncService {
         .from(_table)
         .select('data, updated_at')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .maybeSingle()
+        .timeout(_netTimeout);
 
     // No cloud snapshot yet → upload local as the initial one.
     if (row == null) {
@@ -203,7 +208,8 @@ class SyncService {
         .from(_table)
         .select('data')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .maybeSingle()
+        .timeout(_netTimeout);
     final remoteData = row?['data'] is Map
         ? (row!['data'] as Map).cast<String, dynamic>()
         : null;
@@ -278,6 +284,7 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   StreamSubscription<dynamic>? _dbSub;
   StreamSubscription<AuthState>? _authSub;
   bool _applyingRemote = false;
+  bool _inFlight = false; // a push/reconcile network op is currently running
   // Auto-push is blocked until the first reconcile after sign-in completes.
   // Otherwise a debounced push scheduled while signed-out (e.g. from startup
   // DB seeding) could fire right after sign-in and overwrite the cloud with
@@ -407,7 +414,8 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
 
   /// Manual "sync now" — reconcile (pull if remote newer) then push local.
   Future<void> syncNow() async {
-    if (!_svc.isSignedIn) return;
+    if (!_svc.isSignedIn || _inFlight) return;
+    _inFlight = true;
     state = state.copyWith(busy: true, clearError: true, status: 'Синхронизация…');
     try {
       final outcome = await _applyRemote(() => _svc.reconcile());
@@ -423,6 +431,8 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
       state = state.copyWith(busy: false, lastSynced: ts, status: null);
     } catch (e) {
       state = state.copyWith(busy: false, error: '$e', status: null);
+    } finally {
+      _inFlight = false;
     }
   }
 
@@ -435,16 +445,26 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
 
   Future<void> _doPush() async {
     if (!_svc.isSignedIn || !_initialSyncDone) return;
+    // Never overlap network ops — if one is in flight, retry shortly.
+    if (_inFlight) {
+      _schedulePush();
+      return;
+    }
+    _inFlight = true;
     try {
       state = state.copyWith(busy: true, status: 'Сохранение…');
       final ts = await _svc.push();
       state = state.copyWith(busy: false, lastSynced: ts, status: null);
     } catch (e) {
       state = state.copyWith(busy: false, error: '$e', status: null);
+    } finally {
+      _inFlight = false;
     }
   }
 
   Future<void> _reconcile() async {
+    if (_inFlight) return; // a sync is already running
+    _inFlight = true;
     state = state.copyWith(busy: true, clearError: true, status: 'Синхронизация…');
     try {
       final outcome = await _applyRemote(() => _svc.reconcile());
@@ -461,6 +481,8 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
       // Even on error, unblock auto-push so future edits still sync.
       _initialSyncDone = true;
       state = state.copyWith(busy: false, error: '$e', status: null);
+    } finally {
+      _inFlight = false;
     }
   }
 
