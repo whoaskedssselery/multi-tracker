@@ -53,6 +53,14 @@ class WeekGridScreen extends ConsumerStatefulWidget {
 class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
   int _weekOffset  = 0; // 0 = current week
   int _selectedDow = DateTime.now().weekday; // 1=Mon..7=Sun
+  bool _weekFwd = true; // last week-change direction (for the slide animation)
+
+  void _changeWeek(int delta) {
+    setState(() {
+      _weekFwd = delta > 0;
+      _weekOffset += delta;
+    });
+  }
 
   ThemeTokens get _t => ThemeTokens.of(context);
 
@@ -273,113 +281,124 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
       orElse: () => selected,
     );
 
-    return Scaffold(
-      backgroundColor: t.bg,
-      // Swipe left/right anywhere on the page to change the week.
-      body: GestureDetector(
-        onHorizontalDragEnd: (d) {
-          final v = d.primaryVelocity ?? 0;
-          if (v < -250) {
-            setState(() => _weekOffset++); // swipe left → next week
-          } else if (v > 250) {
-            setState(() => _weekOffset--); // swipe right → previous week
-          }
-        },
-        child: CustomScrollView(
-        slivers: [
-          // ── Header: title + week nav ──
-          SliverToBoxAdapter(
-            child: IosPageHeader(
-              title: 'Тренировки',
-              subtitle: _fmtWeekRange(weekStart),
-              action: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _iosNavBtn(context, t, Icons.chevron_left,
-                      () => setState(() => _weekOffset--)),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () => setState(() {
-                      _weekOffset  = 0;
-                      _selectedDow = DateTime.now().weekday;
-                    }),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: t.surface,
-                        border: Border.all(color: t.border),
-                        borderRadius: AppRadius.smAll,
-                      ),
-                      child: Text('Сегодня',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: t.text1)),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  _iosNavBtn(context, t, Icons.chevron_right,
-                      () => setState(() => _weekOffset++)),
-                ],
-              ),
-            ),
+    // Per-week content (everything below the fixed header) — this is what
+    // slides when the week changes.
+    final weekContent = SingleChildScrollView(
+      key: ValueKey(_weekOffset),
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: _buildDayStrip(context, t, days),
           ),
-
-          // ── Day strip ──
-          SliverToBoxAdapter(
-            child: Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _buildDayStrip(context, t, days),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: _iosTodayCard(context, t, todayItem),
           ),
-
-          // ── Today workout card ──
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _iosTodayCard(context, t, todayItem),
-            ),
-          ),
-
-          // ── Whole week section ──
-          SliverToBoxAdapter(
-            child: Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(20, 24, 20, 4),
-              child: Row(children: [
-                Text('ВСЯ НЕДЕЛЯ',
-                    style: AppTypography.caps(color: t.text3)),
-                const Spacer(),
-                GestureDetector(
-                  onTap: _showProgramDialog,
-                  child: Text(
-                    'Программа →',
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
+            child: Row(children: [
+              Text('ВСЯ НЕДЕЛЯ', style: AppTypography.caps(color: t.text3)),
+              const Spacer(),
+              GestureDetector(
+                onTap: _showProgramDialog,
+                child: Text('Программа →',
                     style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: t.accent),
-                  ),
-                ),
-              ]),
-            ),
+                        color: t.accent)),
+              ),
+            ]),
           ),
-
-          SliverPadding(
+          Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) => Padding(
+            child: Column(
+              children: List.generate(
+                7,
+                (i) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _iosWeekRow(context, t, days[i]),
                 ),
-                childCount: 7,
               ),
             ),
           ),
         ],
-        ),
+      ),
+    );
+
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Fixed header: title + week nav ──
+          IosPageHeader(
+            title: 'Тренировки',
+            subtitle: _fmtWeekRange(weekStart),
+            action: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _iosNavBtn(context, t, Icons.chevron_left,
+                    () => _changeWeek(-1)),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _weekFwd = _weekOffset > 0; // animate back toward today
+                    _weekOffset = 0;
+                    _selectedDow = DateTime.now().weekday;
+                  }),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: t.surface,
+                      border: Border.all(color: t.border),
+                      borderRadius: AppRadius.smAll,
+                    ),
+                    child: Text('Сегодня',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: t.text1)),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                _iosNavBtn(context, t, Icons.chevron_right,
+                    () => _changeWeek(1)),
+              ],
+            ),
+          ),
+          // ── Swipeable, animated week content ──
+          Expanded(
+            child: GestureDetector(
+              onHorizontalDragEnd: (d) {
+                final v = d.primaryVelocity ?? 0;
+                if (v < -250) {
+                  _changeWeek(1); // swipe left → next week
+                } else if (v > 250) {
+                  _changeWeek(-1); // swipe right → previous week
+                }
+              },
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 280),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, anim) {
+                  final begin =
+                      Offset(_weekFwd ? 1.0 : -1.0, 0.0);
+                  return SlideTransition(
+                    position: Tween<Offset>(begin: begin, end: Offset.zero)
+                        .animate(anim),
+                    child: FadeTransition(opacity: anim, child: child),
+                  );
+                },
+                child: weekContent,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

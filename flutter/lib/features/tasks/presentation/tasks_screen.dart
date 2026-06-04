@@ -1413,6 +1413,20 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
               ),
             ),
             const Spacer(),
+            // "Готово" appears while the keyboard is open — taps dismiss it.
+            if (MediaQuery.of(context).viewInsets.bottom > 0)
+              GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 12),
+                  child: Text('Готово',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: t.accent)),
+                ),
+              ),
             GestureDetector(
               onTap: () async {
                 _flush();
@@ -1434,6 +1448,7 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
           child: TextField(
             controller: _titleCtrl,
             onChanged: (_) => _flush(),
+            onTapOutside: (_) => FocusScope.of(context).unfocus(),
             style: TextStyle(
                 fontSize: 24, fontWeight: FontWeight.w700, color: t.text1),
             decoration: InputDecoration(
@@ -1458,6 +1473,7 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
             child: TextField(
               controller: _bodyCtrl,
               onChanged: (_) => _flush(),
+              onTapOutside: (_) => FocusScope.of(context).unfocus(),
               maxLines: null,
               expands: true,
               textAlignVertical: TextAlignVertical.top,
