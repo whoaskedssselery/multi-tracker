@@ -1424,8 +1424,9 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
               ),
             ),
             const Spacer(),
-            // "Готово" appears while a field is focused — saves and dismisses.
-            if (_editing) ...[
+            // While the keyboard is up show "Готово" and hide Delete so a
+            // misplaced tap can never accidentally delete the note mid-edit.
+            if (_editing)
               GestureDetector(
                 onTap: () {
                   _flush();
@@ -1433,29 +1434,27 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 12),
+                      horizontal: 16, vertical: 12),
                   child: Text('Готово',
                       style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: t.accent)),
                 ),
+              )
+            else
+              GestureDetector(
+                onTap: () async {
+                  _flush();
+                  await database.deleteNote(widget.note.id);
+                  widget.onBack();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(Icons.delete_outline,
+                      size: 20, color: t.text3),
+                ),
               ),
-              // Gap prevents accidental taps on the delete button.
-              const SizedBox(width: 4),
-            ],
-            GestureDetector(
-              onTap: () async {
-                _flush();
-                await database.deleteNote(widget.note.id);
-                widget.onBack();
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Icon(Icons.delete_outline,
-                    size: 20, color: t.text3),
-              ),
-            ),
           ]),
         ),
         Divider(height: 1, color: t.borderSoft),

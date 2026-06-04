@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -36,6 +37,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _exportLoading = false;
   final _keyCtrl = TextEditingController();
   String _appVersion = '';
+  Timer? _syncLabelTimer;
 
   ThemeTokens get _t => ThemeTokens.of(context);
 
@@ -45,10 +47,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     PackageInfo.fromPlatform().then((info) {
       if (mounted) setState(() => _appVersion = info.version);
     });
+    // Rebuild the sync status label every 30 s so relative timestamps like
+    // "только что" age correctly into "X мин назад" without waiting for a
+    // state change from the sync controller.
+    _syncLabelTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _syncLabelTimer?.cancel();
     _keyCtrl.dispose();
     super.dispose();
   }
