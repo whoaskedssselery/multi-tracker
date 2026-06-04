@@ -76,6 +76,12 @@ Stream<Set<DateTime>> loggedDates(
       to: weekStart.add(const Duration(days: 6)),
     );
 
+/// Map of logged day (midnight) → workout template performed that day.
+@riverpod
+Stream<Map<DateTime, int>> loggedTemplates(
+        LoggedTemplatesRef ref, DateTime weekStart) =>
+    ref.watch(dbProvider).watchLoggedTemplatesForWeek(weekStart);
+
 @riverpod
 class GroqApiKey extends _$GroqApiKey {
   @override

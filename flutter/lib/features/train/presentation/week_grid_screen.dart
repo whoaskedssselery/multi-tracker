@@ -73,9 +73,15 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
 
   Future<void> _showWorkoutDialog(
       WorkoutTemplateTableData template, DateTime date) async {
-    final exercises = await database
-        .watchExercisesForTemplate(template.id)
-        .first;
+    final now = DateTime.now();
+    final todayMid = DateTime(now.year, now.month, now.day);
+    final dateMid = DateTime(date.year, date.month, date.day);
+    // Past day → show exactly what was logged then (incl. archived exercises),
+    // so editing history doesn't pull in the current program. Today/future →
+    // the current active program exercises.
+    final exercises = dateMid.isBefore(todayMid)
+        ? await database.exercisesLoggedOnDate(template.id, date)
+        : await database.watchExercisesForTemplate(template.id).first;
     if (exercises.isEmpty || !mounted) return;
 
     // Pre-load last sets for each exercise
@@ -160,12 +166,15 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
     final slots     = ref.watch(scheduleSlotsProvider).valueOrNull ?? [];
     final templates = ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
     final logged    = ref.watch(loggedDatesProvider(_weekStart)).valueOrNull ?? {};
+    // What was actually performed each past day (history), by template id.
+    final loggedTmpls =
+        ref.watch(loggedTemplatesProvider(_weekStart)).valueOrNull ?? {};
 
     final today     = DateTime.now();
     final todayMid  = DateTime(today.year, today.month, today.day);
     final weekStart = _weekStart;
 
-    // Map dayOfWeek → template (or null = rest)
+    // Map dayOfWeek → scheduled template (the current plan).
     final scheduleMap = <int, WorkoutTemplateTableData?>{};
     for (final slot in slots) {
       try {
@@ -174,14 +183,27 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
       } catch (_) {}
     }
 
-    // Build day items for the week
+    WorkoutTemplateTableData? byId(int? id) {
+      if (id == null) return null;
+      for (final t in templates) {
+        if (t.id == id) return t;
+      }
+      return null;
+    }
+
+    // Build day items for the week.
+    //   • Past days  → show what was actually LOGGED (history). The current
+    //     plan is NOT applied retroactively, so changing the program never
+    //     rewrites a past day.
+    //   • Today/future → show the scheduled plan.
     final days = List.generate(7, (i) {
       final date    = weekStart.add(Duration(days: i));
       final dateMid = DateTime(date.year, date.month, date.day);
       final dow     = i + 1; // 1=Mon..7=Sun
-      final tmpl    = scheduleMap[dow];
       final isDone  = logged.contains(dateMid);
       final isToday = dateMid == todayMid;
+      final isPast  = dateMid.isBefore(todayMid);
+      final tmpl    = isPast ? byId(loggedTmpls[dateMid]) : scheduleMap[dow];
       return _DayItem(
         dow: dow,
         date: date,

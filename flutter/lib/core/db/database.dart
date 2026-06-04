@@ -87,6 +87,10 @@ class ExerciseTemplateTable extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get workoutTemplateId => integer().references(WorkoutTemplateTable, #id)();
   TextColumn get name => text()();
+  // sortOrder >= 0 → active in the current program (display order).
+  // sortOrder == -1 → ARCHIVED: removed from the program but kept so past
+  // logged workouts (its set_entries) survive as history. Using a sentinel
+  // value avoids a schema migration.
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   TextColumn get defaultSetsJson => text().withDefault(const Constant('[]'))();
   // JSON: [{"weight": 80.0, "reps": 8}, …] — last known default
@@ -384,9 +388,56 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<ExerciseTemplateTableData>> watchExercisesForTemplate(
           int templateId) =>
       (select(exerciseTemplateTable)
-            ..where((t) => t.workoutTemplateId.equals(templateId))
+            ..where((t) =>
+                t.workoutTemplateId.equals(templateId) &
+                t.sortOrder.isBiggerOrEqualValue(0)) // active only (>= 0)
             ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
           .watch();
+
+  /// Exercises (INCLUDING archived) of [templateId] that have logged sets on
+  /// [date] — used to render a past day's workout exactly as it was done,
+  /// even if the program has since changed.
+  Future<List<ExerciseTemplateTableData>> exercisesLoggedOnDate(
+      int templateId, DateTime date) async {
+    final mid = DateTime(date.year, date.month, date.day);
+    final logged = await (select(setEntryTable)
+          ..where((t) => t.date.equals(mid)))
+        .get();
+    final ids = logged.map((s) => s.exerciseTemplateId).toSet();
+    if (ids.isEmpty) return const [];
+    final exs = await (select(exerciseTemplateTable)
+          ..where((t) =>
+              t.workoutTemplateId.equals(templateId) & t.id.isIn(ids))
+          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+        .get();
+    return exs;
+  }
+
+  /// For the week starting [weekStart] (Mon), maps each logged day (midnight)
+  /// to the workout template that was performed that day. Past days are shown
+  /// from this history, not from the current schedule.
+  Stream<Map<DateTime, int>> watchLoggedTemplatesForWeek(DateTime weekStart) {
+    final from = DateTime(weekStart.year, weekStart.month, weekStart.day);
+    final to = from.add(const Duration(days: 6));
+    final query = select(setEntryTable).join([
+      innerJoin(
+        exerciseTemplateTable,
+        exerciseTemplateTable.id.equalsExp(setEntryTable.exerciseTemplateId),
+      ),
+    ])
+      ..where(setEntryTable.date.isBiggerOrEqualValue(from) &
+          setEntryTable.date.isSmallerOrEqualValue(to));
+    return query.watch().map((rows) {
+      final map = <DateTime, int>{};
+      for (final r in rows) {
+        final s = r.readTable(setEntryTable);
+        final ex = r.readTable(exerciseTemplateTable);
+        final day = DateTime(s.date.year, s.date.month, s.date.day);
+        map.putIfAbsent(day, () => ex.workoutTemplateId);
+      }
+      return map;
+    });
+  }
 
   Stream<List<ScheduleSlotTableData>> watchScheduleSlots() =>
       select(scheduleSlotTable).watch();
@@ -457,11 +508,24 @@ class AppDatabase extends _$AppDatabase {
     final keepIds = exs.where((e) => e.id != null).map((e) => e.id).toSet();
     for (final ex in existing) {
       if (!keepIds.contains(ex.id)) {
-        await (delete(setEntryTable)
-              ..where((t) => t.exerciseTemplateId.equals(ex.id)))
-            .go();
-        await (delete(exerciseTemplateTable)..where((t) => t.id.equals(ex.id)))
-            .go();
+        // Removed from the program. Keep its logged history: if it was ever
+        // logged, ARCHIVE it (hide from the program, preserve set_entries);
+        // if it was never logged, it's safe to hard-delete.
+        final logged = await (select(setEntryTable)
+              ..where((t) => t.exerciseTemplateId.equals(ex.id))
+              ..limit(1))
+            .get();
+        if (logged.isEmpty) {
+          await (delete(exerciseTemplateTable)
+                ..where((t) => t.id.equals(ex.id)))
+              .go();
+        } else {
+          // Archive: sentinel sortOrder -1 hides it from the program while
+          // keeping its logged set_entries as history.
+          await (update(exerciseTemplateTable)..where((t) => t.id.equals(ex.id)))
+              .write(const ExerciseTemplateTableCompanion(
+                  sortOrder: Value(-1)));
+        }
       }
     }
     for (var i = 0; i < exs.length; i++) {
@@ -473,7 +537,7 @@ class AppDatabase extends _$AppDatabase {
         await (update(exerciseTemplateTable)..where((t) => t.id.equals(e.id!)))
             .write(ExerciseTemplateTableCompanion(
           name: Value(e.name),
-          sortOrder: Value(i),
+          sortOrder: Value(i), // >= 0 re-activates if it was archived (-1)
           defaultSetsJson: Value(setsJson),
           updatedAt: Value(DateTime.now()),
         ));
