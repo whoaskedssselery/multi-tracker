@@ -53,13 +53,16 @@ class WeekGridScreen extends ConsumerStatefulWidget {
 class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
   int _weekOffset  = 0; // 0 = current week
   int _selectedDow = DateTime.now().weekday; // 1=Mon..7=Sun
-  bool _weekFwd = true; // last week-change direction (for the slide animation)
 
-  void _changeWeek(int delta) {
-    setState(() {
-      _weekFwd = delta > 0;
-      _weekOffset += delta;
-    });
+  // iOS week pager. _basePage maps to _weekOffset 0; large so you can swipe
+  // far in both directions.
+  static const int _basePage = 100000;
+  PageController? _pageController;
+
+  @override
+  void dispose() {
+    _pageController?.dispose();
+    super.dispose();
   }
 
   ThemeTokens get _t => ThemeTokens.of(context);
@@ -168,21 +171,19 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    final t         = _t;
-    final slots     = ref.watch(scheduleSlotsProvider).valueOrNull ?? [];
-    final templates = ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
-    final logged    = ref.watch(loggedDatesProvider(_weekStart)).valueOrNull ?? {};
-    // What was actually performed each past day (history), by template id.
-    final loggedTmpls =
-        ref.watch(loggedTemplatesProvider(_weekStart)).valueOrNull ?? {};
-
-    final today     = DateTime.now();
-    final todayMid  = DateTime(today.year, today.month, today.day);
-    final weekStart = _weekStart;
-
-    // Map dayOfWeek → scheduled template (the current plan).
+  /// Builds the 7 day-items for [weekStart].
+  ///   • Past days → what was actually LOGGED (history); the current plan is
+  ///     never applied retroactively.
+  ///   • Today/future → the scheduled plan.
+  List<_DayItem> _computeDays(
+    DateTime weekStart,
+    List<ScheduleSlotTableData> slots,
+    List<WorkoutTemplateTableData> templates,
+    Set<DateTime> logged,
+    Map<DateTime, int> loggedTmpls,
+  ) {
+    final today = DateTime.now();
+    final todayMid = DateTime(today.year, today.month, today.day);
     final scheduleMap = <int, WorkoutTemplateTableData?>{};
     for (final slot in slots) {
       try {
@@ -190,7 +191,6 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
             templates.firstWhere((t) => t.id == slot.workoutTemplateId);
       } catch (_) {}
     }
-
     WorkoutTemplateTableData? byId(int? id) {
       if (id == null) return null;
       for (final t in templates) {
@@ -198,34 +198,33 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
       }
       return null;
     }
-
-    // Build day items for the week.
-    //   • Past days  → show what was actually LOGGED (history). The current
-    //     plan is NOT applied retroactively, so changing the program never
-    //     rewrites a past day.
-    //   • Today/future → show the scheduled plan.
-    final days = List.generate(7, (i) {
+    return List.generate(7, (i) {
       final date    = weekStart.add(Duration(days: i));
       final dateMid = DateTime(date.year, date.month, date.day);
-      final dow     = i + 1; // 1=Mon..7=Sun
+      final dow     = i + 1;
       final isDone  = logged.contains(dateMid);
       final isToday = dateMid == todayMid;
       final isPast  = dateMid.isBefore(todayMid);
       final tmpl    = isPast ? byId(loggedTmpls[dateMid]) : scheduleMap[dow];
       return _DayItem(
-        dow: dow,
-        date: date,
-        template: tmpl,
-        isDone: isDone,
-        isToday: isToday,
-      );
+        dow: dow, date: date, template: tmpl, isDone: isDone, isToday: isToday);
     });
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    final t = _t;
+    if (Platform.isIOS) return _buildIosPaged(context, t);
+
+    // ── Desktop ──
+    final slots     = ref.watch(scheduleSlotsProvider).valueOrNull ?? [];
+    final templates = ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
+    final logged    = ref.watch(loggedDatesProvider(_weekStart)).valueOrNull ?? {};
+    final loggedTmpls =
+        ref.watch(loggedTemplatesProvider(_weekStart)).valueOrNull ?? {};
+    final weekStart = _weekStart;
+    final days = _computeDays(weekStart, slots, templates, logged, loggedTmpls);
     final selected = days[_selectedDow - 1];
-
-    if (Platform.isIOS) {
-      return _buildIos(context, t, days, selected, weekStart);
-    }
 
     return Scaffold(
       backgroundColor: t.bg,
@@ -272,19 +271,100 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
     );
   }
 
-  // ── iOS layout ────────────────────────────────────────────────────────────
+  // ── iOS layout (interactive PageView — swipe weeks with your finger) ───────
 
-  Widget _buildIos(BuildContext context, ThemeTokens t,
-      List<_DayItem> days, _DayItem selected, DateTime weekStart) {
+  Widget _buildIosPaged(BuildContext context, ThemeTokens t) {
+    _pageController ??= PageController(initialPage: _basePage + _weekOffset);
+    final weekStart = _weekStart;
+
+    void goToPage(int page) {
+      _pageController!.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Fixed header: title + week nav ──
+          IosPageHeader(
+            title: 'Тренировки',
+            subtitle: _fmtWeekRange(weekStart),
+            action: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _iosNavBtn(context, t, Icons.chevron_left,
+                    () => goToPage(_basePage + _weekOffset - 1)),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: () {
+                    _selectedDow = DateTime.now().weekday;
+                    goToPage(_basePage); // animate back to current week
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: t.surface,
+                      border: Border.all(color: t.border),
+                      borderRadius: AppRadius.smAll,
+                    ),
+                    child: Text('Сегодня',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: t.text1)),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                _iosNavBtn(context, t, Icons.chevron_right,
+                    () => goToPage(_basePage + _weekOffset + 1)),
+              ],
+            ),
+          ),
+          // ── Finger-driven week pager ──
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (page) =>
+                  setState(() => _weekOffset = page - _basePage),
+              itemBuilder: (ctx, page) {
+                final offset = page - _basePage;
+                final ws = _weekMonday(DateTime.now())
+                    .add(Duration(days: offset * 7));
+                // Each page subscribes to ITS OWN week's data via a Consumer.
+                return Consumer(builder: (ctx, ref, _) {
+                  final slots =
+                      ref.watch(scheduleSlotsProvider).valueOrNull ?? [];
+                  final templates =
+                      ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
+                  final logged =
+                      ref.watch(loggedDatesProvider(ws)).valueOrNull ?? {};
+                  final loggedTmpls =
+                      ref.watch(loggedTemplatesProvider(ws)).valueOrNull ?? {};
+                  final days =
+                      _computeDays(ws, slots, templates, logged, loggedTmpls);
+                  return _iosWeekScroll(context, t, days);
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _iosWeekScroll(
+      BuildContext context, ThemeTokens t, List<_DayItem> days) {
     final todayItem = days.firstWhere(
       (d) => d.isToday,
-      orElse: () => selected,
+      orElse: () => days[_selectedDow - 1],
     );
-
-    // Per-week content (everything below the fixed header) — this is what
-    // slides when the week changes.
-    final weekContent = SingleChildScrollView(
-      key: ValueKey(_weekOffset),
+    return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -321,80 +401,6 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _iosWeekRow(context, t, days[i]),
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    return Scaffold(
-      backgroundColor: t.bg,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Fixed header: title + week nav ──
-          IosPageHeader(
-            title: 'Тренировки',
-            subtitle: _fmtWeekRange(weekStart),
-            action: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _iosNavBtn(context, t, Icons.chevron_left,
-                    () => _changeWeek(-1)),
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: () => setState(() {
-                    _weekFwd = _weekOffset > 0; // animate back toward today
-                    _weekOffset = 0;
-                    _selectedDow = DateTime.now().weekday;
-                  }),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: t.surface,
-                      border: Border.all(color: t.border),
-                      borderRadius: AppRadius.smAll,
-                    ),
-                    child: Text('Сегодня',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: t.text1)),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                _iosNavBtn(context, t, Icons.chevron_right,
-                    () => _changeWeek(1)),
-              ],
-            ),
-          ),
-          // ── Swipeable, animated week content ──
-          Expanded(
-            child: GestureDetector(
-              onHorizontalDragEnd: (d) {
-                final v = d.primaryVelocity ?? 0;
-                if (v < -250) {
-                  _changeWeek(1); // swipe left → next week
-                } else if (v > 250) {
-                  _changeWeek(-1); // swipe right → previous week
-                }
-              },
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, anim) {
-                  final begin =
-                      Offset(_weekFwd ? 1.0 : -1.0, 0.0);
-                  return SlideTransition(
-                    position: Tween<Offset>(begin: begin, end: Offset.zero)
-                        .animate(anim),
-                    child: FadeTransition(opacity: anim, child: child),
-                  );
-                },
-                child: weekContent,
               ),
             ),
           ),

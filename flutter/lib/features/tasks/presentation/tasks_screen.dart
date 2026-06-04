@@ -1365,6 +1365,9 @@ class _MobileNoteEditorView extends StatefulWidget {
 class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _bodyCtrl;
+  final _titleFocus = FocusNode();
+  final _bodyFocus = FocusNode();
+  bool _editing = false; // true while a field has focus (keyboard up)
 
   @override
   void initState() {
@@ -1372,11 +1375,19 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
     _titleCtrl = TextEditingController(
         text: widget.note.title == 'Без названия' ? '' : widget.note.title);
     _bodyCtrl  = TextEditingController(text: widget.note.body);
+    void onFocus() {
+      final f = _titleFocus.hasFocus || _bodyFocus.hasFocus;
+      if (f != _editing && mounted) setState(() => _editing = f);
+    }
+    _titleFocus.addListener(onFocus);
+    _bodyFocus.addListener(onFocus);
   }
 
   @override
   void dispose() {
     _flush();
+    _titleFocus.dispose();
+    _bodyFocus.dispose();
     _titleCtrl.dispose();
     _bodyCtrl.dispose();
     super.dispose();
@@ -1413,10 +1424,10 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
               ),
             ),
             const Spacer(),
-            // "Готово" appears while the keyboard is open — taps dismiss it.
-            if (MediaQuery.of(context).viewInsets.bottom > 0)
+            // "Готово" appears while a field is focused — taps dismiss it.
+            if (_editing)
               GestureDetector(
-                onTap: () => FocusScope.of(context).unfocus(),
+                onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 12),
@@ -1447,8 +1458,9 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
           child: TextField(
             controller: _titleCtrl,
+            focusNode: _titleFocus,
             onChanged: (_) => _flush(),
-            onTapOutside: (_) => FocusScope.of(context).unfocus(),
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             style: TextStyle(
                 fontSize: 24, fontWeight: FontWeight.w700, color: t.text1),
             decoration: InputDecoration(
@@ -1472,8 +1484,9 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
             child: TextField(
               controller: _bodyCtrl,
+              focusNode: _bodyFocus,
               onChanged: (_) => _flush(),
-              onTapOutside: (_) => FocusScope.of(context).unfocus(),
+              onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
               maxLines: null,
               expands: true,
               textAlignVertical: TextAlignVertical.top,
