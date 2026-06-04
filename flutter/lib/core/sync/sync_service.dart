@@ -285,6 +285,7 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   StreamSubscription<AuthState>? _authSub;
   bool _applyingRemote = false;
   bool _inFlight = false; // a push/reconcile network op is currently running
+  bool _dirty = false; // local has edits not yet pushed → a pull must not wipe
   // Auto-push is blocked until the first reconcile after sign-in completes.
   // Otherwise a debounced push scheduled while signed-out (e.g. from startup
   // DB seeding) could fire right after sign-in and overwrite the cloud with
@@ -323,8 +324,10 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
 
     // Auto-push on any local DB change (debounced), unless we're applying a
     // pulled snapshot right now, or the first post-login reconcile hasn't run.
+    // Mark the DB dirty so a pull can't wipe these unpushed local edits.
     _dbSub = database.tableUpdates().listen((_) {
       if (_applyingRemote || !_initialSyncDone) return;
+      _dirty = true;
       _schedulePush();
     });
 
@@ -405,6 +408,7 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   Future<void> signOut() async {
     _debounce?.cancel();
     _initialSyncDone = false; // re-gate auto-push for the next sign-in
+    _dirty = false;
     await _svc.signOut();
     // Groq key was wiped from secure storage — refresh its provider.
     ref.invalidate(groqApiKeyProvider);
@@ -418,19 +422,23 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     _inFlight = true;
     state = state.copyWith(busy: true, clearError: true, status: 'Синхронизация…');
     try {
-      final outcome = await _applyRemote(() => _svc.reconcile());
-      if (outcome == SyncOutcome.pulled) {
-        ref.invalidate(groqApiKeyProvider);
-      } else {
-        // Didn't pull → flush local changes up, but never clobber a populated
-        // cloud with an empty local DB.
+      if (_dirty) {
+        // Unpushed local edits → push them (don't pull-wipe).
         await _svc.pushSafe();
+        _dirty = false;
+      } else {
+        final outcome = await _applyRemote(() => _svc.reconcile());
+        if (outcome == SyncOutcome.pulled) {
+          ref.invalidate(groqApiKeyProvider);
+        } else {
+          await _svc.pushSafe();
+        }
       }
       _initialSyncDone = true;
       final ts = await SecureStorageService.instance.lastSyncTs;
       state = state.copyWith(busy: false, lastSynced: ts, status: null);
     } catch (e) {
-      state = state.copyWith(busy: false, error: '$e', status: null);
+      state = state.copyWith(busy: false, error: _friendly(e), status: null);
     } finally {
       _inFlight = false;
     }
@@ -454,9 +462,10 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     try {
       state = state.copyWith(busy: true, status: 'Сохранение…');
       final ts = await _svc.push();
+      _dirty = false; // local is now safely in the cloud
       state = state.copyWith(busy: false, lastSynced: ts, status: null);
     } catch (e) {
-      state = state.copyWith(busy: false, error: '$e', status: null);
+      state = state.copyWith(busy: false, error: _friendly(e), status: null);
     } finally {
       _inFlight = false;
     }
@@ -467,23 +476,40 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     _inFlight = true;
     state = state.copyWith(busy: true, clearError: true, status: 'Синхронизация…');
     try {
-      final outcome = await _applyRemote(() => _svc.reconcile());
-      // A pull may have restored the Groq key into secure storage — refresh
-      // its provider so Settings shows it.
-      if (outcome == SyncOutcome.pulled) {
-        ref.invalidate(groqApiKeyProvider);
+      if (_dirty) {
+        // We have unpushed local edits — push them up instead of pulling, so a
+        // pull can't wipe them. (Auto-push handles the common case; this covers
+        // resume/auth-triggered reconciles racing fresh edits.)
+        await _svc.pushSafe();
+        _dirty = false;
+        _initialSyncDone = true;
+      } else {
+        final outcome = await _applyRemote(() => _svc.reconcile());
+        // A pull may have restored the Groq key — refresh its provider.
+        if (outcome == SyncOutcome.pulled) {
+          ref.invalidate(groqApiKeyProvider);
+        }
+        _initialSyncDone = true;
       }
-      // The first reconcile after sign-in is now done — auto-push may run.
-      _initialSyncDone = true;
       final ts = await SecureStorageService.instance.lastSyncTs;
       state = state.copyWith(busy: false, lastSynced: ts, status: null);
     } catch (e) {
       // Even on error, unblock auto-push so future edits still sync.
       _initialSyncDone = true;
-      state = state.copyWith(busy: false, error: '$e', status: null);
+      state = state.copyWith(busy: false, error: _friendly(e), status: null);
     } finally {
       _inFlight = false;
     }
+  }
+
+  /// Human-friendly error text (raw TimeoutException/SocketException are scary).
+  static String _friendly(Object e) {
+    final s = e.toString();
+    if (s.contains('TimeoutException') || s.contains('SocketException') ||
+        s.contains('Failed host lookup') || s.contains('Connection')) {
+      return 'Нет соединения — синхронизирую позже';
+    }
+    return s;
   }
 
   /// Runs [op] with the "applying remote" guard set, so the resulting local
