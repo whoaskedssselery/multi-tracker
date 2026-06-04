@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
@@ -87,6 +88,8 @@ class SyncService {
     if (groq is String && groq.isNotEmpty) {
       await SecureStorageService.instance.setGroqApiKey(groq);
     }
+    // Record what we now hold so an echo push of identical data is skipped.
+    _lastSig = _sigOf(data);
     if (tsRaw is String) {
       final dt = DateTime.tryParse(tsRaw);
       if (dt != null) await SecureStorageService.instance.setLastSyncTs(dt);
@@ -125,24 +128,53 @@ class SyncService {
     return false;
   }
 
-  /// Push the local DB up as the snapshot. Returns the new `updated_at`.
-  Future<DateTime> push() async {
-    final user = currentUser;
-    if (user == null) throw StateError('Not signed in');
+  // Content signature of the last snapshot we synced (pushed OR pulled).
+  // Push is skipped when the local content matches this — that breaks the
+  // two-device ping-pong where each pull's import echoes a new push with the
+  // same data but a fresh timestamp, which the other device then pulls, etc.
+  String? _lastSig;
+
+  /// Signature of a snapshot's actual content (tables + secrets), excluding
+  /// the volatile `exportedAt`/`updated_at`.
+  static String _sigOf(Map<String, dynamic> snap) =>
+      '${jsonEncode(snap['tables'])}§${jsonEncode(snap['secrets'])}';
+
+  Future<Map<String, dynamic>> _localSnapshot() async {
     final snap = await _db.exportSnapshot();
-    // Include secrets that live outside the DB (Groq API key).
     snap['secrets'] = {
       'groqApiKey': await SecureStorageService.instance.groqApiKey,
     };
+    return snap;
+  }
+
+  Future<DateTime> _upload(String userId, Map<String, dynamic> snap) async {
     final now = DateTime.now().toUtc();
     await _sb.from(_table).upsert({
-      'user_id': user.id,
+      'user_id': userId,
       'data': snap,
       'updated_at': now.toIso8601String(),
       'device': _deviceLabel(),
     }).timeout(_netTimeout);
+    _lastSig = _sigOf(snap);
     await SecureStorageService.instance.setLastSyncTs(now);
     return now;
+  }
+
+  /// Push the local DB up as the snapshot (always uploads).
+  Future<DateTime> push() async {
+    final user = currentUser;
+    if (user == null) throw StateError('Not signed in');
+    return _upload(user.id, await _localSnapshot());
+  }
+
+  /// Push only if the local content actually changed since the last sync.
+  /// Returns the new timestamp, or null when nothing changed (no upload).
+  Future<DateTime?> pushIfChanged() async {
+    final user = currentUser;
+    if (user == null) return null;
+    final snap = await _localSnapshot();
+    if (_lastSig != null && _sigOf(snap) == _lastSig) return null;
+    return _upload(user.id, snap);
   }
 
   /// Startup / resume / login reconcile.
@@ -200,7 +232,7 @@ class SyncService {
     final user = currentUser;
     if (user == null) return;
     if (await _db.hasUserData()) {
-      await push();
+      await pushIfChanged(); // dedup so identical data doesn't loop
       return;
     }
     // Local is empty — only push if the cloud is also empty/absent.
@@ -214,7 +246,7 @@ class SyncService {
         ? (row!['data'] as Map).cast<String, dynamic>()
         : null;
     if (!_snapshotHasData(remoteData)) {
-      await push();
+      await pushIfChanged();
     }
   }
 
@@ -461,9 +493,12 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     _inFlight = true;
     try {
       state = state.copyWith(busy: true, status: 'Сохранение…');
-      final ts = await _svc.push();
-      _dirty = false; // local is now safely in the cloud
-      state = state.copyWith(busy: false, lastSynced: ts, status: null);
+      // pushIfChanged returns null when nothing actually changed — this is what
+      // breaks the pull→echo-push→pull ping-pong between two devices.
+      final ts = await _svc.pushIfChanged();
+      _dirty = false; // local is now safely in the cloud (or already matched)
+      state = state.copyWith(
+          busy: false, lastSynced: ts ?? state.lastSynced, status: null);
     } catch (e) {
       state = state.copyWith(busy: false, error: _friendly(e), status: null);
     } finally {
