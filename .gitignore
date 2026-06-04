@@ -4,6 +4,10 @@
 .claude/
 *.iml
 
+# Local-only Claude Code files (machine-specific, not for repo)
+CLAUDE.md
+.mcp.json
+
 # OS junk
 .DS_Store
 Thumbs.db
