@@ -211,6 +211,16 @@ class SyncService {
         : null;
     final last = await SecureStorageService.instance.lastSyncTs;
 
+    // iOS Keychain survives app reinstalls, so lastSyncTs may still be set
+    // even on a fresh install with an empty DB. If local has no user data but
+    // remote does, always pull — don't let the stale timestamp block it.
+    if (remoteData != null &&
+        _snapshotHasData(remoteData) &&
+        !await _db.hasUserData()) {
+      await _applyPulled(remoteData, row['updated_at']);
+      return SyncOutcome.pulled;
+    }
+
     final remoteIsNewer =
         last == null || (remoteTs != null && remoteTs.isAfter(last));
     if (remoteIsNewer && remoteData != null) {

@@ -1,7 +1,3 @@
-# Monorepo root .gitignore
-# The Flutter app lives in flutter/ and has its own .gitignore.
-# A website will live in its own folder later.
-
 # Tooling / IDE
 .idea/
 .codegraph/
@@ -11,3 +7,12 @@
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Web app (web/)
+web/node_modules/
+web/.next/
+web/out/
+web/dist/
+web/.env
+web/.env.local
+web/.env.*.local

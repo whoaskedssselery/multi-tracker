@@ -104,7 +104,6 @@ class _AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: replace string literals with AppLocalizations once generated
     return AdaptiveScaffold(
       selectedIndex: _selectedIndex,
       onDestinationSelected: (i) => context.go(_routes[i]),

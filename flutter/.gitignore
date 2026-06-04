@@ -24,7 +24,6 @@ windows/flutter/ephemeral/
 .env.*
 *.key
 api_keys.dart
-gemini_key.txt
 
 # IntelliJ / AS
 .idea/

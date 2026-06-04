@@ -1424,10 +1424,13 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
               ),
             ),
             const Spacer(),
-            // "Готово" appears while a field is focused — taps dismiss it.
-            if (_editing)
+            // "Готово" appears while a field is focused — saves and dismisses.
+            if (_editing) ...[
               GestureDetector(
-                onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+                onTap: () {
+                  _flush();
+                  FocusManager.instance.primaryFocus?.unfocus();
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 12),
@@ -1438,6 +1441,9 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
                           color: t.accent)),
                 ),
               ),
+              // Gap prevents accidental taps on the delete button.
+              const SizedBox(width: 4),
+            ],
             GestureDetector(
               onTap: () async {
                 _flush();
