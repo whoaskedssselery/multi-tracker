@@ -28,7 +28,8 @@ class _RetryInterceptor extends Interceptor {
   final Dio _dio;
 
   static const _maxRetries = 3;
-  static const _retryStatuses = {429, 500, 502, 503, 504};
+  // 429 is a rate-limit — retrying floods the API further; let it surface.
+  static const _retryStatuses = {500, 502, 503, 504};
 
   @override
   Future<void> onError(

@@ -564,9 +564,10 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     try {
       return await op();
     } finally {
-      // Clear after a short delay — Drift fires table-update events slightly
-      // after the write transaction commits.
-      Future.delayed(const Duration(milliseconds: 600), () {
+      // Clear after a delay — Drift fires table-update events slightly after
+      // the write transaction commits, and on a slow device the lag can exceed
+      // 600ms. 1500ms gives headroom without blocking normal auto-push for long.
+      Future.delayed(const Duration(milliseconds: 1500), () {
         _applyingRemote = false;
       });
     }

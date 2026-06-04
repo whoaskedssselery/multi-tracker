@@ -47,6 +47,9 @@ dependencies:
   file_picker: ^8.1.4
 
 
+  # App metadata
+  package_info_plus: ^8.1.2
+
   # Intl
   intl: ^0.20.2
 

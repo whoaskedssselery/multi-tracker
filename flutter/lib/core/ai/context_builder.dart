@@ -38,24 +38,29 @@ class ContextBuilder {
         '${lines.join('\n')}';
   }
 
-  Future<String> _tasksContext() async {
+  Future<String> _tasksContext({int limit = 50}) async {
     final tasks = await (_db.select(_db.taskItemTable)
           ..where((t) => t.isDone.equals(false))
           ..orderBy([
             (t) => OrderingTerm(expression: t.priority),
             (t) => OrderingTerm.asc(t.createdAt),
-          ]))
+          ])
+          ..limit(limit + 1))
         .get();
-    if (tasks.isEmpty) return 'Активных задач нет.';
-    final lines = tasks.map((t) {
+    final hasMore = tasks.length > limit;
+    final displayed = hasMore ? tasks.take(limit).toList() : tasks;
+    if (displayed.isEmpty) return 'Активных задач нет.';
+    final lines = displayed.map((t) {
       final prio = t.priority == 'none' ? '' : '[${t.priority}] ';
       return '- $prio${t.body}';
     });
-    return 'Активные задачи (${tasks.length}):\n${lines.join('\n')}';
+    final suffix = hasMore ? '\n(ещё задачи не показаны)' : '';
+    return 'Активные задачи (${displayed.length}${hasMore ? '+' : ''}):\n'
+        '${lines.join('\n')}$suffix';
   }
 
-  Future<String> _trainContext() async {
-    final cutoff = DateTime.now().subtract(const Duration(days: 28));
+  Future<String> _trainContext({int days = 28}) async {
+    final cutoff = DateTime.now().subtract(Duration(days: days));
     final sets = await (_db.select(_db.setEntryTable)
           ..where((t) => t.date.isBiggerOrEqualValue(cutoff))
           ..orderBy([
@@ -64,7 +69,7 @@ class ContextBuilder {
           ]))
         .get();
     if (sets.isEmpty) {
-      return 'Тренировочных данных нет (нет записанных подходов за последние 28 дней).';
+      return 'Тренировочных данных нет (нет записанных подходов за последние $days дней).';
     }
 
     // Actual date range of logged data
@@ -104,10 +109,11 @@ class ContextBuilder {
   }
 
   Future<String> _allContext() async {
+    // Tighter limits in combined mode to stay within smaller model token budgets.
     final results = await Future.wait([
       _weightContext(),
-      _tasksContext(),
-      _trainContext(),
+      _tasksContext(limit: 20),
+      _trainContext(days: 14),
     ]);
     return results.join('\n\n');
   }

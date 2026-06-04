@@ -5,6 +5,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -34,8 +35,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _pingLoading   = false;
   bool _exportLoading = false;
   final _keyCtrl = TextEditingController();
+  String _appVersion = '';
 
   ThemeTokens get _t => ThemeTokens.of(context);
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _appVersion = info.version);
+    });
+  }
 
   @override
   void dispose() {
@@ -47,7 +57,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     'llama-3.3-70b-versatile',
     'deepseek-r1-distill-llama-70b',
     'llama-3.1-8b-instant',
-    'mixtral-8x7b-32768',
   ];
 
   @override
@@ -201,7 +210,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // ── About ────────────────────────────────────────
             _sectionLabel('О ПРИЛОЖЕНИИ'),
             _card([
-              _infoRow('Версия', '0.1.0', t: t),
+              _infoRow('Версия', _appVersion.isEmpty ? '…' : _appVersion, t: t),
               _divider(t),
               _infoRow('Платформа',
                   '${Platform.operatingSystem[0].toUpperCase()}${Platform.operatingSystem.substring(1)}',
