@@ -1,0 +1,140 @@
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+.header {
+  padding: $space-2xl $space-3xl $space-lg;
+  border-bottom: 1px solid var(--color-border-soft);
+  flex-shrink: 0;
+
+  @include mobile { padding: $space-xl $space-xl $space-md; }
+}
+
+.greeting {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--color-text1);
+  letter-spacing: -0.02em;
+
+  @include mobile { font-size: 22px; }
+}
+
+.date {
+  font-size: 13px;
+  color: var(--color-text3);
+  margin-top: 2px;
+}
+
+// ── Content ───────────────────────────────────────────────────────────────────
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  @include custom-scrollbar;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: $space-xl;
+  padding: $space-xl $space-3xl $space-3xl;
+  max-width: 1200px;
+
+  @include tablet {
+    grid-template-columns: 1fr;
+    padding: $space-lg $space-xl $space-3xl;
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+    padding: $space-lg $space-lg $space-3xl;
+    gap: $space-lg;
+  }
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+
+  @include mobile { gap: $space-lg; }
+}
+
+// ── History card ──────────────────────────────────────────────────────────────
+
+.historyCard {
+  @include card;
+  padding: $space-xl;
+}
+
+.historyTitle {
+  @include caps-label;
+  margin-bottom: $space-md;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.historyRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm 0;
+  border-bottom: 1px solid var(--color-border-soft);
+
+  &:last-child { border-bottom: none; }
+}
+
+.historyDate {
+  font-size: 12px;
+  color: var(--color-text3);
+  width: 52px;
+  flex-shrink: 0;
+}
+
+.historyVal {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text1);
+}
+
+.historyDelta {
+  font-size: 12px;
+  color: var(--color-text3);
+  width: 44px;
+  text-align: right;
+}
+
+.deltaUp   { color: var(--color-warning); }
+.deltaDown { color: var(--color-success); }
+
+.historyDelete {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--color-text4);
+  border-radius: $radius-xs;
+  cursor: pointer;
+  @include transition-fast;
+
+  @include hover {
+    color: var(--color-danger);
+    background: var(--color-danger-tint);
+  }
+}

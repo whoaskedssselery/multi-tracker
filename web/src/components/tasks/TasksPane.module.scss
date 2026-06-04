@@ -1,0 +1,220 @@
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+// ── Toolbar ───────────────────────────────────────────────────────────────────
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md $space-3xl;
+  border-bottom: 1px solid var(--color-border-soft);
+  flex-shrink: 0;
+
+  @include mobile { padding: $space-md $space-lg; }
+}
+
+.searchWrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: $space-md;
+  color: var(--color-text3);
+  pointer-events: none;
+}
+
+.search {
+  width: 100%;
+  height: 36px;
+  padding: 0 32px 0 36px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-soft);
+  border-radius: $radius-sm;
+  font-size: 13px;
+  color: var(--color-text1);
+  @include transition-fast(border-color);
+
+  &::placeholder { color: var(--color-text4); }
+  &:focus { outline: none; border-color: var(--color-accent); }
+}
+
+.clearSearch {
+  position: absolute;
+  right: $space-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--color-text3);
+  cursor: pointer;
+  border-radius: $radius-xs;
+  @include transition-fast;
+
+  @include hover { color: var(--color-text1); background: var(--color-surface-raised); }
+}
+
+// ── List ──────────────────────────────────────────────────────────────────────
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: $space-lg $space-3xl $space-3xl;
+  @include custom-scrollbar;
+
+  @include mobile { padding: $space-lg $space-lg $space-3xl; }
+}
+
+.empty {
+  text-align: center;
+  padding: $space-5xl $space-lg;
+  color: var(--color-text3);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.emptySub {
+  font-size: 13px;
+  color: var(--color-text4);
+  margin-top: $space-xs;
+  font-weight: 400;
+}
+
+.group {
+  margin-bottom: $space-lg;
+}
+
+.groupLabel {
+  @include caps-label;
+  margin-bottom: $space-sm;
+  padding-left: $space-xs;
+}
+
+.groupCard {
+  @include card;
+  overflow: hidden;
+}
+
+// ── Task row ──────────────────────────────────────────────────────────────────
+
+.taskRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-md $space-lg;
+  border-bottom: 1px solid var(--color-border-soft);
+  @include transition-fast(background);
+
+  @include hover { background: var(--color-surface-sunken); }
+}
+
+.taskRowLast { border-bottom: none; }
+
+.check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.75px solid var(--color-border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  @include transition(background, border-color);
+
+  @include hover { border-color: var(--color-accent); }
+}
+
+.checked {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.checkMark {
+  font-size: 12px;
+  color: #fff;
+  line-height: 1;
+}
+
+.prio {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.taskBody {
+  flex: 1;
+  font-size: 15px;
+  color: var(--color-text1);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.taskDone {
+  text-decoration: line-through;
+  color: var(--color-text3);
+}
+
+.taskArrow {
+  color: var(--color-text4);
+  flex-shrink: 0;
+  cursor: pointer;
+  @include transition-fast(color);
+
+  @include hover { color: var(--color-text2); }
+}
+
+// ── Form ──────────────────────────────────────────────────────────────────────
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.formLabel {
+  @include caps-label;
+  margin-bottom: $space-sm;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-xs;
+}
+
+.chip {
+  padding: $space-xs $space-md;
+  border-radius: $radius-pill;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text2);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  @include transition-fast;
+
+  @include hover { border-color: var(--color-accent); color: var(--color-accent); }
+}
+
+.chipActive {
+  background: var(--color-accent-tint);
+  color: var(--color-accent-press);
+  border-color: rgba(var(--color-accent-rgb), 0.4);
+}
+
+.chipHigh.chipActive { background: rgba(176, 75, 63, 0.1); color: var(--color-danger); border-color: rgba(176, 75, 63, 0.3); }
+.chipMid.chipActive  { background: rgba(201, 122, 58, 0.1); color: var(--color-warning); border-color: rgba(201, 122, 58, 0.3); }

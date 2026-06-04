@@ -1,0 +1,21 @@
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
+
+.shell {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  @include mobile {
+    // Reserve space for mobile bottom nav
+    padding-bottom: var(--mobile-nav-height);
+  }
+}

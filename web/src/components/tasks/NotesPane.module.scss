@@ -1,0 +1,266 @@
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
+
+.root {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border-soft);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface);
+
+  @include mobile {
+    width: 100%;
+    border-right: none;
+  }
+}
+
+.sidebarHidden {
+  @include mobile { display: none; }
+}
+
+// ── Search bar ────────────────────────────────────────────────────────────────
+
+.searchBar {
+  padding: $space-md $space-md;
+  border-bottom: 1px solid var(--color-border-soft);
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  flex-shrink: 0;
+}
+
+.searchWrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: $space-sm;
+  color: var(--color-text3);
+  pointer-events: none;
+}
+
+.search {
+  width: 100%;
+  height: 32px;
+  padding: 0 28px 0 30px;
+  background: var(--color-surface-sunken);
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  font-size: 12px;
+  color: var(--color-text1);
+  @include transition-fast(border-color);
+
+  &::placeholder { color: var(--color-text4); }
+  &:focus { outline: none; border-color: var(--color-accent); }
+}
+
+.clearSearch {
+  position: absolute;
+  right: $space-xs;
+  display: flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text4);
+  cursor: pointer;
+  border-radius: $radius-xs;
+  @include transition-fast;
+
+  @include hover { color: var(--color-text1); }
+}
+
+.newBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  color: var(--color-text3);
+  cursor: pointer;
+  flex-shrink: 0;
+  @include transition-fast;
+
+  @include hover { background: var(--color-surface-sunken); color: var(--color-accent); }
+}
+
+// ── List ──────────────────────────────────────────────────────────────────────
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: $space-xs $space-sm $space-xl;
+  @include custom-scrollbar;
+}
+
+.empty {
+  text-align: center;
+  padding: $space-3xl $space-lg;
+  font-size: 13px;
+  color: var(--color-text4);
+}
+
+.section { margin-top: $space-xs; }
+
+.sectionLabel {
+  @include caps-label;
+  padding: $space-sm $space-sm $space-xs;
+}
+
+// ── Note card ─────────────────────────────────────────────────────────────────
+
+.noteCard {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-xs;
+  padding: $space-sm + 2px $space-sm;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  margin-bottom: 2px;
+  @include transition-fast(background);
+
+  @include hover { background: var(--color-surface-sunken); }
+}
+
+.noteCardActive {
+  background: var(--color-accent-tint);
+
+  @include hover { background: var(--color-accent-tint); }
+
+  .noteTitle { color: var(--color-accent-press); }
+  .notePreview { color: rgba(var(--color-accent-rgb), 0.65); }
+}
+
+.noteMain { flex: 1; min-width: 0; }
+
+.noteTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text1);
+  @include truncate;
+}
+
+.notePreview {
+  font-size: 12px;
+  color: var(--color-text3);
+  @include truncate;
+  margin-top: 1px;
+}
+
+.noteActions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  @include transition-fast(opacity);
+  flex-shrink: 0;
+
+  .noteCard:hover & { opacity: 1; }
+  .noteCardActive & { opacity: 1; }
+}
+
+.noteAction {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-xs;
+  color: var(--color-text3);
+  cursor: pointer;
+  @include transition-fast;
+
+  @include hover { background: var(--color-surface-raised); color: var(--color-accent); }
+}
+
+.noteActionDel {
+  @include hover { color: var(--color-danger); }
+}
+
+// ── Editor ────────────────────────────────────────────────────────────────────
+
+.editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg);
+
+  @include mobile {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: var(--color-bg);
+    display: none;
+  }
+}
+
+.editorEmpty {
+  @include not-mobile { align-items: center; justify-content: center; }
+}
+
+.editorInner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  @include mobile {
+    display: flex !important;
+  }
+}
+
+.editor:not(.editorEmpty) {
+  @include mobile { display: flex; }
+}
+
+.mobileBack {
+  display: none;
+  padding: $space-sm $space-md;
+  border-bottom: 1px solid var(--color-border-soft);
+
+  @include mobile { display: flex; }
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-accent);
+  cursor: pointer;
+  @include transition-fast(opacity);
+
+  @include hover { opacity: 0.7; }
+}
+
+.emptyState {
+  text-align: center;
+  padding: $space-3xl $space-lg;
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text3);
+}
+
+.emptySub {
+  font-size: 13px;
+  color: var(--color-text4);
+  margin-top: $space-xs;
+}
