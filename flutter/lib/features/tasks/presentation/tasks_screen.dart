@@ -637,9 +637,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
       ),
       child: Row(children: [
         _mobileTabPill('Tasks · $taskCount', _activeTab == _Tab.tasks,
-            () => setState(() => _activeTab = _Tab.tasks), t),
+            () => setState(() { _activeTab = _Tab.tasks; _searchQuery = ''; _searchCtrl.clear(); }), t),
         _mobileTabPill('Notes · $noteCount', _activeTab == _Tab.notes,
-            () => setState(() => _activeTab = _Tab.notes), t),
+            () => setState(() { _activeTab = _Tab.notes; _searchQuery = ''; _searchCtrl.clear(); }), t),
       ]),
     );
   }
@@ -679,25 +679,87 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   }
 
   Widget _buildMobileTaskGroups(ThemeTokens t) {
-    final done = _allTasks.where((t) => t.isDone).toList();
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+    final q = _searchQuery.toLowerCase();
+    final done = _allTasks
+        .where((t) => t.isDone && (q.isEmpty || t.body.toLowerCase().contains(q)))
+        .toList();
+    return Column(
       children: [
-        for (final (key, label) in _kMobileGroups) ...[
-          _mobileGroup(t, key, label),
-        ],
-        if (done.isNotEmpty) ...[
-          _mobileGroupHeader(t, 'ВЫПОЛНЕНО'),
-          _mobileGroupCard(t, done),
-          const SizedBox(height: 8),
-        ],
+        _buildMobileSearch(t),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+            children: [
+              for (final (key, label) in _kMobileGroups) ...[
+                _mobileGroup(t, key, label),
+              ],
+              if (done.isNotEmpty) ...[
+                _mobileGroupHeader(t, 'ВЫПОЛНЕНО'),
+                _mobileGroupCard(t, done),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        ),
       ],
     );
   }
 
+  Widget _buildMobileSearch(ThemeTokens t) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: t.surface,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: t.borderSoft),
+        ),
+        child: Row(children: [
+          const SizedBox(width: 12),
+          Icon(Icons.search, size: 16, color: t.text3),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _searchQuery = v),
+              style: TextStyle(fontSize: 15, color: t.text1),
+              decoration: InputDecoration(
+                hintText: 'Поиск',
+                hintStyle: TextStyle(fontSize: 15, color: t.text4),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: true,
+                fillColor: Colors.transparent,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          if (_searchQuery.isNotEmpty) ...[
+            GestureDetector(
+              onTap: () {
+                _searchCtrl.clear();
+                setState(() => _searchQuery = '');
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: Icon(Icons.close, size: 14, color: t.text4),
+              ),
+            ),
+          ] else
+            const SizedBox(width: 12),
+        ]),
+      ),
+    );
+  }
+
   Widget _mobileGroup(ThemeTokens t, String groupKey, String label) {
+    final q = _searchQuery.toLowerCase();
     final tasks = _allTasks
-        .where((t) => !t.isDone && t.group == groupKey)
+        .where((t) => !t.isDone && t.group == groupKey &&
+            (q.isEmpty || t.body.toLowerCase().contains(q)))
         .toList();
     if (tasks.isEmpty) return const SizedBox.shrink();
     return Column(

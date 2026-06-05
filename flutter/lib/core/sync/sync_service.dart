@@ -336,6 +336,7 @@ final syncControllerProvider =
 class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   late final SyncService _svc;
   Timer? _debounce;
+  Timer? _periodicTimer;
   StreamSubscription<dynamic>? _dbSub;
   StreamSubscription<AuthState>? _authSub;
   bool _applyingRemote = false;
@@ -353,6 +354,7 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
 
     ref.onDispose(() {
       _debounce?.cancel();
+      _periodicTimer?.cancel();
       _dbSub?.cancel();
       _authSub?.cancel();
       WidgetsBinding.instance.removeObserver(this);
@@ -363,6 +365,14 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     }
 
     WidgetsBinding.instance.addObserver(this);
+
+    // Periodic pull so changes from another device appear automatically
+    // without the user resuming the app or pressing "Синхронизировать".
+    // 5 min is a reasonable balance: low battery/traffic impact, fast enough
+    // for notes/tasks written on the phone to show up on Windows promptly.
+    _periodicTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      if (_svc.isSignedIn && !_inFlight) _reconcile();
+    });
 
     // React to login / logout.
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
