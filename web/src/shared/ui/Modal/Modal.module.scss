@@ -1,0 +1,100 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: $z-overlay;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.wrapper {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-lg;
+  z-index: $z-modal;
+  pointer-events: none;
+
+  @include mobile {
+    align-items: flex-end;
+    padding: 0;
+  }
+}
+
+.dialog {
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: $radius-xl;
+  box-shadow: $shadow-xl;
+  pointer-events: all;
+  position: relative;
+  max-height: calc(100dvh - #{$space-3xl});
+  display: flex;
+  flex-direction: column;
+
+  @include mobile {
+    border-radius: $radius-xl $radius-xl 0 0;
+    max-height: 92dvh;
+    max-width: 100% !important;
+    // Safe area for iPhone home indicator
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-xl $space-xl $space-lg;
+  border-bottom: 1px solid var(--color-border-soft);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text1);
+  letter-spacing: -0.01em;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: $touch-target;
+  height: $touch-target;
+  border-radius: $radius-sm;
+  color: var(--color-text3);
+  cursor: pointer;
+  @include no-tap-flash;
+  @include transition-fast;
+  @include hover { background: var(--color-surface-sunken); color: var(--color-text1); }
+}
+
+.closeBtnAbs {
+  @extend .closeBtn;
+  position: absolute;
+  top: $space-sm;
+  right: $space-sm;
+  z-index: 1;
+}
+
+.body {
+  padding: $space-xl;
+  overflow-y: auto;
+  flex: 1;
+  @include scrollbar;
+}
+
+.footer {
+  padding: $space-lg $space-xl;
+  border-top: 1px solid var(--color-border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-sm;
+  flex-shrink: 0;
+}

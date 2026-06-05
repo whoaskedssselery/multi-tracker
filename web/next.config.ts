@@ -2,7 +2,8 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   sassOptions: {
-    additionalData: `@use "@/styles/variables" as *; @use "@/styles/mixins" as *;`,
+    // Auto-inject design tokens into every SCSS module — no manual @use needed
+    additionalData: `@use "@/shared/styles/variables" as *; @use "@/shared/styles/mixins" as *;`,
   },
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts', 'framer-motion'],

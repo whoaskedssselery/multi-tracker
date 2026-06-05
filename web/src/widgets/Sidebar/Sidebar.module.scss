@@ -1,0 +1,78 @@
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border-soft);
+  padding: $space-lg $space-md;
+  overflow-y: auto;
+  @include scrollbar;
+  @include mobile { display: none; }
+}
+
+.brand { display: flex; align-items: center; gap: 10px; padding: $space-xs $space-sm; margin-bottom: $space-lg + 4px; }
+
+.brandIcon {
+  width: 28px; height: 28px; border-radius: $radius-sm; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-press));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px; font-weight: 700; letter-spacing: -0.02em;
+}
+
+.brandName { font-size: 15px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.01em; }
+
+.nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+
+.item {
+  position: relative;
+  display: flex; align-items: center; gap: $space-md;
+  padding: $space-sm + 2px $space-md;
+  border-radius: $radius-sm;
+  color: var(--color-text2);
+  font-size: 14px; font-weight: 500;
+  text-decoration: none;
+  @include transition-fast(color, background);
+  @include hover { background: var(--color-surface-sunken); color: var(--color-text1); }
+}
+
+.itemActive {
+  color: var(--color-accent-press);
+  font-weight: 600;
+  background: var(--color-accent-tint);
+  @include hover { background: var(--color-accent-tint); }
+  .itemIcon { color: var(--color-accent-press); }
+}
+
+.indicator {
+  position: absolute;
+  left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 20px;
+  background: var(--color-accent);
+  border-radius: 0 $radius-xs $radius-xs 0;
+}
+
+.itemIcon { flex-shrink: 0; @include transition-fast(color); }
+.itemLabel { @include truncate; }
+
+.footer {
+  padding-top: $space-lg;
+  border-top: 1px solid var(--color-border-soft);
+  display: flex; flex-direction: column; gap: $space-xs;
+}
+
+.syncRow {
+  display: flex; align-items: center; gap: $space-xs;
+  padding: $space-xs $space-md; border-radius: $radius-sm;
+  cursor: pointer; @include transition-fast;
+  margin-bottom: $space-xs;
+  @include hover { background: var(--color-surface-sunken); }
+  &:disabled { cursor: not-allowed; }
+}
+
+.syncBusy { opacity: 0.7; }
+.syncIcon { flex-shrink: 0; color: var(--color-text3); }
+.syncSpin { animation: spin 1.2s linear infinite; }
+.syncText { font-size: 11px; color: var(--color-text4); @include truncate; }
+.syncError { font-size: 11px; color: var(--color-danger); padding: 0 $space-md $space-xs; @include line-clamp(2); }
