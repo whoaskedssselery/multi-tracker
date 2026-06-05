@@ -8,8 +8,12 @@ import type { WeightEntry } from '@frontend/shared/types';
 import styles from './WeightHistoryList.module.scss';
 
 export function WeightHistoryList() {
-  const entries = useAppStore(s => s.weightEntries.slice(0, 8));
+  // Select the stable array reference; slice in render. Slicing inside the
+  // selector returns a fresh array every call → Zustand sees a changed
+  // snapshot every render → "getSnapshot should be cached" infinite loop.
+  const all = useAppStore(s => s.weightEntries);
   const deleteEntry = useAppStore(s => s.deleteWeightEntry);
+  const entries = all.slice(0, 8);
   if (!entries.length) return null;
 
   return (
