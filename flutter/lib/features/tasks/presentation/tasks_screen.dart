@@ -1426,8 +1426,12 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
             const Spacer(),
             // While the keyboard is up show "Готово" and hide Delete so a
             // misplaced tap can never accidentally delete the note mid-edit.
+            // Distinct keys keep these as SEPARATE elements — otherwise Flutter
+            // reuses one GestureDetector and a focus change mid-tap could swap
+            // its onTap from "Готово" to Delete (which deleted the note).
             if (_editing)
               GestureDetector(
+                key: const ValueKey('note-done'),
                 onTap: () {
                   _flush();
                   FocusManager.instance.primaryFocus?.unfocus();
@@ -1444,6 +1448,7 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
               )
             else
               GestureDetector(
+                key: const ValueKey('note-delete'),
                 onTap: () async {
                   _flush();
                   await database.deleteNote(widget.note.id);
@@ -1465,7 +1470,6 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
             controller: _titleCtrl,
             focusNode: _titleFocus,
             onChanged: (_) => _flush(),
-            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             style: TextStyle(
                 fontSize: 24, fontWeight: FontWeight.w700, color: t.text1),
             decoration: InputDecoration(
@@ -1491,7 +1495,6 @@ class _MobileNoteEditorViewState extends State<_MobileNoteEditorView> {
               controller: _bodyCtrl,
               focusNode: _bodyFocus,
               onChanged: (_) => _flush(),
-              onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
               maxLines: null,
               expands: true,
               textAlignVertical: TextAlignVertical.top,

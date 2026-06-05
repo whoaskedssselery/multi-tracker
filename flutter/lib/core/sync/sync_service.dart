@@ -134,10 +134,11 @@ class SyncService {
   // same data but a fresh timestamp, which the other device then pulls, etc.
   String? _lastSig;
 
-  /// Signature of a snapshot's actual content (tables + secrets), excluding
-  /// the volatile `exportedAt`/`updated_at`.
+  /// Signature of a snapshot's DB content (the tables), excluding the volatile
+  /// `exportedAt`/`updated_at` AND `secrets` (the Groq key can differ per
+  /// device and would otherwise cause endless echo pushes).
   static String _sigOf(Map<String, dynamic> snap) =>
-      '${jsonEncode(snap['tables'])}§${jsonEncode(snap['secrets'])}';
+      jsonEncode(snap['tables']);
 
   Future<Map<String, dynamic>> _localSnapshot() async {
     final snap = await _db.exportSnapshot();
@@ -210,6 +211,18 @@ class SyncService {
         ? DateTime.tryParse(row['updated_at'] as String)
         : null;
     final last = await SecureStorageService.instance.lastSyncTs;
+
+    // The cloud content is byte-identical to what we already hold? Then this is
+    // a timestamp-only change — e.g. another client (or an old build) echo-
+    // pushing the same data — so ignore it: don't re-import and don't advance
+    // "synced just now". This is what stops the endless re-sync on the
+    // receiving device even if the other end keeps looping.
+    if (remoteData != null &&
+        _lastSig != null &&
+        await _db.hasUserData() &&
+        _sigOf(remoteData) == _lastSig) {
+      return SyncOutcome.upToDate;
+    }
 
     // iOS Keychain survives app reinstalls, so lastSyncTs may still be set
     // even on a fresh install with an empty DB. If local has no user data but
