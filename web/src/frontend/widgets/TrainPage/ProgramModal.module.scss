@@ -1,0 +1,140 @@
+// ── Segmented switcher ────────────────────────────────────────────────────────
+.segmented {
+  display: flex; gap: 3px; padding: 3px; margin-bottom: $space-lg;
+  background: var(--color-surface-sunken); border-radius: $radius-md;
+}
+.seg {
+  flex: 1; padding: 8px; border-radius: $radius-sm;
+  font-size: 13px; font-weight: 600; color: var(--color-text3);
+  cursor: pointer; @include no-tap-flash; @include transition-fast(background, color);
+}
+.segActive {
+  background: var(--color-surface); color: var(--color-text1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.hint { font-size: 13px; color: var(--color-text4); padding: $space-sm 0; }
+
+// ── Library ───────────────────────────────────────────────────────────────────
+.library { display: flex; flex-direction: column; gap: $space-sm; }
+
+.programCard {
+  display: flex; align-items: center; gap: $space-md; width: 100%; text-align: left;
+  padding: $space-md $space-lg;
+  @include card; cursor: pointer; @include no-tap-flash;
+  @include transition-fast(border-color, background);
+  @include hover { border-color: var(--color-border); background: var(--color-surface-sunken); }
+}
+.progDot { flex-shrink: 0; width: 12px; height: 12px; border-radius: $radius-xs; }
+.progBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.progTop { display: flex; align-items: baseline; justify-content: space-between; gap: $space-sm; }
+.progName { font-size: 15px; font-weight: 600; color: var(--color-text1); }
+.progCount { @include mono; font-size: 12px; color: var(--color-text3); flex-shrink: 0; }
+.progPreview { @include truncate; font-size: 13px; color: var(--color-text2); }
+.progChevron { color: var(--color-text3); flex-shrink: 0; }
+
+.createBtn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 13px; margin-top: $space-xs;
+  border: 1px solid var(--color-border); border-radius: $radius-sm;
+  font-size: 14px; font-weight: 500; color: var(--color-accent-press);
+  cursor: pointer; @include no-tap-flash; @include transition-fast(background, border-color);
+  @include hover { background: var(--color-accent-tint); border-color: var(--color-accent); }
+}
+
+// ── Week schedule ──────────────────────────────────────────────────────────────
+.week { display: flex; flex-direction: column; gap: $space-sm; }
+
+.weekRow {
+  display: flex; align-items: flex-start; gap: $space-md;
+  padding: $space-md; @include card;
+}
+.weekDay {
+  flex-shrink: 0; width: 32px; padding-top: 6px;
+  font-size: 13px; font-weight: 600; color: var(--color-text2);
+}
+.pills { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 11px; border-radius: $radius-pill;
+  font-size: 12px; font-weight: 500; color: var(--color-text2);
+  background: var(--color-surface-sunken); border: 1px solid transparent;
+  cursor: pointer; @include no-tap-flash; @include transition-fast(background, color);
+}
+.pillDot { width: 7px; height: 7px; border-radius: $radius-xs; }
+.pillActive {
+  color: #fff;
+  .pillDot { background: #fff !important; }
+}
+.pillRest { background: var(--color-text2); color: #fff; }
+
+// ── Editor ──────────────────────────────────────────────────────────────────
+.back {
+  display: inline-flex; align-items: center; gap: 4px; margin-bottom: $space-lg;
+  font-size: 14px; font-weight: 600; color: var(--color-text2);
+  cursor: pointer; @include no-tap-flash;
+  @include hover { color: var(--color-text1); }
+}
+
+.field { margin-top: $space-lg; }
+.fieldLabel { @include caps-label; display: block; margin-bottom: $space-sm; }
+
+.colors { display: flex; flex-wrap: wrap; gap: $space-sm; }
+.colorDot {
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; @include no-tap-flash; @include transition-fast(transform);
+  @include hover { transform: scale(1.08); }
+}
+.colorActive { border-color: var(--color-text1); box-shadow: 0 0 0 2px var(--color-bg) inset; }
+
+.exList { display: flex; flex-direction: column; gap: $space-sm; }
+.exRow {
+  display: flex; align-items: center; gap: $space-sm; flex-wrap: wrap;
+}
+.exInput {
+  flex: 1; min-width: 120px; padding: 9px 11px;
+  border-radius: $radius-sm; border: 1px solid var(--color-border);
+  background: var(--color-surface-sunken); color: var(--color-text1); font-size: 14px;
+  @include transition-fast(border-color);
+  &:focus { outline: none; border-color: var(--color-accent); background: var(--color-surface); }
+  &::placeholder { color: var(--color-text4); }
+}
+.exDel {
+  width: 30px; height: 30px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-text4); border-radius: $radius-sm; cursor: pointer;
+  @include no-tap-flash; @include transition-fast(background, color);
+  @include hover { color: var(--color-danger); background: var(--color-danger-tint); }
+}
+
+.addEx {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: $space-md;
+  padding: 7px 11px; border-radius: $radius-sm;
+  font-size: 13px; font-weight: 500; color: var(--color-accent-press);
+  cursor: pointer; @include no-tap-flash; @include transition-fast(background);
+  @include hover { background: var(--color-accent-tint); }
+}
+
+// ── Stepper ──────────────────────────────────────────────────────────────────
+.stepper {
+  display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0;
+  background: var(--color-surface-sunken); border: 1px solid var(--color-border);
+  border-radius: $radius-sm; padding: 2px;
+  button {
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+    color: var(--color-text2); border-radius: $radius-xs; cursor: pointer;
+    @include no-tap-flash; @include transition-fast(background);
+    @include hover { background: var(--color-surface); color: var(--color-text1); }
+  }
+}
+.stepperVal {
+  @include mono; min-width: 46px; text-align: center;
+  font-size: 13px; font-weight: 600; color: var(--color-text1);
+  display: inline-flex; flex-direction: column; line-height: 1.1;
+  em { font-style: normal; font-size: 9px; font-weight: 500; color: var(--color-text4); @include caps-label; }
+}
+
+// ── Footer ──────────────────────────────────────────────────────────────────
+.footer { display: flex; align-items: center; justify-content: space-between; gap: $space-sm; width: 100%; }
+.footerRight { display: flex; gap: $space-sm; margin-left: auto; }

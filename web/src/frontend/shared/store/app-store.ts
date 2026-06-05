@@ -7,7 +7,7 @@ import type {
   WorkoutTemplate, ExerciseTemplate, ScheduleSlot, SetEntry,
   WorkoutNote, ChatMessage, AppSnapshot, SyncStatus,
 } from '@frontend/shared/types';
-import { todayMidnight } from '@frontend/shared/lib/utils/format';
+import { todayMidnight, dayKey } from '@frontend/shared/lib/utils/format';
 
 // в”Ђв”Ђв”Ђ Default values в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
@@ -106,6 +106,21 @@ interface AppActions {
   updateNote: (id: number, patch: Partial<NoteItem>) => void;
   deleteNote: (id: number) => void;
 
+  // Train
+  addWorkoutTemplate: (name: string, color?: number) => number;
+  updateWorkoutTemplate: (id: number, patch: { name?: string; color?: number }) => void;
+  deleteWorkoutTemplate: (id: number) => void;
+  setTemplateExercises: (
+    templateId: number,
+    exs: { id?: number; name: string; sets: number; reps: number }[],
+  ) => void;
+  setScheduleSlot: (dayOfWeek: number, templateId: number | null) => void;
+  logSets: (
+    exerciseId: number,
+    date: string,
+    sets: { weightKg: number; reps: number }[],
+  ) => void;
+
   // Chat
   addChatMessage: (role: 'user' | 'assistant', content: string, filter: string) => void;
   clearChatHistory: (filter?: string) => void;
@@ -202,6 +217,8 @@ export const useAppStore = create<AppState & AppActions>()(
         tasks:  Math.max(0, ...s.tasks.map(e => e.id)) + 1,
         notes:  Math.max(0, ...s.notes.map(e => e.id)) + 1,
         templates: Math.max(0, ...s.workoutTemplates.map(e => e.id)) + 1,
+        exercises: Math.max(0, ...s.exerciseTemplates.map(e => e.id)) + 1,
+        schedule:  Math.max(0, ...s.scheduleSlots.map(e => e.id)) + 1,
         sets:   Math.max(0, ...s.setEntries.map(e => e.id)) + 1,
         chat:   Math.max(0, ...s.chatMessages.map(e => e.id)) + 1,
       };
@@ -411,6 +428,104 @@ export const useAppStore = create<AppState & AppActions>()(
       s.isDirty = true;
     }),
 
+    // в”Ђв”Ђ Train в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    addWorkoutTemplate: (name, color = 0xFF6B8F71) => {
+      let newId = 0;
+      set((s) => {
+        const id = nextId(s, 'templates');
+        newId = id;
+        s.workoutTemplates.push({
+          id, name, color,
+          sortOrder: s.workoutTemplates.length,
+          createdAt: now(), updatedAt: now(),
+        });
+        s.isDirty = true;
+      });
+      return newId;
+    },
+
+    updateWorkoutTemplate: (id, patch) => set((s) => {
+      const idx = s.workoutTemplates.findIndex(t => t.id === id);
+      if (idx >= 0) Object.assign(s.workoutTemplates[idx], patch, { updatedAt: now() });
+      s.isDirty = true;
+    }),
+
+    deleteWorkoutTemplate: (id) => set((s) => {
+      const exIds = new Set(
+        s.exerciseTemplates.filter(e => e.workoutTemplateId === id).map(e => e.id),
+      );
+      s.setEntries = s.setEntries.filter(se => !exIds.has(se.exerciseTemplateId));
+      s.exerciseTemplates = s.exerciseTemplates.filter(e => e.workoutTemplateId !== id);
+      s.scheduleSlots = s.scheduleSlots.filter(sl => sl.workoutTemplateId !== id);
+      s.workoutTemplates = s.workoutTemplates.filter(t => t.id !== id);
+      s.isDirty = true;
+    }),
+
+    // Reconciles a template's exercises: id==null → insert, id!=null → update,
+    // removed-but-logged → archive (sortOrder -1, keeps history), removed-and-
+    // never-logged → hard delete. Mirrors Flutter setTemplateExercises.
+    setTemplateExercises: (templateId, exs) => set((s) => {
+      const existing = s.exerciseTemplates.filter(e => e.workoutTemplateId === templateId);
+      const keepIds = new Set(exs.filter(e => e.id != null).map(e => e.id as number));
+      const toDelete = new Set<number>();
+      for (const ex of existing) {
+        if (keepIds.has(ex.id)) continue;
+        const logged = s.setEntries.some(se => se.exerciseTemplateId === ex.id);
+        if (logged) ex.sortOrder = -1; // archive
+        else toDelete.add(ex.id);
+      }
+      if (toDelete.size) {
+        s.exerciseTemplates = s.exerciseTemplates.filter(e => !toDelete.has(e.id));
+      }
+      exs.forEach((e, i) => {
+        const n = e.sets < 1 ? 1 : e.sets;
+        const setsJson = JSON.stringify(
+          Array.from({ length: n }, () => ({ weight: 0.0, reps: e.reps })),
+        );
+        if (e.id != null) {
+          const idx = s.exerciseTemplates.findIndex(x => x.id === e.id);
+          if (idx >= 0) {
+            Object.assign(s.exerciseTemplates[idx], {
+              name: e.name, sortOrder: i, defaultSetsJson: setsJson, updatedAt: now(),
+            });
+          }
+        } else {
+          const id = nextId(s, 'exercises');
+          s.exerciseTemplates.push({
+            id, workoutTemplateId: templateId, name: e.name, sortOrder: i,
+            defaultSetsJson: setsJson, createdAt: now(), updatedAt: now(),
+          });
+        }
+      });
+      s.isDirty = true;
+    }),
+
+    setScheduleSlot: (dayOfWeek, templateId) => set((s) => {
+      s.scheduleSlots = s.scheduleSlots.filter(sl => sl.dayOfWeek !== dayOfWeek);
+      if (templateId != null) {
+        const id = nextId(s, 'schedule');
+        s.scheduleSlots.push({ id, workoutTemplateId: templateId, dayOfWeek });
+      }
+      s.isDirty = true;
+    }),
+
+    // Overwrites all sets for an exercise on a given calendar day.
+    logSets: (exerciseId, date, sets) => set((s) => {
+      const key = dayKey(date);
+      s.setEntries = s.setEntries.filter(
+        se => !(se.exerciseTemplateId === exerciseId && dayKey(se.date) === key),
+      );
+      sets.forEach((st, i) => {
+        const id = nextId(s, 'sets');
+        s.setEntries.push({
+          id, exerciseTemplateId: exerciseId, date,
+          setIndex: i, weightKg: st.weightKg, reps: st.reps,
+          note: null, createdAt: now(),
+        });
+      });
+      s.isDirty = true;
+    }),
+
     // в”Ђв”Ђ Chat в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     addChatMessage: (role, content, filter) => set((s) => {
       const id = nextId(s, 'chat');
@@ -420,6 +535,7 @@ export const useAppStore = create<AppState & AppActions>()(
         citedRefsJson: '[]',
         createdAt: now(),
       });
+      s.isDirty = true;
     }),
 
     clearChatHistory: (filter) => set((s) => {

@@ -1,0 +1,59 @@
+.head {
+  display: flex; align-items: baseline; gap: $space-md; flex-wrap: wrap;
+  margin-bottom: $space-lg;
+}
+.title { font-size: 20px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.01em; }
+.date { @include mono; font-size: 13px; color: var(--color-text3); }
+
+.list { display: flex; flex-direction: column; gap: $space-lg; }
+
+.exercise {
+  @include card; padding: $space-lg;
+}
+
+.exHead {
+  display: flex; align-items: baseline; justify-content: space-between; gap: $space-md;
+  margin-bottom: $space-md;
+}
+.exName { font-size: 15px; font-weight: 600; color: var(--color-text1); }
+.exLast { @include mono; font-size: 12px; color: var(--color-text3); }
+
+.rows { display: flex; flex-direction: column; gap: $space-xs; }
+
+.row {
+  display: grid; grid-template-columns: 28px 1fr 1fr 32px;
+  align-items: center; gap: $space-sm;
+}
+
+.rowHeader { margin-bottom: 2px; }
+.cellIdx { @include mono; font-size: 13px; color: var(--color-text4); text-align: center; }
+.cellLabel { @include caps-label; font-size: 10px; }
+.cellDel { width: 32px; }
+
+.cell {
+  width: 100%; padding: 9px 10px; text-align: center;
+  border-radius: $radius-sm; border: 1px solid var(--color-border);
+  background: var(--color-surface-sunken); color: var(--color-text1);
+  font-size: 15px; @include mono;
+  @include transition-fast(border-color);
+  &:focus { outline: none; border-color: var(--color-accent); background: var(--color-surface); }
+  &::placeholder { color: var(--color-text4); }
+}
+
+.del {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  color: var(--color-text4); border-radius: $radius-sm; cursor: pointer;
+  @include no-tap-flash; @include transition-fast(background, color);
+  @include hover { color: var(--color-danger); background: var(--color-danger-tint); }
+}
+
+.addSet {
+  margin-top: $space-xs; align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: $radius-sm;
+  font-size: 13px; font-weight: 500; color: var(--color-accent-press);
+  cursor: pointer; @include no-tap-flash; @include transition-fast(background);
+  @include hover { background: var(--color-accent-tint); }
+}
+
+.footer { display: flex; justify-content: flex-end; gap: $space-sm; }

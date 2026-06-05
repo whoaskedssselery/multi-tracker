@@ -1,15 +1,140 @@
-﻿.page { display: flex; flex-direction: column; height: 100%; background: var(--color-bg); }
+.page {
+  display: flex; flex-direction: column; height: 100%; overflow: hidden;
+  background: var(--color-bg);
+}
 
+// ── Header ──────────────────────────────────────────────────────────────────
 .header {
-  padding: $space-2xl $space-3xl $space-lg; border-bottom: 1px solid var(--color-border-soft); flex-shrink: 0;
-  @include mobile { padding: $space-xl; }
+  padding: $space-2xl $space-3xl $space-md;
+  border-bottom: 1px solid var(--color-border-soft); flex-shrink: 0;
+  @include mobile { padding: $space-xl $space-xl $space-md; }
+}
+
+.headTop {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: $space-lg;
+  @include mobile { flex-direction: column; gap: $space-md; }
 }
 
 .title { font-size: 26px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.02em; @include mobile { font-size: 22px; } }
+.subtitle { @include mono; font-size: 13px; color: var(--color-text3); margin-top: 2px; }
 
-.content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: $space-md; padding: $space-3xl; text-align: center; }
+.nav { display: flex; align-items: center; gap: $space-sm; @include mobile { width: 100%; } }
 
-.icon  { color: var(--color-text4); }
-.label { font-size: 17px; font-weight: 600; color: var(--color-text2); }
-.sub   { font-size: 14px; color: var(--color-text4); max-width: 360px; line-height: 1.5; }
+.navBtn {
+  width: 34px; height: 34px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--color-border); border-radius: $radius-sm;
+  background: var(--color-surface); color: var(--color-text2);
+  cursor: pointer; @include no-tap-flash; @include transition-fast(background, border-color);
+  @include hover { background: var(--color-surface-sunken); }
+}
 
+.todayBtn {
+  padding: 8px 14px; border: 1px solid var(--color-border); border-radius: $radius-sm;
+  background: var(--color-surface); color: var(--color-text1);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  @include no-tap-flash; @include transition-fast(background);
+  @include hover { background: var(--color-surface-sunken); }
+}
+
+.programBtn {
+  display: inline-flex; align-items: center; gap: 6px; margin-left: $space-xs;
+  padding: 8px 14px; border: 1px solid var(--color-border); border-radius: $radius-sm;
+  background: var(--color-surface); color: var(--color-text1);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  @include no-tap-flash; @include transition-fast(background, border-color);
+  @include hover { background: var(--color-surface-sunken); border-color: var(--color-border); }
+  @include mobile { margin-left: auto; }
+}
+
+// ── Day strip ───────────────────────────────────────────────────────────────
+.strip { display: flex; gap: $space-xs; margin-top: $space-lg; }
+
+.stripDay {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 2px; border-radius: $radius-sm; cursor: pointer;
+  border: 1px solid transparent;
+  @include no-tap-flash; @include transition-fast(background, border-color);
+  @include hover { background: var(--color-surface-sunken); }
+}
+.stripActive { background: var(--color-accent-tint); @include hover { background: var(--color-accent-tint); } }
+.stripToday .stripDate { color: var(--color-accent-press); }
+.stripLabel { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; color: var(--color-text3); }
+.stripActive .stripLabel { color: var(--color-accent-press); }
+.stripDate { @include mono; font-size: 15px; font-weight: 600; color: var(--color-text1); }
+.stripMark {
+  width: 5px; height: 5px; border-radius: 50%; background: transparent;
+}
+.stripMarkOn { background: var(--color-text4); }
+.stripMarkDone { background: var(--color-accent); }
+
+// ── Body ────────────────────────────────────────────────────────────────────
+.body {
+  flex: 1; overflow-y: auto; @include scrollbar; -webkit-overflow-scrolling: touch;
+  padding: $space-xl $space-3xl $space-5xl;
+  max-width: 760px; margin: 0 auto; width: 100%;
+  @include mobile { padding: $space-lg $space-lg $space-5xl; }
+}
+
+.caps { @include caps-label; }
+
+// Selected-day card
+.dayCard {
+  @include card; border-width: 1.5px; padding: $space-xl;
+  display: flex; flex-direction: column;
+}
+.dayName {
+  font-size: 30px; font-weight: 800; color: var(--color-text1);
+  letter-spacing: -0.02em; line-height: 1.05; margin: 6px 0 0; text-transform: uppercase;
+  @include mobile { font-size: 26px; }
+}
+.dayPreview { font-size: 14px; color: var(--color-text2); margin-top: $space-sm; line-height: 1.4; }
+.dayFoot { display: flex; align-items: center; justify-content: space-between; margin-top: $space-lg; }
+.dayCount { @include mono; font-size: 13px; color: var(--color-text3); }
+
+.openBtn {
+  padding: 11px 22px; border-radius: $radius-md;
+  background: var(--color-accent); color: #fff; font-size: 14px; font-weight: 600;
+  cursor: pointer; @include no-tap-flash; @include transition-fast(background);
+  @include hover { background: var(--color-accent-press); }
+}
+.doneBadge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 14px; border-radius: $radius-md;
+  background: var(--color-accent-tint); color: var(--color-accent-press);
+  font-size: 14px; font-weight: 600;
+}
+
+.restCard {
+  @include card; padding: $space-xl;
+  display: flex; align-items: center; gap: $space-md;
+}
+.restIcon { color: var(--color-text4); }
+.restText { font-size: 17px; font-weight: 600; color: var(--color-text2); }
+
+// Whole-week
+.weekHead {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: $space-2xl 0 $space-sm;
+}
+.weekProgram { font-size: 13px; font-weight: 500; color: var(--color-accent); cursor: pointer; @include no-tap-flash; }
+
+.weekList { display: flex; flex-direction: column; gap: $space-sm; }
+
+.row {
+  display: flex; align-items: center; gap: $space-md; width: 100%; text-align: left;
+  padding: $space-md $space-lg; border-radius: $radius-md;
+  background: var(--color-surface); border: 1px solid var(--color-border-soft);
+  @include transition-fast(background, border-color);
+}
+.rowActive {
+  background: var(--color-accent-tint); cursor: pointer; @include no-tap-flash;
+  @include hover { filter: brightness(0.98); }
+}
+.rowDate { flex-shrink: 0; width: 76px; font-size: 12px; font-weight: 500; color: var(--color-text3); }
+.rowBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.rowName { font-size: 15px; font-weight: 600; color: var(--color-text1); @include truncate; }
+.rowCount { @include mono; font-size: 11px; color: var(--color-text3); }
+.rowRest { font-size: 14px; font-weight: 500; color: var(--color-text3); }
+.rowCheck { color: var(--color-accent-press); flex-shrink: 0; }
+.rowChevron { color: var(--color-text3); flex-shrink: 0; }

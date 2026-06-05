@@ -44,6 +44,17 @@ export function todayMidnight(): string {
   return midnight();
 }
 
+// Calendar-day key (local). Extracts the day a date belongs to in the user's
+// timezone — correct for both Flutter-origin dates (ISO without Z → local) and
+// web-origin dates (UTC-Z midnight). Used to group/compare workout logs by day.
+export function dayKey(dateStr: string): string {
+  return format(parseISO(dateStr), 'yyyy-MM-dd');
+}
+
+export function dayKeyOf(date: Date): string {
+  return format(date, 'yyyy-MM-dd');
+}
+
 export function weekdayName(iso: number): string {
   const names = ['', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
   return names[iso] ?? '';
