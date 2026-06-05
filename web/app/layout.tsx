@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Toaster } from 'react-hot-toast';
+import { RouteShell } from '@frontend/widgets/RouteShell';
 import './globals.scss';
 
 export const metadata: Metadata = {
@@ -10,9 +11,9 @@ export const metadata: Metadata = {
 
   // iPhone "Add to Home Screen" support
   appleWebApp: {
-    capable:         true,
-    title:           'Multi-tracker',
-    statusBarStyle:  'default',
+    capable:        true,
+    title:          'Multi-tracker',
+    statusBarStyle: 'default',
   },
 
   // Apple touch icon (180×180 recommended for iPhone)
@@ -21,7 +22,6 @@ export const metadata: Metadata = {
     icon:  '/icons/icon-192.png',
   },
 
-  // Open Graph for share cards
   openGraph: {
     title:       'Multi-tracker',
     description: 'Трекер веса, тренировок, задач и заметок',
@@ -31,10 +31,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   // viewport-fit=cover: allows content under notch / Dynamic Island
-  width:            'device-width',
-  initialScale:     1,
-  maximumScale:     1,
-  viewportFit:      'cover',
+  width:        'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit:  'cover',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#FAF7F0' },
     { media: '(prefers-color-scheme: dark)',  color: '#15130E' },
@@ -45,22 +45,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ru" suppressHydrationWarning>
       <head>
-        {/* Extra Apple meta tags not yet in Next.js Metadata API */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="format-detection" content="telephone=no" />
       </head>
       <body>
-        {children}
+        <RouteShell>{children}</RouteShell>
 
         <Toaster
           position="bottom-right"
           toastOptions={{
             duration: 3000,
             style: {
-              fontFamily: "'Manrope', sans-serif",
-              fontSize:   '14px',
+              fontFamily:   "'Manrope', sans-serif",
+              fontSize:     '14px',
               borderRadius: '12px',
-              padding:    '12px 16px',
+              padding:      '12px 16px',
             },
           }}
         />
