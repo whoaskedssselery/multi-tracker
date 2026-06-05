@@ -1,0 +1,68 @@
+﻿.card { @include card; padding: $space-xl; }
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-md;
+  margin-bottom: $space-lg;
+  flex-wrap: wrap;
+}
+
+.caps { @include caps-label; display: block; margin-bottom: $space-xs; }
+
+.valueRow { display: flex; align-items: baseline; gap: $space-xs; flex-wrap: wrap; }
+
+.value { font-size: 28px; font-weight: 700; color: var(--color-text1); line-height: 1; }
+.unit  { font-size: 15px; color: var(--color-text3); }
+.trend { font-size: 13px; color: var(--color-text3); font-weight: 500; }
+.trendUp   { color: var(--color-warning); }
+.trendDown { color: var(--color-success); }
+
+.periods {
+  display: flex;
+  gap: 2px;
+  background: var(--color-surface-sunken);
+  border-radius: $radius-pill;
+  padding: 3px;
+  flex-shrink: 0;
+}
+
+.period {
+  padding: 4px 11px;
+  border-radius: $radius-pill;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text3);
+  cursor: pointer;
+  @include no-tap-flash;
+  @include transition-fast;
+  @include hover { color: var(--color-text1); }
+}
+
+.periodActive {
+  background: var(--color-surface);
+  color: var(--color-text1);
+  box-shadow: $shadow-sm;
+}
+
+.chart { height: 160px; }
+
+.empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--color-text4);
+}
+
+.tooltip {
+  background: var(--color-accent-press);
+  border-radius: $radius-sm;
+  padding: $space-xs $space-sm;
+  font-size: 12px;
+  color: #fff;
+  font-weight: 600;
+}
+

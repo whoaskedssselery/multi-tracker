@@ -1,0 +1,52 @@
+﻿.row {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-md $space-lg;
+  border-bottom: 1px solid var(--color-border-soft);
+  min-height: $touch-target;
+  @include transition-fast(background);
+  @include hover { background: var(--color-surface-sunken); }
+}
+
+.last { border-bottom: none; }
+
+.check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.75px solid var(--color-border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  @include no-tap-flash;
+  @include transition(background, border-color);
+  @include hover { border-color: var(--color-accent); }
+}
+
+.checked { background: var(--color-accent); border-color: var(--color-accent); }
+.checkMark { font-size: 12px; color: #fff; line-height: 1; }
+
+.prio { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+.body {
+  flex: 1;
+  font-size: 15px;
+  color: var(--color-text1);
+  cursor: pointer;
+  line-height: 1.4;
+  @include no-tap-flash;
+}
+
+.done { text-decoration: line-through; color: var(--color-text3); }
+
+.arrow {
+  color: var(--color-text4);
+  flex-shrink: 0;
+  cursor: pointer;
+  @include transition-fast(color);
+  @include hover { color: var(--color-text2); }
+}
+

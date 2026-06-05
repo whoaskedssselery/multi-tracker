@@ -1,0 +1,71 @@
+﻿.page { display: flex; flex-direction: column; height: 100%; overflow: hidden; background: var(--color-bg); }
+
+.header {
+  padding: $space-2xl $space-3xl $space-lg;
+  border-bottom: 1px solid var(--color-border-soft);
+  flex-shrink: 0;
+  @include mobile { padding: $space-xl $space-xl $space-md; }
+}
+
+.greeting {
+  font-size: 26px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.02em;
+  @include mobile { font-size: 22px; }
+}
+
+.date { font-size: 13px; color: var(--color-text3); margin-top: 2px; }
+
+.scroll {
+  flex: 1; overflow-y: auto;
+  @include scrollbar;
+  // Smooth momentum scrolling on iOS
+  -webkit-overflow-scrolling: touch;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: $space-xl;
+  padding: $space-xl $space-3xl $space-3xl;
+  max-width: 1200px;
+
+  @include tablet  { grid-template-columns: 1fr; padding: $space-lg $space-xl $space-3xl; }
+  @include mobile  { grid-template-columns: 1fr; padding: $space-lg $space-lg $space-5xl; gap: $space-lg; }
+}
+
+.col { display: flex; flex-direction: column; gap: $space-xl; @include mobile { gap: $space-lg; } }
+
+.card { @include card; padding: $space-xl; }
+
+.cardHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: $space-lg; }
+
+.caps { @include caps-label; }
+
+.addBtn {
+  display: flex; align-items: center; justify-content: center;
+  width: $touch-target; height: $touch-target;
+  border-radius: $radius-sm; color: var(--color-text3); cursor: pointer;
+  @include no-tap-flash; @include transition-fast;
+  @include hover { background: var(--color-surface-sunken); color: var(--color-accent); }
+}
+
+.empty { font-size: 14px; color: var(--color-text4); padding: $space-sm 0; }
+
+.goalList { display: flex; flex-direction: column; gap: $space-lg; }
+
+.statsSection { margin-bottom: $space-xl; &:last-child { margin-bottom: 0; } }
+
+.streakList { display: flex; flex-wrap: wrap; gap: $space-sm; margin-top: $space-md; }
+
+.streak {
+  display: inline-flex; align-items: center; gap: $space-xs;
+  background: var(--color-surface-sunken); border: 1px solid var(--color-border-soft);
+  border-radius: $radius-pill; padding: $space-xs + 2px $space-md;
+  font-size: 13px; color: var(--color-text1); font-weight: 500;
+}
+
+.streakIcon { color: var(--color-accent); }
+.streakDay, .streakLabel { color: var(--color-text2); }
+
+.taskStat { font-size: 22px; font-weight: 600; color: var(--color-text1); margin-top: $space-md; }
+.allDone  { font-size: 16px; color: var(--color-success); font-weight: 600; }
+

@@ -1,0 +1,2 @@
+﻿export { TrainPage } from './TrainPage';
+

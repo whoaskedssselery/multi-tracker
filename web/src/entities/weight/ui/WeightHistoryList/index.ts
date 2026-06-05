@@ -1,1 +1,0 @@
-export { WeightHistoryList } from './WeightHistoryList';

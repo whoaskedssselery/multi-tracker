@@ -24,7 +24,8 @@
     "react-hook-form": "^7.56.4",
     "@hookform/resolvers": "^3.10.0",
     "zod": "^3.25.28",
-    "date-fns": "^4.1.0"
+    "date-fns": "^4.1.0",
+    "sass": "^1.87.0"
   },
   "devDependencies": {
     "@types/node": "^22",
@@ -32,7 +33,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^15.3.2",
-    "sass": "^1.87.0",
     "typescript": "^5"
   }
 }

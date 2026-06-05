@@ -1,2 +1,3 @@
-import { SettingsPage } from '@widgets/SettingsPage';
+﻿import { SettingsPage } from '@client/widgets/SettingsPage';
 export default SettingsPage;
+

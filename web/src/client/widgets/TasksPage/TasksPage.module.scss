@@ -1,0 +1,130 @@
+﻿.page { display: flex; flex-direction: column; height: 100%; overflow: hidden; background: var(--color-bg); }
+
+.header {
+  padding: $space-2xl $space-3xl $space-md;
+  border-bottom: 1px solid var(--color-border-soft);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: $space-lg;
+
+  @include mobile {
+    flex-direction: column; align-items: flex-start; gap: $space-md;
+    padding: $space-xl $space-xl $space-md;
+  }
+}
+
+.title {
+  font-size: 26px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.02em;
+  @include mobile { font-size: 22px; }
+}
+
+.controls { display: flex; align-items: center; gap: $space-md; @include mobile { width: 100%; } }
+
+.tabs {
+  display: flex; gap: 2px;
+  background: var(--color-surface-sunken);
+  border-radius: $radius-sm; padding: 3px;
+  @include mobile { flex: 1; }
+}
+
+.tab {
+  flex: 1; padding: $space-sm $space-lg; border-radius: $radius-xs + 2px;
+  font-size: 13px; font-weight: 600; color: var(--color-text3);
+  cursor: pointer; @include no-tap-flash; @include transition-fast;
+  min-height: $touch-target - 10px;
+  @include hover { color: var(--color-text2); }
+}
+
+.tabActive {
+  background: var(--color-surface); color: var(--color-text1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+// ── Tasks panel ───────────────────────────────────────────────────────────────
+
+.tasksPanel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+.toolbar {
+  padding: $space-md $space-3xl;
+  border-bottom: 1px solid var(--color-border-soft);
+  flex-shrink: 0;
+  @include mobile { padding: $space-md $space-lg; }
+}
+
+.taskList {
+  flex: 1; overflow-y: auto; padding: $space-lg $space-3xl $space-3xl;
+  @include scrollbar; -webkit-overflow-scrolling: touch;
+  @include mobile { padding: $space-lg $space-lg $space-5xl; }
+}
+
+.group { margin-bottom: $space-lg; }
+
+.groupLabel { @include caps-label; margin-bottom: $space-sm; padding-left: $space-xs; }
+
+.groupCard { @include card; overflow: hidden; }
+
+.empty { text-align: center; padding: $space-5xl $space-lg; color: var(--color-text3); font-size: 15px; font-weight: 500; }
+.emptySub { font-size: 13px; color: var(--color-text4); margin-top: $space-xs; font-weight: 400; }
+
+// ── Notes panel ───────────────────────────────────────────────────────────────
+
+.notesPanel { display: flex; height: 100%; overflow: hidden; }
+
+.notesSidebar {
+  width: 260px; flex-shrink: 0;
+  border-right: 1px solid var(--color-border-soft);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--color-surface);
+
+  @include mobile { width: 100%; border-right: none; }
+}
+
+.notesSidebarHidden { @include mobile { display: none; } }
+
+.notesToolbar {
+  padding: $space-md; border-bottom: 1px solid var(--color-border-soft); flex-shrink: 0;
+}
+
+.notesList {
+  flex: 1; overflow-y: auto;
+  padding: $space-xs $space-sm $space-xl;
+  @include scrollbar; -webkit-overflow-scrolling: touch;
+}
+
+.notesSection { @include caps-label; padding: $space-sm $space-sm $space-xs; }
+
+.notesEditor {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--color-bg);
+
+  @include mobile {
+    position: absolute; inset: 0; z-index: 10; background: var(--color-bg);
+    display: none;
+  }
+}
+
+.notesEditorEmpty {
+  @include not-mobile { align-items: center; justify-content: center; }
+}
+
+.notesEditorInner {
+  display: flex; flex-direction: column; height: 100%;
+  @include mobile { display: flex !important; }
+}
+
+.notesEditor:not(.notesEditorEmpty) { @include mobile { display: flex; } }
+
+.mobileBack {
+  display: none; padding: $space-sm $space-md; border-bottom: 1px solid var(--color-border-soft);
+  @include mobile { display: flex; }
+}
+
+.backBtn {
+  display: flex; align-items: center; gap: $space-sm;
+  font-size: 15px; font-weight: 600; color: var(--color-accent);
+  cursor: pointer; @include no-tap-flash;
+}
+
+.notesEmptyState { flex: 1; display: flex; align-items: center; justify-content: center; }
+.notesEmptyTitle { font-size: 15px; font-weight: 500; color: var(--color-text3); }
+

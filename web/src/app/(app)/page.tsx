@@ -1,2 +1,3 @@
-import { HomePage } from '@widgets/HomePage';
+﻿import { HomePage } from '@client/widgets/HomePage';
 export default HomePage;
+

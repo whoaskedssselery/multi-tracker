@@ -1,2 +1,3 @@
-import { AiPage } from '@widgets/AiPage';
+﻿import { AiPage } from '@client/widgets/AiPage';
 export default AiPage;
+
