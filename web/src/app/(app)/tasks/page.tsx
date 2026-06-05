@@ -1,3 +1,4 @@
-﻿import { TasksPage } from '@client/widgets/TasksPage';
+﻿import { TasksPage } from '@frontend/widgets/TasksPage';
 export default TasksPage;
+
 

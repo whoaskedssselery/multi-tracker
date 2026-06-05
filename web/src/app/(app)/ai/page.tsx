@@ -1,3 +1,4 @@
-﻿import { AiPage } from '@client/widgets/AiPage';
+﻿import { AiPage } from '@frontend/widgets/AiPage';
 export default AiPage;
+
 

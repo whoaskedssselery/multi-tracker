@@ -1,3 +1,4 @@
-﻿import { HomePage } from '@client/widgets/HomePage';
+﻿import { HomePage } from '@frontend/widgets/HomePage';
 export default HomePage;
+
 

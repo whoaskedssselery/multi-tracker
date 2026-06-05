@@ -1,3 +1,4 @@
-﻿import { SettingsPage } from '@client/widgets/SettingsPage';
+﻿import { SettingsPage } from '@frontend/widgets/SettingsPage';
 export default SettingsPage;
+
 

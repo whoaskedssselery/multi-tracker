@@ -1,3 +1,4 @@
-﻿import { AuthForm } from '@client/features/auth';
+﻿import { AuthForm } from '@frontend/features/auth';
 export default AuthForm;
+
 

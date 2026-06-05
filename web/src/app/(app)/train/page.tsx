@@ -1,3 +1,4 @@
-﻿import { TrainPage } from '@client/widgets/TrainPage';
+﻿import { TrainPage } from '@frontend/widgets/TrainPage';
 export default TrainPage;
+
 
