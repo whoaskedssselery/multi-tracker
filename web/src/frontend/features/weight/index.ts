@@ -1,2 +1,2 @@
-﻿export { WeightRecorder } from './ui/WeightRecorder';
+export { WeightRecorder } from './ui/WeightRecorder';
 

@@ -1,4 +1,4 @@
-﻿export {
+export {
   useAppStore,
   selectActiveTasks,
   selectDoneTasks,

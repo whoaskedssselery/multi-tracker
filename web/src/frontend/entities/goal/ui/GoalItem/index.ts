@@ -1,2 +1,2 @@
-﻿export { GoalItem } from './GoalItem';
+export { GoalItem } from './GoalItem';
 

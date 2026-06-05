@@ -1,2 +1,2 @@
-﻿export { TrainPage } from './TrainPage';
+export { TrainPage } from './TrainPage';
 

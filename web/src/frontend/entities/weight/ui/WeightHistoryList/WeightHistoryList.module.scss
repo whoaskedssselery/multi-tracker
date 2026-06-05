@@ -1,4 +1,4 @@
-﻿.card { @include card; padding: $space-xl; }
+.card { @include card; padding: $space-xl; }
 
 .title { @include caps-label; margin-bottom: $space-md; }
 

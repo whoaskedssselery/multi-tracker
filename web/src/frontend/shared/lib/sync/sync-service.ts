@@ -1,4 +1,4 @@
-﻿// ─── SyncService — TypeScript port of Flutter's SyncService (LWW snapshot) ───
+// ─── SyncService — TypeScript port of Flutter's SyncService (LWW snapshot) ───
 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { AppSnapshot } from '@frontend/shared/types';

@@ -1,3 +1,3 @@
-﻿export { Input, Textarea } from './Input';
+export { Input, Textarea } from './Input';
 export type { InputProps, TextareaProps } from './Input';
 

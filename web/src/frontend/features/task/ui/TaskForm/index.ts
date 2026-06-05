@@ -1,2 +1,2 @@
-﻿export { TaskForm } from './TaskForm';
+export { TaskForm } from './TaskForm';
 

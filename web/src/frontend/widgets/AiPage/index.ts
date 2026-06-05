@@ -1,2 +1,2 @@
-﻿export { AiPage } from './AiPage';
+export { AiPage } from './AiPage';
 

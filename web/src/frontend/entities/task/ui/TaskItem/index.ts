@@ -1,2 +1,2 @@
-﻿export { TaskItem } from './TaskItem';
+export { TaskItem } from './TaskItem';
 

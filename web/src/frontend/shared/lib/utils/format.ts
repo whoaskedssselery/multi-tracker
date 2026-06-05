@@ -1,4 +1,4 @@
-﻿import { format, formatDistanceToNow, isToday, isYesterday, parseISO } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isYesterday, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 export function formatDate(dateStr: string): string {

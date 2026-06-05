@@ -1,4 +1,4 @@
-﻿import { Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import styles from './SearchBar.module.scss';
 
 export interface SearchBarProps {

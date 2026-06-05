@@ -1,2 +1,2 @@
-﻿export { WeightChart } from './WeightChart';
+export { WeightChart } from './WeightChart';
 

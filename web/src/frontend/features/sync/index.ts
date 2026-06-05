@@ -1,2 +1,2 @@
-﻿export { useSync } from './model/use-sync';
+export { useSync } from './model/use-sync';
 

@@ -1,4 +1,4 @@
-﻿// ─── Data types — mirror of Flutter/Drift schema (camelCase, matching toJson) ─
+// ─── Data types — mirror of Flutter/Drift schema (camelCase, matching toJson) ─
 
 export interface Profile {
   id: number;

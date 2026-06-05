@@ -1,2 +1,2 @@
-﻿export { NoteCard } from './NoteCard';
+export { NoteCard } from './NoteCard';
 

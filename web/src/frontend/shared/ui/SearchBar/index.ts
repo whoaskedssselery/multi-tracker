@@ -1,3 +1,3 @@
-﻿export { SearchBar } from './SearchBar';
+export { SearchBar } from './SearchBar';
 export type { SearchBarProps } from './SearchBar';
 

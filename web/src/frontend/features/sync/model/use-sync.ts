@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@frontend/shared/store';
@@ -25,7 +25,7 @@ export function useSync() {
   const exportSnap = useCallback(() => store.exportSnapshot(), [store]);
   const hasData = useCallback(() => store.hasUserData(), [store]);
 
-  // в”Ђв”Ђ Push (debounced, only if changed) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // ── Push (debounced, only if changed) ──────────────────────────────────────
   const schedulePush = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
@@ -34,7 +34,7 @@ export function useSync() {
       if (!user) return;
 
       inFlightRef.current = true;
-      store.setSyncStatus({ busy: true, status: 'РЎРѕС…СЂР°РЅРµРЅРёРµвЂ¦' });
+      store.setSyncStatus({ busy: true, status: 'Сохранение…' });
       try {
         const ts = await svc.pushIfChanged(user.id, exportSnap());
         store.clearDirty();
@@ -46,14 +46,14 @@ export function useSync() {
     }, DEBOUNCE_MS);
   }, [svc, store, exportSnap]);
 
-  // в”Ђв”Ђ Reconcile (pull if remote newer, push if dirty) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // ── Reconcile (pull if remote newer, push if dirty) ────────────────────────
   const reconcile = useCallback(async () => {
     if (inFlightRef.current) return;
     const user = await svc.getUser();
     if (!user) return;
 
     inFlightRef.current = true;
-    store.setSyncStatus({ busy: true, status: 'РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏвЂ¦' });
+    store.setSyncStatus({ busy: true, status: 'Синхронизация…' });
     try {
       if (store.isDirty) {
         await svc.pushSafe(user.id, exportSnap(), hasData());
@@ -67,7 +67,7 @@ export function useSync() {
             const storedKey = localStorage.getItem(GROQ_KEY_LS);
             if (storedKey) store.setGroqApiKey(storedKey);
           }
-          toast.success('Р”Р°РЅРЅС‹Рµ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅС‹');
+          toast.success('Данные синхронизированы');
         }
       }
       const ts = svc.getLastSyncTs();
@@ -81,14 +81,14 @@ export function useSync() {
     }
   }, [svc, store, exportSnap, hasData]);
 
-  // в”Ђв”Ђ Manual sync в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // ── Manual sync ────────────────────────────────────────────────────────────
   const syncNow = useCallback(async () => {
     if (inFlightRef.current) return;
     const user = await svc.getUser();
     if (!user) return;
 
     inFlightRef.current = true;
-    store.setSyncStatus({ busy: true, error: null, status: 'РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏвЂ¦' });
+    store.setSyncStatus({ busy: true, error: null, status: 'Синхронизация…' });
     try {
       if (store.isDirty) {
         await svc.pushSafe(user.id, exportSnap(), hasData());
@@ -109,7 +109,7 @@ export function useSync() {
       const ts = svc.getLastSyncTs();
       if (ts) {
         store.setSyncStatus({ lastSynced: ts });
-        toast.success(`РЎРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅРѕ ${formatSyncTime(ts)}`);
+        toast.success(`Синхронизировано ${formatSyncTime(ts)}`);
       }
     } catch (err) {
       const msg = friendlyError(err);
@@ -121,7 +121,7 @@ export function useSync() {
     }
   }, [svc, store, exportSnap, hasData]);
 
-  // в”Ђв”Ђ Boot: init user + initial reconcile в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // ── Boot: init user + initial reconcile ────────────────────────────────────
   useEffect(() => {
     let mounted = true;
 
@@ -165,7 +165,7 @@ export function useSync() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // в”Ђв”Ђ Re-sync on tab focus в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // ── Re-sync on tab focus ───────────────────────────────────────────────────
   useEffect(() => {
     const onFocus = () => {
       if (store.sync.signedIn) reconcile();
@@ -174,7 +174,7 @@ export function useSync() {
     return () => window.removeEventListener('focus', onFocus);
   }, [reconcile, store.sync.signedIn]);
 
-  // в”Ђв”Ђ Auto-push on dirty в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // ── Auto-push on dirty ─────────────────────────────────────────────────────
   useEffect(() => {
     if (store.isDirty && store.sync.signedIn) schedulePush();
   }, [store.isDirty, store.sync.signedIn, schedulePush]);
@@ -185,9 +185,6 @@ export function useSync() {
 function friendlyError(err: unknown): string {
   const s = String(err);
   if (s.includes('NetworkError') || s.includes('fetch') || s.includes('timeout'))
-    return 'РќРµС‚ СЃРѕРµРґРёРЅРµРЅРёСЏ вЂ” СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓСЋ РїРѕР·Р¶Рµ';
+    return 'Нет соединения — синхронизирую позже';
   return s.slice(0, 120);
 }
-
-
-

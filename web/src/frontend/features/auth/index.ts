@@ -1,2 +1,2 @@
-﻿export { AuthForm } from './ui/AuthForm';
+export { AuthForm } from './ui/AuthForm';
 

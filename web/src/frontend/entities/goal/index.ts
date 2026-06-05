@@ -1,2 +1,2 @@
-﻿export { GoalItem } from './ui/GoalItem';
+export { GoalItem } from './ui/GoalItem';
 

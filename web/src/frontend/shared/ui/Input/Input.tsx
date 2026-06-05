@@ -1,4 +1,4 @@
-﻿import { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import styles from './Input.module.scss';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {

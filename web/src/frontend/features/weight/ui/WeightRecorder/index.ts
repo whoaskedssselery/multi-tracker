@@ -1,2 +1,2 @@
-﻿export { WeightRecorder } from './WeightRecorder';
+export { WeightRecorder } from './WeightRecorder';
 

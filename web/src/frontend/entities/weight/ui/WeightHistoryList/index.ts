@@ -1,2 +1,2 @@
-﻿export { WeightHistoryList } from './WeightHistoryList';
+export { WeightHistoryList } from './WeightHistoryList';
 
