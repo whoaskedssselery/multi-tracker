@@ -360,10 +360,12 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
 
   Widget _iosWeekScroll(
       BuildContext context, ThemeTokens t, List<_DayItem> days) {
-    final todayItem = days.firstWhere(
-      (d) => d.isToday,
-      orElse: () => days[_selectedDow - 1],
-    );
+    // The big card follows the SELECTED day. _selectedDow defaults to today's
+    // weekday and resets to today via the "Сегодня" button, so the current
+    // week still opens on today — but tapping another day in the strip now
+    // updates the card. (Previously it was hard-pinned to today on the current
+    // week, so every day looked like today's program.)
+    final selectedItem = days[_selectedDow - 1];
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
@@ -375,7 +377,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: _iosTodayCard(context, t, todayItem),
+            child: _iosTodayCard(context, t, selectedItem),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
