@@ -1,5 +1,11 @@
 ﻿// ─── SCSS mixins ─────────────────────────────────────────────────────────────
 
+// Mixins reference design tokens ($bp-*, $dur-*, $ease-*, …). Under Dart Sass
+// these are module-scoped, so a mixin can't see variables that only the
+// *caller* @use'd — this file must pull them in itself.
+@use "sass:list";
+@use "./variables" as *;
+
 // Breakpoints
 @mixin mobile   { @media (max-width: #{$bp-mobile - 1px})   { @content; } }
 @mixin tablet   { @media (min-width: $bp-mobile)  and (max-width: #{$bp-tablet - 1px}) { @content; } }
@@ -58,13 +64,30 @@
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
-// Transitions
-@mixin transition($props: all) {
-  transition: $props $dur-normal $ease-std;
+// Transitions — variadic: @include transition(background, border-color) builds
+// one timed entry per property (defaults to `all` when none are given).
+@mixin transition($props...) {
+  @if list.length($props) == 0 {
+    transition: all $dur-normal $ease-std;
+  } @else {
+    $list: ();
+    @each $p in $props {
+      $list: list.append($list, #{$p} $dur-normal $ease-std, comma);
+    }
+    transition: $list;
+  }
 }
 
 @mixin transition-fast($props...) {
-  transition: $props $dur-fast $ease-std;
+  @if list.length($props) == 0 {
+    transition: all $dur-fast $ease-std;
+  } @else {
+    $list: ();
+    @each $p in $props {
+      $list: list.append($list, #{$p} $dur-fast $ease-std, comma);
+    }
+    transition: $list;
+  }
 }
 
 // Section caps label
