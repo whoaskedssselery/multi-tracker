@@ -16,52 +16,62 @@
 .blob1, .blob2 {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.35;
+  filter: blur(90px);
+  opacity: 0.4;
+  animation: float 14s ease-in-out infinite;
 }
 
 .blob1 {
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.4), transparent 70%);
-  top: -100px; right: -100px;
+  width: 520px; height: 520px;
+  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.45), transparent 70%);
+  top: -120px; right: -120px;
 }
 
 .blob2 {
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.2), transparent 70%);
-  bottom: -80px; left: -80px;
+  width: 420px; height: 420px;
+  background: radial-gradient(circle, rgba(201, 122, 58, 0.22), transparent 70%);
+  bottom: -100px; left: -100px;
+  animation-delay: -7s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(20px, -24px) scale(1.08); }
 }
 
 .card {
   position: relative;
   width: 100%;
   max-width: 420px;
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
   border: 1px solid var(--color-border-soft);
   border-radius: $radius-xl;
   padding: $space-3xl;
-  box-shadow: $shadow-xl;
+  box-shadow: var(--shadow-float);
 
-  @include mobile { padding: $space-2xl $space-xl; border-radius: $radius-lg; }
+  @include mobile { padding: $space-2xl $space-xl; border-radius: $radius-xl; }
 }
 
 .logo { display: flex; align-items: center; gap: 10px; margin-bottom: $space-3xl; }
 
 .logoIcon {
-  width: 36px; height: 36px;
-  border-radius: $radius-sm;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-press));
+  width: 38px; height: 38px;
+  border-radius: $radius-md;
+  background: var(--accent-grad);
+  box-shadow: 0 4px 14px rgba(var(--color-accent-rgb), 0.4);
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 18px; font-weight: 700; letter-spacing: -0.02em;
+  color: #fff; font-size: 19px; font-weight: 800; letter-spacing: -0.02em;
 }
 
 .logoText { font-size: 17px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.01em; }
 
 .tabs {
   display: flex;
-  gap: 2px;
+  gap: 3px;
   background: var(--color-surface-sunken);
-  border-radius: $radius-sm;
+  border-radius: $radius-md;
   padding: 3px;
   margin-bottom: $space-2xl;
 }
@@ -69,20 +79,19 @@
 .tab {
   flex: 1;
   padding: $space-sm $space-md;
-  border-radius: $radius-xs + 2px;
+  border-radius: $radius-sm;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text3);
   cursor: pointer;
-  @include no-tap-flash;
-  @include transition-fast;
+  @include pressable;
   min-height: $touch-target - 8px;
 }
 
 .tabActive {
   background: var(--color-surface);
   color: var(--color-text1);
-  box-shadow: $shadow-sm;
+  box-shadow: var(--shadow-card);
 }
 
 .form { display: flex; flex-direction: column; gap: $space-lg; }
@@ -127,11 +136,12 @@
 .submit {
   display: flex; align-items: center; justify-content: center;
   gap: $space-sm; height: $touch-target + 8px; width: 100%;
-  background: var(--color-accent); color: #fff;
-  border-radius: $radius-md; font-size: 15px; font-weight: 600;
+  background: var(--accent-grad); color: #fff;
+  border-radius: $radius-md; font-size: 15px; font-weight: 700;
   cursor: pointer; margin-top: $space-xs;
-  @include no-tap-flash; @include transition(background, box-shadow);
-  @include hover { background: var(--color-accent-press); box-shadow: 0 4px 16px rgba(var(--color-accent-rgb), 0.3); }
+  box-shadow: 0 4px 14px rgba(var(--color-accent-rgb), 0.32);
+  @include no-tap-flash; @include transition(filter, box-shadow);
+  @include hover { filter: brightness(1.05); box-shadow: 0 6px 22px rgba(var(--color-accent-rgb), 0.42); }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
