@@ -5,8 +5,8 @@
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
-  border-right: 1px solid var(--color-border-soft);
-  padding: $space-lg $space-md;
+  border-right: 1px solid var(--hairline);
+  padding: $space-xl $space-md $space-lg;
   overflow-y: auto;
   @include scrollbar;
   @include mobile { display: none; }
@@ -15,10 +15,11 @@
 .brand { display: flex; align-items: center; gap: 10px; padding: $space-xs $space-sm; margin-bottom: $space-lg + 4px; }
 
 .brandIcon {
-  width: 28px; height: 28px; border-radius: $radius-sm; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-press));
+  width: 30px; height: 30px; border-radius: $radius-md; flex-shrink: 0;
+  background: var(--accent-grad);
+  box-shadow: 0 2px 8px rgba(var(--color-accent-rgb), 0.35);
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 15px; font-weight: 700; letter-spacing: -0.02em;
+  color: #fff; font-size: 16px; font-weight: 800; letter-spacing: -0.02em;
 }
 
 .brandName { font-size: 15px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.01em; }
@@ -28,11 +29,12 @@
 .item {
   position: relative;
   display: flex; align-items: center; gap: $space-md;
-  padding: $space-sm + 2px $space-md;
-  border-radius: $radius-sm;
+  padding: 10px $space-md;
+  border-radius: $radius-md;
   color: var(--color-text2);
   font-size: 14px; font-weight: 500;
   text-decoration: none;
+  @include pressable;
   @include transition-fast(color, background);
   @include hover { background: var(--color-surface-sunken); color: var(--color-text1); }
 }
@@ -58,7 +60,7 @@
 
 .footer {
   padding-top: $space-lg;
-  border-top: 1px solid var(--color-border-soft);
+  border-top: 1px solid var(--hairline);
   display: flex; flex-direction: column; gap: $space-xs;
 }
 
