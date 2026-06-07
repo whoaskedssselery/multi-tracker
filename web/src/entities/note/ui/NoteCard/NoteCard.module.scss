@@ -1,11 +1,12 @@
 .card {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: $space-xs;
-  padding: $space-sm + 2px $space-sm;
-  border-radius: $radius-sm;
+  padding: 10px $space-md;
+  border-radius: $radius-md;
   cursor: pointer;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
   @include transition-fast(background);
   @include no-tap-flash;
   min-height: $touch-target;
@@ -18,12 +19,18 @@
   @include hover { background: var(--color-accent-tint); }
   .title   { color: var(--color-accent-press); }
   .preview { color: rgba(var(--color-accent-rgb), 0.65); }
+  &::before {
+    content: '';
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 60%;
+    background: var(--color-accent); border-radius: 0 $radius-xs $radius-xs 0;
+  }
 }
 
 .main { flex: 1; min-width: 0; }
 
 .title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text1);
   @include truncate;
@@ -47,16 +54,15 @@
 }
 
 .action {
-  width: $touch-target;
-  height: $touch-target;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: $radius-xs;
+  border-radius: $radius-sm;
   color: var(--color-text3);
   cursor: pointer;
-  @include no-tap-flash;
-  @include transition-fast;
+  @include pressable;
   @include hover { background: var(--color-surface-raised); color: var(--color-accent); }
 }
 
