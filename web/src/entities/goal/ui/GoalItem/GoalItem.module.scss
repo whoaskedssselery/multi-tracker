@@ -1,26 +1,40 @@
 .item {
   cursor: pointer;
-  padding: $space-sm;
-  margin: -$space-sm;
+  padding: $space-md;
+  margin: 0 (-$space-sm);
   border-radius: $radius-md;
-  @include transition-fast(background);
-  @include no-tap-flash;
+  @include pressable;
   @include hover { background: var(--color-surface-sunken); }
 }
 
 .header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: $space-sm;
   margin-bottom: $space-sm;
 }
 
-.label { font-size: 14px; font-weight: 500; color: var(--color-text1); @include truncate; }
-.vals  { font-size: 12px; color: var(--color-text3); flex-shrink: 0; }
+.label { font-size: 15px; font-weight: 600; color: var(--color-text1); @include truncate; }
+.vals  { @include mono; font-size: 12px; color: var(--color-text3); flex-shrink: 0; }
 
-.bar { height: 4px; background: var(--color-surface-sunken); border-radius: $radius-pill; overflow: hidden; }
-.fill { height: 100%; border-radius: $radius-pill; }
+.bar {
+  height: 7px;
+  background: var(--color-surface-sunken);
+  border-radius: $radius-pill;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(23,21,15,0.06);
+}
+.fill {
+  height: 100%;
+  border-radius: $radius-pill;
+  background: var(--accent-grad);
+}
 
-.pct { display: block; font-size: 11px; color: var(--color-text3); margin-top: $space-xs; }
-
+.pct {
+  @include mono;
+  display: block;
+  font-size: 11px; font-weight: 600;
+  color: var(--color-text3);
+  margin-top: 6px;
+}

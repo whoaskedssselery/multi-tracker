@@ -1,22 +1,24 @@
 .trigger {
-  @include card;
+  @include surface-card;
   padding: $space-lg $space-xl;
   width: 100%;
   display: flex; align-items: center; justify-content: space-between;
-  cursor: pointer; border-color: var(--color-accent) !important;
-  @include transition; @include no-tap-flash;
-  @include hover { box-shadow: 0 4px 16px rgba(var(--color-accent-rgb), 0.15); }
+  cursor: pointer;
+  border: 1.5px solid var(--color-accent);
+  background: linear-gradient(180deg, var(--color-surface), var(--color-accent-tint));
+  @include pressable;
+  @include hover { box-shadow: 0 6px 20px rgba(var(--color-accent-rgb), 0.2); }
 }
 
 .triggerLabel { @include caps-label; margin-bottom: $space-xs; }
 
-.triggerVal { font-size: 24px; font-weight: 700; color: var(--color-accent-press); }
+.triggerVal { @include mono; font-size: 26px; font-weight: 700; color: var(--color-accent-press); }
 
 .triggerUnit { font-size: 16px; color: var(--color-text3); }
 
 .arrow { font-size: 20px; color: var(--color-accent); @include transition(transform); button:hover & { transform: translateX(4px); } }
 
-.pad { @include card; padding: $space-xl; }
+.pad { @include surface-card; padding: $space-xl; }
 
 .display {
   display: flex; align-items: baseline; gap: $space-sm;
@@ -31,10 +33,10 @@
 .numRow { display: grid; grid-template-columns: repeat(4, 1fr); gap: $space-sm; }
 
 .key {
-  height: 52px; border-radius: $radius-md;
+  height: 54px; border-radius: $radius-md;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; font-family: $font-sans;
-  @include no-tap-flash; @include transition-fast;
+  @include pressable;
 }
 
 .keyNum {
@@ -50,8 +52,9 @@
 }
 
 .keyOk {
-  background: var(--color-accent); color: #fff; border: none;
-  @include hover { background: var(--color-accent-press); box-shadow: 0 4px 12px rgba(var(--color-accent-rgb), 0.3); }
+  background: var(--accent-grad); color: #fff; border: none;
+  box-shadow: 0 4px 12px rgba(var(--color-accent-rgb), 0.3);
+  @include hover { filter: brightness(1.05); box-shadow: 0 6px 18px rgba(var(--color-accent-rgb), 0.4); }
 }
 
 .cancel {

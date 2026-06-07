@@ -1,4 +1,4 @@
-.card { @include card; padding: $space-xl; }
+.card { @include surface-card; padding: $space-xl; }
 
 .header {
   display: flex;
@@ -13,11 +13,17 @@
 
 .valueRow { display: flex; align-items: baseline; gap: $space-xs; flex-wrap: wrap; }
 
-.value { font-size: 28px; font-weight: 700; color: var(--color-text1); line-height: 1; }
+.value { @include mono; font-size: 32px; font-weight: 700; color: var(--color-text1); line-height: 1; letter-spacing: -0.02em; }
 .unit  { font-size: 15px; color: var(--color-text3); }
-.trend { font-size: 13px; color: var(--color-text3); font-weight: 500; }
-.trendUp   { color: var(--color-warning); }
-.trendDown { color: var(--color-success); }
+.trend {
+  @include mono;
+  font-size: 12px; font-weight: 600;
+  padding: 3px 8px; border-radius: $radius-pill;
+  background: var(--color-surface-sunken); color: var(--color-text3);
+  margin-left: $space-xs;
+}
+.trendUp   { color: var(--color-warning); background: rgba(201,122,58,0.12); }
+.trendDown { color: var(--color-success); background: var(--color-accent-tint); }
 
 .periods {
   display: flex;
@@ -43,7 +49,7 @@
 .periodActive {
   background: var(--color-surface);
   color: var(--color-text1);
-  box-shadow: $shadow-sm;
+  box-shadow: var(--shadow-card);
 }
 
 .chart { height: 160px; }
