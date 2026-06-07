@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Sidebar } from '@/widgets/Sidebar';
 import { MobileNav } from '@/widgets/MobileNav';
+import { PageTransition } from '@/widgets/PageTransition';
 import { useSync } from '@/features/sync';
 import { useAppStore } from '@/shared/store';
 import styles from './AppShell.module.scss';
@@ -29,7 +30,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.shell}>
       <Sidebar />
-      <main className={styles.main}>{children}</main>
+      <main className={styles.main}>
+        <PageTransition>{children}</PageTransition>
+      </main>
       <MobileNav />
     </div>
   );
