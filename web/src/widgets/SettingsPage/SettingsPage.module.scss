@@ -1,20 +1,17 @@
 .page { display: flex; flex-direction: column; height: 100%; overflow: hidden; background: var(--color-bg); }
 
 .header {
-  padding: $space-2xl $space-3xl $space-lg;
-  border-bottom: 1px solid var(--color-border-soft); flex-shrink: 0;
-  @include mobile { padding: $space-xl $space-xl $space-md; }
+  padding: $space-3xl $space-3xl $space-lg;
+  @include hairline-bottom; flex-shrink: 0;
+  @include mobile { padding: calc(#{$space-xl} + env(safe-area-inset-top, 0px)) $space-xl $space-md; }
 }
 
-.title {
-  font-size: 26px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.02em;
-  @include mobile { font-size: 22px; }
-}
+.title { @include large-title; }
 
 .scroll {
   flex: 1; overflow-y: auto;
-  padding: $space-xl $space-3xl $space-5xl;
-  max-width: 680px;
+  padding: $space-2xl $space-3xl $space-5xl;
+  max-width: 720px; margin: 0 auto; width: 100%;
   @include scrollbar; -webkit-overflow-scrolling: touch;
   @include mobile { padding: $space-lg $space-lg $space-5xl; }
 }
@@ -23,7 +20,7 @@
 
 .sectionLabel { @include caps-label; margin-bottom: $space-sm; padding-left: $space-xs; }
 
-.card { @include card; overflow: hidden; }
+.card { @include surface-card; overflow: hidden; }
 
 .row {
   display: flex; align-items: center; gap: $space-sm;
@@ -41,7 +38,7 @@
 .rowLabel { font-size: 14px; color: var(--color-text1); flex: 1; }
 .rowValue { font-size: 14px; color: var(--color-text3); @include truncate; max-width: 200px; }
 
-.divider { height: 1px; border: none; background: var(--color-border-soft); margin: 0 $space-xl; }
+.divider { height: 1px; border: none; background: var(--hairline); margin: 0 $space-xl; }
 
 .themes { display: flex; flex-wrap: wrap; gap: $space-sm; padding: $space-lg $space-xl; }
 
