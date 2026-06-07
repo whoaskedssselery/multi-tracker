@@ -33,8 +33,16 @@
   --color-danger:  #B04B3F;
   --color-danger-tint: #F7EDEC;
 
-  --sidebar-width:      240px;
+  --sidebar-width:      244px;
   --mobile-nav-height:  64px;
+
+  // Premium elevation / glass / hairlines (warm-tinted)
+  --shadow-card:  0 1px 2px rgba(23,21,15,0.04), 0 2px 8px rgba(23,21,15,0.05);
+  --shadow-pop:   0 6px 20px rgba(23,21,15,0.09), 0 1px 3px rgba(23,21,15,0.06);
+  --shadow-float: 0 16px 48px rgba(23,21,15,0.16), 0 4px 12px rgba(23,21,15,0.08);
+  --glass-bg:     rgba(255,253,247,0.72);
+  --hairline:     rgba(23,21,15,0.08);
+  --accent-grad:  linear-gradient(135deg, #7C9D82 0%, #5A8062 100%);
 }
 
 [data-theme='dark'] {
@@ -63,6 +71,13 @@
   --color-warning: #D8956A;
   --color-danger:  #D17468;
   --color-danger-tint: #2C1A19;
+
+  --shadow-card:  0 1px 2px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.36);
+  --shadow-pop:   0 6px 20px rgba(0,0,0,0.42), 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-float: 0 16px 48px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.42);
+  --glass-bg:     rgba(30,27,21,0.7);
+  --hairline:     rgba(255,255,255,0.07);
+  --accent-grad:  linear-gradient(135deg, #93B699 0%, #6E9476 100%);
 }
 
 // ─── Reset ────────────────────────────────────────────────────────────────────
@@ -85,6 +100,9 @@ body {
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'ss01', 'cv11';
+  letter-spacing: -0.003em;
   min-height: 100dvh;
   // Prevent pull-to-refresh on iOS PWA
   overscroll-behavior-y: none;
@@ -106,6 +124,8 @@ input, textarea, select { font-family: inherit; color: inherit; }
 img, button, a, [role="button"] { -webkit-touch-callout: none; }
 
 ul, ol { list-style: none; }
+
+::selection { background: var(--color-accent-tint); color: var(--color-accent-press); }
 
 // Remove outline for mouse users, keep for keyboard
 :focus { outline: none; }

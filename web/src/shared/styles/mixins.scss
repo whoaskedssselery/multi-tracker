@@ -140,3 +140,79 @@
   -webkit-user-select: none;
 }
 
+// ─── Premium primitives ───────────────────────────────────────────────────────
+
+// Elevation levels (theme-aware, set in globals)
+@mixin elevation($level: 1) {
+  @if $level == 0 { box-shadow: none; }
+  @else if $level == 1 { box-shadow: var(--shadow-card); }
+  @else if $level == 2 { box-shadow: var(--shadow-pop); }
+  @else { box-shadow: var(--shadow-float); }
+}
+
+// Crisp 1px hairline rule (matches iOS separators)
+@mixin hairline-bottom { border-bottom: 1px solid var(--hairline); }
+@mixin hairline-top    { border-top: 1px solid var(--hairline); }
+
+// A premium surface card — soft fill, hairline, gentle lift
+@mixin surface-card($radius: $radius-lg) {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: $radius;
+  @include elevation(1);
+}
+
+// Pressable: tactile scale + no tap flash (pair with framer whileTap for JS feel)
+@mixin pressable {
+  @include no-tap-flash;
+  @include transition-fast(transform, background, border-color, box-shadow);
+  &:active { transform: scale(0.97); }
+}
+
+// iOS large title
+@mixin large-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--color-text1);
+  @include mobile { font-size: 30px; }
+}
+
+// Bottom-sheet surface (mobile dialogs)
+@mixin sheet-surface {
+  background: var(--color-surface);
+  border-top-left-radius: $radius-xl;
+  border-top-right-radius: $radius-xl;
+  @include elevation(3);
+}
+
+// Pill chip
+@mixin chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: $radius-pill;
+  font-size: 13px; font-weight: 500;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  color: var(--color-text2);
+  @include pressable;
+}
+
+// Text field base
+@mixin field-base {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: $radius-md;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  color: var(--color-text1);
+  font-size: 15px; font-family: inherit;
+  @include transition-fast(border-color, background, box-shadow);
+  &::placeholder { color: var(--color-text4); }
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 3px rgba(var(--color-accent-rgb), 0.14);
+  }
+}
+

@@ -8,8 +8,10 @@
     height: var(--mobile-nav-height);
     // Extra space for iPhone home indicator
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    @include glass;
-    border-top: 1px solid var(--color-border-soft);
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-top: 1px solid var(--hairline);
     z-index: $z-sidebar;
   }
 }
@@ -32,8 +34,11 @@
 .iconWrap {
   position: relative;
   display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 28px;
+  width: 48px; height: 30px;
+  border-radius: $radius-pill;
+  @include transition-fast(background);
 }
+.itemActive .iconWrap { background: var(--color-accent-tint); }
 
 .dot {
   position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%);
