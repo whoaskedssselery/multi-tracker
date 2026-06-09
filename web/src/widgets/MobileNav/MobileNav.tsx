@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Home, Dumbbell, CheckSquare, Sparkles, Settings } from 'lucide-react';
 import styles from './MobileNav.module.scss';
@@ -15,14 +15,14 @@ const NAV = [
 ];
 
 export function MobileNav() {
-  const pathname = usePathname();
+  const pathname = useLocation().pathname;
 
   return (
     <nav className={styles.nav} aria-label="Навигация">
       {NAV.map(({ href, icon: Icon, label }) => {
         const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
         return (
-          <Link key={href} href={href} className={`${styles.item} ${active ? styles.itemActive : ''}`}>
+          <Link key={href} to={href} className={`${styles.item} ${active ? styles.itemActive : ''}`}>
             <span className={styles.iconWrap}>
               <Icon size={24} strokeWidth={active ? 2.2 : 1.8} />
               {active && (

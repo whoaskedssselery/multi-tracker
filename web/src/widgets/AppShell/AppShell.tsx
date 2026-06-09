@@ -1,41 +1,44 @@
-'use client';
-
-import { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Sidebar } from '@/widgets/Sidebar';
 import { MobileNav } from '@/widgets/MobileNav';
-import { PageTransition } from '@/widgets/PageTransition';
 import { useSync } from '@/features/sync';
-import { useAppStore } from '@/shared/store';
+import { HomePage } from '@/widgets/HomePage';
+import { TrainPage } from '@/widgets/TrainPage';
+import { TasksPage } from '@/widgets/TasksPage';
+import { AiPage } from '@/widgets/AiPage';
+import { SettingsPage } from '@/widgets/SettingsPage';
 import styles from './AppShell.module.scss';
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell() {
   useSync();
-
-  const themeMode = useAppStore(s => s.preferences.themeMode);
-
-  useEffect(() => {
-    const html = document.documentElement;
-    const apply = (dark: boolean) => html.setAttribute('data-theme', dark ? 'dark' : 'light');
-
-    if (themeMode === 'dark')   { apply(true);  return; }
-    if (themeMode === 'light')  { apply(false); return; }
-
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    apply(mq.matches);
-    const h = (e: MediaQueryListEvent) => apply(e.matches);
-    mq.addEventListener('change', h);
-    return () => mq.removeEventListener('change', h);
-  }, [themeMode]);
+  const location = useLocation();
 
   return (
     <div className={styles.shell}>
       <Sidebar />
       <main className={styles.main}>
-        <PageTransition>{children}</PageTransition>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            className={styles.page}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Routes location={location}>
+              <Route path="/"         element={<HomePage />} />
+              <Route path="/train"    element={<TrainPage />} />
+              <Route path="/tasks"    element={<TasksPage />} />
+              <Route path="/ai"       element={<AiPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="*"         element={<Navigate to="/" replace />} />
+            </Routes>
+          </motion.div>
+        </AnimatePresence>
       </main>
       <MobileNav />
     </div>
   );
 }
-
-

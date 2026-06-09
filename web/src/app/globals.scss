@@ -1,5 +1,4 @@
-@use 'shared/styles/variables' as *;
-@use 'shared/styles/mixins' as *;
+// Tokens + mixins are auto-injected by Vite (css.preprocessorOptions.additionalData).
 
 // ─── Google Fonts ─────────────────────────────────────────────────────────────
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');

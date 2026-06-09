@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,7 +32,7 @@ const THEMES: { key: ThemeMode; label: string; Icon: typeof Sun }[] = [
 ];
 
 export function SettingsPage() {
-  const router    = useRouter();
+  const navigate = useNavigate();
   const { syncNow } = useSync();
 
   const profile         = useAppStore(s => s.profile);
@@ -112,7 +112,7 @@ export function SettingsPage() {
     try {
       await createClient().auth.signOut();
       resetStore();
-      router.push('/auth');
+      navigate('/auth');
     } catch { toast.error('Ошибка выхода'); }
   };
 
@@ -205,7 +205,7 @@ export function SettingsPage() {
               <Row label="Выйти" value="" onClick={signOut} danger icon={<LogOut size={14} />} />
             </>
           ) : (
-            <Row label="Войти" value="Для синхронизации с устройствами" onClick={() => router.push('/auth')} />
+            <Row label="Войти" value="Для синхронизации с устройствами" onClick={() => navigate('/auth')} />
           )}
         </Section>
 

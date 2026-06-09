@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Home, Dumbbell, CheckSquare, Sparkles, Settings, RefreshCw } from 'lucide-react';
 import { useAppStore } from '@/shared/store';
@@ -17,7 +17,7 @@ const NAV = [
 ];
 
 export function Sidebar() {
-  const pathname = usePathname();
+  const pathname = useLocation().pathname;
   const sync     = useAppStore(s => s.sync);
   const { syncNow } = useSync();
 
@@ -39,7 +39,7 @@ export function Sidebar() {
 
       <nav className={styles.nav}>
         {NAV.map(({ href, icon: Icon, label }) => (
-          <Link key={href} href={href}
+          <Link key={href} to={href}
             className={`${styles.item} ${isActive(href) ? styles.itemActive : ''}`}>
             {isActive(href) && (
               <motion.span className={styles.indicator} layoutId="sidebar-active"
@@ -61,7 +61,7 @@ export function Sidebar() {
         )}
         {sync.error && <p className={styles.syncError}>{sync.error}</p>}
 
-        <Link href="/settings"
+        <Link to="/settings"
           className={`${styles.item} ${isActive('/settings') ? styles.itemActive : ''}`}>
           {isActive('/settings') && (
             <motion.span className={styles.indicator} layoutId="sidebar-active"

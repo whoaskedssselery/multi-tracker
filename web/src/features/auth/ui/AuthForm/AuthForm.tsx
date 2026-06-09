@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -19,7 +19,7 @@ type FormData = z.infer<typeof schema>;
 type Mode = 'signin' | 'signup';
 
 export function AuthForm() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const supabase = createClient();
   const [mode, setMode]       = useState<Mode>('signin');
   const [showPass, setShowPass] = useState(false);
@@ -46,8 +46,7 @@ export function AuthForm() {
           return;
         }
       }
-      router.push('/');
-      router.refresh();
+      navigate('/');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Произошла ошибка');
     } finally {
