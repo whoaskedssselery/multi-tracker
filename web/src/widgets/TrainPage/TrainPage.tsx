@@ -100,32 +100,36 @@ export function TrainPage() {
 
       <div className={styles.body}>
         {/* Selected-day card */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${weekOffset}-${selectedDow}`}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.16 }}
-          >
-            <DayCard day={selected} exerciseTpls={exerciseTpls} onOpen={() => openLog(selected)} />
-          </motion.div>
-        </AnimatePresence>
+        <div className={styles.colMain}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${weekOffset}-${selectedDow}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.16 }}
+            >
+              <DayCard day={selected} exerciseTpls={exerciseTpls} onOpen={() => openLog(selected)} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
         {/* Whole week */}
-        <div className={styles.weekHead}>
-          <span className={styles.caps}>Вся неделя</span>
-          <button className={styles.weekProgram} onClick={() => setProgramOpen(true)}>Программа →</button>
-        </div>
-        <div className={styles.weekList}>
-          {days.map(d => (
-            <WeekRow
-              key={d.dow}
-              day={d}
-              count={d.template ? activeExercises(exerciseTpls, d.template.id).length : 0}
-              onOpen={() => openLog(d)}
-            />
-          ))}
+        <div className={styles.colSide}>
+          <div className={styles.weekHead}>
+            <span className={styles.caps}>Вся неделя</span>
+            <button className={styles.weekProgram} onClick={() => setProgramOpen(true)}>Программа →</button>
+          </div>
+          <div className={styles.weekList}>
+            {days.map(d => (
+              <WeekRow
+                key={d.dow}
+                day={d}
+                count={d.template ? activeExercises(exerciseTpls, d.template.id).length : 0}
+                onOpen={() => openLog(d)}
+              />
+            ))}
+          </div>
         </div>
       </div>
 

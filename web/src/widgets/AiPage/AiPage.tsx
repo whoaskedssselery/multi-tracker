@@ -111,7 +111,10 @@ export function AiPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.titleRow}>
-          <h1 className={styles.title}>ИИ</h1>
+          <div>
+            <h1 className={styles.title}>ИИ-тренер</h1>
+            <p className={styles.subtitle}>Чат по твоим данным — вес, тренировки, задачи</p>
+          </div>
           {msgs.length > 0 && (
             <button className={styles.clearBtn} onClick={() => clearHistory(filter)}>
               Очистить

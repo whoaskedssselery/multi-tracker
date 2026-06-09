@@ -68,63 +68,73 @@
 .stripMarkOn { background: var(--color-text4); }
 .stripMarkDone { background: var(--color-accent); }
 
-// ── Body ────────────────────────────────────────────────────────────────────
+// ── Body (2-column dashboard) ──────────────────────────────────────────────
 .body {
   flex: 1; overflow-y: auto; @include scrollbar; -webkit-overflow-scrolling: touch;
-  padding: $space-xl $space-3xl $space-5xl;
-  max-width: 760px; margin: 0 auto; width: 100%;
-  @include mobile { padding: $space-lg $space-lg $space-5xl; }
+  padding: $space-xl $space-4xl $space-5xl;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(360px, 1fr);
+  gap: $space-2xl;
+  align-items: start;
+  @include tablet { grid-template-columns: 1fr; }
+  @include mobile { grid-template-columns: 1fr; padding: $space-lg $space-xl $space-5xl; gap: $space-lg; }
 }
 
-.caps { @include caps-label; }
+.colMain { min-width: 0; }
+.colSide { min-width: 0; }
+
+.caps { @include caps-label; font-size: 12px; }
 
 // Selected-day card
 .dayCard {
-  @include surface-card; border-width: 1.5px; padding: $space-xl;
-  display: flex; flex-direction: column;
+  @include surface-card($radius-xl); border-width: 1.5px; padding: $space-2xl $space-3xl;
+  display: flex; flex-direction: column; min-height: 260px;
+  @include mobile { padding: $space-xl; min-height: 0; }
 }
 .dayName {
-  font-size: 30px; font-weight: 800; color: var(--color-text1);
-  letter-spacing: -0.02em; line-height: 1.05; margin: 6px 0 0; text-transform: uppercase;
-  @include mobile { font-size: 26px; }
+  font-size: 44px; font-weight: 800; color: var(--color-text1);
+  letter-spacing: -0.03em; line-height: 1.02; margin: 8px 0 0; text-transform: uppercase;
+  @include mobile { font-size: 30px; }
 }
-.dayPreview { font-size: 14px; color: var(--color-text2); margin-top: $space-sm; line-height: 1.4; }
-.dayFoot { display: flex; align-items: center; justify-content: space-between; margin-top: $space-lg; }
-.dayCount { @include mono; font-size: 13px; color: var(--color-text3); }
+.dayPreview { font-size: 16px; color: var(--color-text2); margin-top: $space-md; line-height: 1.5; }
+.dayFoot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: $space-2xl; }
+.dayCount { @include mono; font-size: 14px; color: var(--color-text3); }
 
 .openBtn {
-  padding: 11px 22px; border-radius: $radius-md;
-  background: var(--accent-grad); color: #fff; font-size: 14px; font-weight: 700;
+  padding: 14px 28px; border-radius: $radius-md;
+  background: var(--accent-grad); color: #fff; font-size: 15px; font-weight: 700;
   box-shadow: 0 3px 12px rgba(var(--color-accent-rgb), 0.3);
   cursor: pointer; @include pressable;
   @include hover { filter: brightness(1.05); }
 }
 .doneBadge {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 9px 14px; border-radius: $radius-md;
+  padding: 11px 16px; border-radius: $radius-md;
   background: var(--color-accent-tint); color: var(--color-accent-press);
-  font-size: 14px; font-weight: 600;
+  font-size: 15px; font-weight: 600;
 }
 
 .restCard {
-  @include surface-card; padding: $space-xl;
-  display: flex; align-items: center; gap: $space-md;
+  @include surface-card($radius-xl); padding: $space-3xl; min-height: 260px;
+  display: flex; align-items: center; justify-content: center; gap: $space-md;
+  @include mobile { min-height: 0; padding: $space-xl; justify-content: flex-start; }
 }
 .restIcon { color: var(--color-text4); }
-.restText { font-size: 17px; font-weight: 600; color: var(--color-text2); }
+.restText { font-size: 20px; font-weight: 600; color: var(--color-text2); }
 
 // Whole-week
 .weekHead {
   display: flex; align-items: center; justify-content: space-between;
-  margin: $space-2xl 0 $space-sm;
+  margin: 0 0 $space-md;
 }
-.weekProgram { font-size: 13px; font-weight: 500; color: var(--color-accent); cursor: pointer; @include no-tap-flash; }
+.weekProgram { font-size: 14px; font-weight: 600; color: var(--color-accent); cursor: pointer; @include no-tap-flash; }
 
 .weekList { display: flex; flex-direction: column; gap: $space-sm; }
 
 .row {
   display: flex; align-items: center; gap: $space-md; width: 100%; text-align: left;
-  padding: $space-md $space-lg; border-radius: $radius-md;
+  padding: 15px $space-lg; border-radius: $radius-md;
   background: var(--color-surface); border: 1px solid var(--color-border-soft);
   @include transition-fast(background, border-color);
 }
