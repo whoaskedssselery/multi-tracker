@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Sun, Moon, Monitor, RefreshCw, LogOut, Download, Trash2, Eye, EyeOff, Check, X } from 'lucide-react';
+import { Sun, Moon, Monitor, RefreshCw, LogOut, Download, Upload, FileText, Trash2, Eye, EyeOff, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAppStore } from '@/shared/store';
 import { createClient } from '@/shared/lib/supabase/client';
@@ -43,6 +43,9 @@ export function SettingsPage() {
   const updatePrefs     = useAppStore(s => s.updatePreferences);
   const setGroqApiKey   = useAppStore(s => s.setGroqApiKey);
   const resetStore      = useAppStore(s => s.reset);
+  const hydrate         = useAppStore(s => s.hydrate);
+  const markDirty       = useAppStore(s => s.markDirty);
+  const fileRef         = useRef<HTMLInputElement>(null);
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [keyOpen,     setKeyOpen]     = useState(false);
@@ -61,8 +64,8 @@ export function SettingsPage() {
   // Read app version
   useEffect(() => {
     fetch('/manifest.json').then(r => r.json())
-      .then(m => setAppVersion(m.version ?? '1.0.0'))
-      .catch(() => setAppVersion('1.0.0'));
+      .then(m => setAppVersion(m.version ?? '1.0.2'))
+      .catch(() => setAppVersion('1.0.2'));
   }, []);
 
   const { register, handleSubmit, formState: { errors }, reset: resetForm } = useForm<PF>({
@@ -116,12 +119,38 @@ export function SettingsPage() {
     } catch { toast.error('Ошибка выхода'); }
   };
 
-  const exportJson = () => {
-    const snap = useAppStore.getState().exportSnapshot();
-    const url  = URL.createObjectURL(new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' }));
-    const a = Object.assign(document.createElement('a'), { href: url, download: `multi-tracker-${new Date().toISOString().slice(0, 10)}.json` });
+  const today = () => new Date().toISOString().slice(0, 10);
+  const download = (data: string, mime: string, ext: string) => {
+    const url = URL.createObjectURL(new Blob([data], { type: mime }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: `multi-tracker-${today()}.${ext}` });
     a.click(); URL.revokeObjectURL(url);
-    toast.success('Экспортировано');
+  };
+
+  const exportJson = () => {
+    download(JSON.stringify(useAppStore.getState().exportSnapshot(), null, 2), 'application/json', 'json');
+    toast.success('Экспортировано в JSON');
+  };
+
+  const exportCsv = () => {
+    const entries = useAppStore.getState().weightEntries;
+    if (entries.length === 0) { toast.error('Нет данных о весе'); return; }
+    const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
+    const rows = [...entries].sort((a, b) => a.date.localeCompare(b.date))
+      .map(e => [e.date.slice(0, 10), String(e.value), esc(e.note ?? '')].join(','));
+    download(['date,weight_kg,note', ...rows].join('\n'), 'text/csv;charset=utf-8', 'csv');
+    toast.success('Вес экспортирован в CSV');
+  };
+
+  const importJson = async (file: File) => {
+    try {
+      const snap = JSON.parse(await file.text());
+      if (!snap?.tables) throw new Error('bad');
+      hydrate(snap);
+      markDirty();
+      toast.success('Данные импортированы');
+    } catch {
+      toast.error('Не удалось прочитать файл');
+    }
   };
 
   const syncStatus = sync.busy
@@ -210,13 +239,19 @@ export function SettingsPage() {
         </Section>
 
         <Section label="ДАННЫЕ">
-          <Row label="Экспорт JSON" value="" onClick={exportJson} icon={<Download size={14} />} />
+          <Row label="Импорт JSON" value="" onClick={() => fileRef.current?.click()} icon={<Upload size={16} />} />
           <Div />
-          <Row label="Сбросить данные" value="" onClick={() => setResetOpen(true)} icon={<Trash2 size={14} />} danger />
+          <Row label="Экспорт JSON" value="" onClick={exportJson} icon={<Download size={16} />} />
+          <Div />
+          <Row label="Экспорт веса в CSV" value="" onClick={exportCsv} icon={<FileText size={16} />} />
+          <Div />
+          <Row label="Сбросить данные" value="" onClick={() => setResetOpen(true)} icon={<Trash2 size={16} />} danger />
         </Section>
+        <input ref={fileRef} type="file" accept="application/json,.json" hidden
+          onChange={e => { const f = e.target.files?.[0]; if (f) importJson(f); e.target.value = ''; }} />
 
         <Section label="О ПРИЛОЖЕНИИ">
-          <Row label="Версия" value={appVersion || '1.0.0'} />
+          <Row label="Версия" value={appVersion || '1.0.2'} />
           <Div /><Row label="Платформа" value="Web" />
         </Section>
       </div>

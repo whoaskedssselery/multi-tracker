@@ -1,6 +1,7 @@
 {
   "name": "Multi-tracker",
   "short_name": "Tracker",
+  "version": "1.0.2",
   "description": "Трекер веса, тренировок, задач и заметок",
   "start_url": "/",
   "scope": "/",
@@ -12,36 +13,22 @@
   "lang": "ru",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-maskable.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [
     {
       "name": "Задачи",
       "short_name": "Задачи",
-      "url": "/tasks",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "url": "/tasks"
     },
     {
       "name": "Записать вес",
       "short_name": "Вес",
-      "url": "/",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "url": "/"
     }
   ],
   "categories": ["productivity", "health", "fitness"]

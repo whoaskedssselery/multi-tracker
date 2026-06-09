@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Delete, Check } from 'lucide-react';
 import { useAppStore } from '@/shared/store';
@@ -31,12 +31,32 @@ export function WeightRecorder() {
     });
   }, []);
 
-  const commit = () => {
-    const v = parseFloat(draft.replace(',', '.'));
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+
+  const commit = useCallback(() => {
+    const v = parseFloat(draftRef.current.replace(',', '.'));
     if (v > 0 && v < 500) { addEntry(v); setOpen(false); setDraft('0'); }
-  };
+  }, [addEntry]);
 
   const open_ = () => { setDraft(last ? last.value.toFixed(1) : '0'); setOpen(true); };
+
+  // Hardware keyboard while the pad is open.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      const k = e.key;
+      if (/^[0-9]$/.test(k)) { press(k); e.preventDefault(); }
+      else if (k === '.' || k === ',') { press('.'); e.preventDefault(); }
+      else if (k === 'Backspace') { press('del'); e.preventDefault(); }
+      else if (k === '+' || k === '=') { press('+0.5'); e.preventDefault(); }
+      else if (k === '-' || k === '_') { press('-0.5'); e.preventDefault(); }
+      else if (k === 'Enter') { commit(); e.preventDefault(); }
+      else if (k === 'Escape') { setOpen(false); e.preventDefault(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, press, commit]);
 
   return (
     <AnimatePresence mode="wait">

@@ -52,6 +52,7 @@
   line-height: 1.2;
   letter-spacing: -0.015em;
   &::placeholder { color: var(--color-text4); }
+  &:focus, &:focus-visible { outline: none !important; box-shadow: none !important; }
 }
 
 .bodyWrap {
@@ -76,5 +77,6 @@
   color: var(--color-text1);
   @include scrollbar;
   &::placeholder { color: var(--color-text4); }
+  &:focus, &:focus-visible { outline: none !important; box-shadow: none !important; }
 }
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { Pin, PinOff, Trash2 } from 'lucide-react';
 import type { NoteItem } from '@/shared/types';
 import styles from './NoteCard.module.scss';
@@ -17,11 +16,9 @@ export function NoteCard({ note, selected, onSelect, onPin, onDelete }: Props) {
   const preview = note.body.replace(/\n/g, ' ').trim() || 'Нет текста';
 
   return (
-    <motion.div
+    <div
       className={`${styles.card} ${selected ? styles.active : ''}`}
       onClick={onSelect}
-      whileHover={{ x: selected ? 0 : 2 }}
-      layout
     >
       <div className={styles.main}>
         <p className={styles.title}>{note.title || 'Без названия'}</p>
@@ -39,7 +36,7 @@ export function NoteCard({ note, selected, onSelect, onPin, onDelete }: Props) {
           <Trash2 size={13} />
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

@@ -106,11 +106,11 @@ export function useSync() {
           store.clearDirty();
         }
       }
-      const ts = svc.getLastSyncTs();
-      if (ts) {
-        store.setSyncStatus({ lastSynced: ts });
-        toast.success(`Синхронизировано ${formatSyncTime(ts)}`);
-      }
+      // Manual sync always refreshes the label to "только что", even when
+      // there was nothing to push/pull (outcome upToDate).
+      const ts = new Date();
+      store.setSyncStatus({ lastSynced: ts, error: null });
+      toast.success(`Синхронизировано ${formatSyncTime(ts)}`);
     } catch (err) {
       const msg = friendlyError(err);
       store.setSyncStatus({ error: msg });
