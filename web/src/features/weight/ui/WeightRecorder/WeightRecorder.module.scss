@@ -1,18 +1,17 @@
 .trigger {
-  @include surface-card;
-  padding: $space-lg $space-xl;
+  @include surface-card($radius-xl);
+  padding: $space-xl $space-2xl;
   width: 100%;
   display: flex; align-items: center; justify-content: space-between;
   cursor: pointer;
-  border: 1.5px solid var(--color-accent);
-  background: linear-gradient(180deg, var(--color-surface), var(--color-accent-tint));
   @include pressable;
-  @include hover { box-shadow: 0 6px 20px rgba(var(--color-accent-rgb), 0.2); }
+  @include hover { border-color: var(--color-accent); }
 }
 
-.triggerLabel { @include caps-label; margin-bottom: $space-xs; }
+.triggerLabel { @include caps-label; font-size: 12px; margin-bottom: $space-sm; }
 
-.triggerVal { @include mono; font-size: 26px; font-weight: 700; color: var(--color-accent-press); }
+.triggerVal { @include mono; font-size: 34px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.02em; }
+.triggerUnit { font-size: 18px; color: var(--color-text3); }
 
 .triggerUnit { font-size: 16px; color: var(--color-text3); }
 

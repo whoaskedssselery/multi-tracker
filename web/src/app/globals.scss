@@ -45,26 +45,26 @@
 }
 
 [data-theme='dark'] {
-  --color-bg:              #15130E;
-  --color-surface:         #1E1B15;
-  --color-surface-raised:  #2A2620;
-  --color-surface-sunken:  #100E0A;
-  --color-surface-rgb:     30, 27, 21;
+  --color-bg:              #131210;
+  --color-surface:         #211E18;
+  --color-surface-raised:  #2C2820;
+  --color-surface-sunken:  #1A1813;
+  --color-surface-rgb:     33, 30, 24;
 
-  --color-text1: #F2EEE3;
-  --color-text2: #B8B19C;
-  --color-text3: #85806F;
-  --color-text4: #524D43;
+  --color-text1: #F4F1E8;
+  --color-text2: #C4BDAB;
+  --color-text3: #908A78;
+  --color-text4: #5E594D;
 
-  --color-border:      #322D23;
-  --color-border-soft: #26221A;
-  --color-divider:     #26221A;
+  --color-border:      #383229;
+  --color-border-soft: #2A251D;
+  --color-divider:     #2A251D;
 
-  --color-accent:       #8FB295;
-  --color-accent-press: #A8C7AD;
+  --color-accent:       #9DBFA2;
+  --color-accent-press: #B6D2BA;
   --color-accent-soft:  #2A332B;
-  --color-accent-tint:  #202B22;
-  --color-accent-rgb:   143, 178, 149;
+  --color-accent-tint:  #25322A;
+  --color-accent-rgb:   157, 191, 162;
 
   --color-success: #8FB295;
   --color-warning: #D8956A;
@@ -74,9 +74,9 @@
   --shadow-card:  0 1px 2px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.36);
   --shadow-pop:   0 6px 20px rgba(0,0,0,0.42), 0 1px 3px rgba(0,0,0,0.3);
   --shadow-float: 0 16px 48px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.42);
-  --glass-bg:     rgba(30,27,21,0.7);
-  --hairline:     rgba(255,255,255,0.07);
-  --accent-grad:  linear-gradient(135deg, #93B699 0%, #6E9476 100%);
+  --glass-bg:     rgba(33,30,24,0.72);
+  --hairline:     rgba(255,255,255,0.08);
+  --accent-grad:  linear-gradient(135deg, #A6C9AB 0%, #7CA382 100%);
 }
 
 // ─── Reset ────────────────────────────────────────────────────────────────────
@@ -93,15 +93,13 @@ html {
 
 body {
   font-family: $font-sans;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.5;
   color: var(--color-text1);
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: 'ss01', 'cv11';
-  letter-spacing: -0.003em;
   min-height: 100dvh;
   // Prevent pull-to-refresh on iOS PWA
   overscroll-behavior-y: none;

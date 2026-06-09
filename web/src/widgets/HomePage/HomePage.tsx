@@ -53,7 +53,7 @@ export function HomePage() {
   const [editingGoal,  setEditingGoal]  = useState<typeof goals[0] | null>(null);
 
   const name = profile.name.trim();
-  const greeting = !name || name === 'User' ? 'Привет 👋' : `Привет, ${name}`;
+  const greeting = !name || name === 'User' ? 'Привет' : `Привет, ${name}`;
 
   const weightStreak = calcStreak(weightEntries.map(e => e.date.slice(0, 10)));
   const taskStreak   = calcStreak(
@@ -70,26 +70,12 @@ export function HomePage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div className={styles.headMain}>
-          <motion.h1 className={styles.greeting}
-            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
-            {greeting}
-          </motion.h1>
-          <p className={styles.date}>{headerDate()}</p>
-        </div>
-        {streaks.length > 0 && (
-          <div className={styles.headStreaks}>
-            {streaks.map(({ n, label }) => (
-              <span key={label} className={styles.streak}>
-                <Flame size={14} className={styles.streakIcon} />
-                <b className="mono">{n}</b>
-                <span className={styles.streakDay}>{dayWord(n)}</span>
-                <span className={styles.streakLabel}>· {label}</span>
-              </span>
-            ))}
-          </div>
-        )}
+        <motion.h1 className={styles.greeting}
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
+          {greeting}
+        </motion.h1>
+        <p className={styles.date}>{headerDate()}</p>
       </header>
 
       <div className={styles.scroll}>
@@ -127,10 +113,10 @@ export function HomePage() {
             <motion.section className={styles.card} {...rise(2)}>
               <div className={styles.cardHeader}>
                 <span className={styles.caps}>Задачи</span>
-                <ListTodo size={16} className={styles.cardIcon} />
+                <ListTodo size={18} className={styles.cardIcon} />
               </div>
               {openTasks === 0 ? (
-                <p className={styles.allDone}>Всё сделано ✓</p>
+                <p className={styles.allDone}>Всё сделано</p>
               ) : (
                 <p className={styles.taskStat}>
                   <span className="mono">{openTasks}</span>
@@ -138,6 +124,23 @@ export function HomePage() {
                 </p>
               )}
             </motion.section>
+
+            {streaks.length > 0 && (
+              <motion.section className={styles.card} {...rise(3)}>
+                <div className={styles.cardHeader}>
+                  <span className={styles.caps}>Серии</span>
+                  <Flame size={18} className={styles.streakIcon} />
+                </div>
+                <div className={styles.streakList}>
+                  {streaks.map(({ n, label }) => (
+                    <div key={label} className={styles.streak}>
+                      <span className={`${styles.streakNum} mono`}>{n}</span>
+                      <span className={styles.streakMeta}>{dayWord(n)} подряд · {label}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.section>
+            )}
           </div>
         </div>
       </div>

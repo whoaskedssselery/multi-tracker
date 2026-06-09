@@ -1,127 +1,79 @@
 .page { display: flex; flex-direction: column; height: 100%; overflow: hidden; background: var(--color-bg); }
 
+// ── Header ──────────────────────────────────────────────────────────────────
 .header {
-  padding: $space-3xl $space-3xl $space-md;
-  @include hairline-bottom;
   flex-shrink: 0;
-  display: flex; align-items: center; justify-content: space-between; gap: $space-lg;
-
+  padding: $space-3xl $space-4xl $space-lg;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: $space-xl;
   @include mobile {
-    flex-direction: column; align-items: flex-start; gap: $space-md;
+    flex-direction: column; align-items: stretch; gap: $space-md;
     padding: calc(#{$space-xl} + env(safe-area-inset-top, 0px)) $space-xl $space-md;
   }
 }
 
-.title { @include large-title; }
+.title { @include large-title; font-size: 36px; @include mobile { font-size: 28px; } }
 
 .controls { display: flex; align-items: center; gap: $space-md; @include mobile { width: 100%; } }
 
 .tabs {
-  display: flex; gap: 3px;
+  display: flex; gap: 4px;
   background: var(--color-surface-sunken);
-  border-radius: $radius-md; padding: 3px;
+  border-radius: $radius-md; padding: 4px;
   @include mobile { flex: 1; }
 }
 
 .tab {
-  flex: 1; padding: $space-sm $space-lg; border-radius: $radius-sm;
-  font-size: 13px; font-weight: 600; color: var(--color-text3);
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  padding: 9px $space-lg; border-radius: $radius-sm;
+  font-size: 14px; font-weight: 600; color: var(--color-text3);
   cursor: pointer; @include pressable;
-  min-height: $touch-target - 10px;
+  @include mobile { flex: 1; justify-content: center; }
   @include hover { color: var(--color-text2); }
+}
+
+.tabBadge {
+  font-size: 11px; font-weight: 700; @include mono;
+  min-width: 20px; height: 20px; padding: 0 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: $radius-pill;
+  background: var(--color-surface-raised); color: var(--color-text3);
 }
 
 .tabActive {
   background: var(--color-surface); color: var(--color-text1);
   box-shadow: var(--shadow-card);
+  .tabBadge { background: var(--color-accent-tint); color: var(--color-accent-press); }
 }
 
-.body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-
-// ── Tasks panel ───────────────────────────────────────────────────────────────
-
-.tasksPanel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-
+// ── Toolbar (search) ──────────────────────────────────────────────────────────
 .toolbar {
-  padding: $space-md $space-3xl;
-  @include hairline-bottom;
   flex-shrink: 0;
-  @include mobile { padding: $space-md $space-lg; }
+  padding: $space-xs $space-4xl $space-lg;
+  @include mobile { padding: $space-xs $space-xl $space-md; }
 }
 
-.taskList {
-  flex: 1; overflow-y: auto; padding: $space-lg $space-3xl $space-3xl;
-  @include scrollbar; -webkit-overflow-scrolling: touch;
-  @include mobile { padding: $space-lg $space-lg $space-5xl; }
+// ── Content ─────────────────────────────────────────────────────────────────
+.scroll {
+  flex: 1; overflow-y: auto; @include scrollbar; -webkit-overflow-scrolling: touch;
+  padding: 0 $space-4xl $space-5xl;
+  @include mobile { padding: 0 $space-xl $space-5xl; }
 }
 
-.group { margin-bottom: $space-lg; }
-
-.groupLabel { @include caps-label; margin-bottom: $space-sm; padding-left: $space-xs; }
-
-.groupCard { @include surface-card; overflow: hidden; }
-
-.empty { text-align: center; padding: $space-5xl $space-lg; color: var(--color-text3); font-size: 15px; font-weight: 500; }
-.emptySub { font-size: 13px; color: var(--color-text4); margin-top: $space-xs; font-weight: 400; }
-
-// ── Notes panel ───────────────────────────────────────────────────────────────
-
-.notesPanel { display: flex; height: 100%; overflow: hidden; }
-
-.notesSidebar {
-  width: 272px; flex-shrink: 0;
-  border-right: 1px solid var(--hairline);
-  display: flex; flex-direction: column; overflow: hidden;
-  background: var(--color-surface);
-
-  @include mobile { width: 100%; border-right: none; }
+.list { width: 100%; }
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: $space-2xl;
+  align-items: start;
+  @include mobile { grid-template-columns: 1fr; gap: $space-lg; }
 }
 
-.notesSidebarHidden { @include mobile { display: none; } }
+.group { min-width: 0; }
+.groupLabel { @include caps-label; font-size: 12px; margin-bottom: $space-sm; padding-left: $space-xs; }
+.groupCard { @include surface-card($radius-xl); overflow: hidden; }
+.noteList  { @include surface-card($radius-xl); overflow: hidden; padding: $space-xs; }
 
-.notesToolbar {
-  padding: $space-md; @include hairline-bottom; flex-shrink: 0;
-}
-
-.notesList {
-  flex: 1; overflow-y: auto;
-  padding: $space-xs $space-sm $space-xl;
-  @include scrollbar; -webkit-overflow-scrolling: touch;
-}
-
-.notesSection { @include caps-label; padding: $space-sm $space-sm $space-xs; }
-
-.notesEditor {
-  flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--color-bg);
-
-  @include mobile {
-    position: absolute; inset: 0; z-index: 10; background: var(--color-bg);
-    display: none;
-  }
-}
-
-.notesEditorEmpty {
-  @include not-mobile { align-items: center; justify-content: center; }
-}
-
-.notesEditorInner {
-  display: flex; flex-direction: column; height: 100%;
-  @include mobile { display: flex !important; }
-}
-
-.notesEditor:not(.notesEditorEmpty) { @include mobile { display: flex; } }
-
-.mobileBack {
-  display: none; padding: $space-sm $space-md; @include hairline-bottom;
-  @include mobile { display: flex; }
-}
-
-.backBtn {
-  display: flex; align-items: center; gap: $space-sm;
-  font-size: 15px; font-weight: 600; color: var(--color-accent);
-  cursor: pointer; @include no-tap-flash;
-}
-
-.notesEmptyState { flex: 1; display: flex; align-items: center; justify-content: center; }
-.notesEmptyTitle { font-size: 15px; font-weight: 500; color: var(--color-text3); }
-
+// ── Empty ─────────────────────────────────────────────────────────────────────
+.empty { text-align: center; padding: $space-5xl $space-lg; }
+.emptyTitle { font-size: 17px; font-weight: 600; color: var(--color-text2); }
+.emptySub { font-size: 14px; color: var(--color-text4); margin-top: $space-xs; }

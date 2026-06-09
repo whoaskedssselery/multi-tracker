@@ -3,14 +3,15 @@
   display: flex;
   align-items: center;
   background: var(--color-surface-sunken);
-  border: 1px solid var(--color-border-soft);
-  border-radius: $radius-sm;
-  height: 40px;
-  @include transition(border-color);
+  border: 1px solid transparent;
+  border-radius: $radius-md;
+  height: 44px;
+  max-width: 480px;
+  @include transition(border-color, background);
 
   &:focus-within {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px rgba(var(--color-accent-rgb), 0.1);
+    background: var(--color-surface);
+    border-color: var(--color-border);
   }
 }
 

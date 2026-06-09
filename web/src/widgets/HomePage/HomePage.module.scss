@@ -3,68 +3,63 @@
 // ── Header (iOS large title) ───────────────────────────────────────────────
 .header {
   flex-shrink: 0;
-  display: flex; align-items: flex-end; justify-content: space-between; gap: $space-lg;
-  padding: $space-3xl $space-3xl $space-lg;
-  @include hairline-bottom;
+  padding: $space-3xl $space-4xl $space-lg;
   @include mobile {
-    flex-direction: column; align-items: flex-start; gap: $space-md;
     padding: calc(#{$space-xl} + env(safe-area-inset-top, 0px)) $space-xl $space-md;
   }
 }
 
-.headMain { min-width: 0; }
-.greeting { @include large-title; }
+.greeting { @include large-title; font-size: 36px; @include mobile { font-size: 28px; } }
 .date {
-  @include mono; font-size: 13px; color: var(--color-text3);
-  margin-top: 4px; text-transform: lowercase;
+  @include mono; font-size: 14px; color: var(--color-text3);
+  margin-top: 6px; text-transform: lowercase;
 }
-
-.headStreaks { display: flex; flex-wrap: wrap; gap: $space-sm; @include mobile { width: 100%; } }
-.streak {
-  @include chip;
-  cursor: default;
-  b { font-weight: 700; color: var(--color-text1); }
-}
-.streakIcon { color: var(--color-warning); }
-.streakDay, .streakLabel { color: var(--color-text3); font-weight: 500; }
 
 // ── Scroll + grid ──────────────────────────────────────────────────────────
 .scroll { flex: 1; overflow-y: auto; @include scrollbar; -webkit-overflow-scrolling: touch; }
 
 .grid {
   display: grid;
-  grid-template-columns: 1.45fr 1fr;
-  gap: $space-xl;
-  padding: $space-2xl $space-3xl $space-4xl;
-  max-width: 1180px; margin: 0 auto; width: 100%;
-  @include tablet { grid-template-columns: 1fr; padding: $space-xl $space-xl $space-4xl; }
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+  gap: $space-2xl;
+  padding: $space-lg $space-4xl $space-5xl;
+  width: 100%;
+  align-items: start;
+  @include tablet { grid-template-columns: 1fr; padding: $space-lg $space-xl $space-5xl; }
   @include mobile {
     grid-template-columns: 1fr; gap: $space-lg;
-    padding: $space-lg $space-lg $space-5xl;
+    padding: $space-md $space-xl $space-5xl;
   }
 }
 
-.col { display: flex; flex-direction: column; gap: $space-xl; @include mobile { gap: $space-lg; } }
+.col { display: flex; flex-direction: column; gap: $space-2xl; @include mobile { gap: $space-lg; } }
 
 // ── Cards ──────────────────────────────────────────────────────────────────
-.card { @include surface-card; padding: $space-xl; }
+.card { @include surface-card($radius-xl); padding: $space-2xl; }
 
 .cardHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: $space-lg; }
-.caps { @include caps-label; }
+.caps { @include caps-label; font-size: 12px; }
 .cardIcon { color: var(--color-text4); }
 
 .addBtn {
   display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; border-radius: $radius-pill;
+  width: 36px; height: 36px; border-radius: $radius-pill;
   color: var(--color-accent-press); background: var(--color-accent-tint);
   @include pressable;
   @include hover { filter: brightness(0.96); }
 }
 
-.empty { font-size: 14px; color: var(--color-text4); padding: $space-xs 0; }
-.goalList { display: flex; flex-direction: column; gap: $space-md; }
+.empty { font-size: 15px; color: var(--color-text4); padding: $space-sm 0; }
+.goalList { display: flex; flex-direction: column; gap: $space-lg; }
 
 .taskStat { display: flex; align-items: baseline; gap: $space-sm;
-  font-size: 34px; font-weight: 800; color: var(--color-text1); letter-spacing: -0.02em; }
-.taskWord { font-size: 14px; font-weight: 500; color: var(--color-text3); letter-spacing: 0; }
-.allDone  { font-size: 18px; font-weight: 700; color: var(--color-success); }
+  font-size: 40px; font-weight: 800; color: var(--color-text1); letter-spacing: -0.02em; }
+.taskWord { font-size: 15px; font-weight: 500; color: var(--color-text3); letter-spacing: 0; }
+.allDone  { font-size: 20px; font-weight: 700; color: var(--color-success); }
+
+// ── Streaks ────────────────────────────────────────────────────────────────
+.streakIcon { color: var(--color-warning); }
+.streakList { display: flex; flex-direction: column; gap: $space-md; }
+.streak { display: flex; align-items: baseline; gap: $space-md; }
+.streakNum { font-size: 28px; font-weight: 800; color: var(--color-accent-press); letter-spacing: -0.02em; min-width: 36px; }
+.streakMeta { font-size: 14px; color: var(--color-text3); font-weight: 500; }
