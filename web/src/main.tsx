@@ -9,9 +9,20 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-// PWA service worker
+// Service worker. In dev: unregister any stale SW (e.g. from the old Next
+// build) and clear caches so it can't hijack assets. In prod: register the
+// network-first worker.
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
+  if (import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  } else {
+    navigator.serviceWorker.getRegistrations()
+      .then((rs) => rs.forEach((r) => r.unregister()))
+      .catch(() => {});
+    if ('caches' in window) {
+      caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
+    }
+  }
 }

@@ -1,30 +1,32 @@
-// Basic service worker — caches app shell for offline use
-const CACHE = 'multi-tracker-v1';
-const PRECACHE = ['/', '/tasks', '/train', '/ai', '/settings'];
+// Network-first service worker. v3 — purges all older caches on activate so a
+// stale shell (e.g. from the previous Next build) can never be served again.
+const CACHE = 'multi-tracker-v3';
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()),
-  );
-});
+self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
-    ).then(() => self.clients.claim()),
+    caches.keys()
+      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
-  // Network-first for API/Supabase, cache-first for everything else
-  const url = new URL(e.request.url);
-  if (url.hostname.includes('supabase') || url.pathname.startsWith('/api/')) {
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-    return;
-  }
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  // Only handle same-origin requests; never touch Supabase / Groq.
+  if (url.origin !== self.location.origin) return;
+
+  // Network-first: always try fresh, fall back to cache only when offline.
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request)),
+    fetch(req)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        return res;
+      })
+      .catch(() => caches.match(req).then((m) => m || caches.match('/'))),
   );
 });

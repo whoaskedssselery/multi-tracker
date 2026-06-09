@@ -1,116 +1,135 @@
 # Multi-tracker
 
-Personal fitness & productivity app — weight log, workouts (PPL), tasks, notes, and AI chat.
+Личное приложение для фитнеса и продуктивности — вес, тренировки (PPL), задачи, заметки и ИИ-чат.
 
-**Platforms:** iOS · Windows · Web *(coming soon)*
+**Платформы:** iOS · Windows · Web
 
----
-
-## Modules
-
-| Module | Description |
-|--------|-------------|
-| **Home** | Dashboard: weight trend chart, active goals, streak counters, today's workout, pending tasks |
-| **Train** | Weekly schedule · workout templates · set/rep logging with numpad · AI progress badge per exercise |
-| **Tasks / Notes** | Task list with priority, due date, reminders · notes with search and pin |
-| **AI Chat** | Groq LLM (llama-3.3-70b / deepseek-r1) · 4 independent context tabs |
-| **Sync** | Optional Supabase cloud sync — snapshot LWW, works fully offline |
-| **Settings** | Profile · light/dark/system theme · units (kg/lbs) · Groq API key · JSON export · data reset |
+Все данные синхронизируются между устройствами через Supabase (необязательно — приложение полностью работает офлайн).
 
 ---
 
-## Repository structure
+## Разделы
+
+| Раздел | Что внутри |
+|--------|------------|
+| **Главная** | Дашборд: график веса, цели, серии (стрики), задачи |
+| **Тренировки** | Недельное расписание · программы (шаблоны) · журнал подходов/повторов · история по дням |
+| **Задачи / Заметки** | Задачи с приоритетом, датой и напоминанием · заметки с поиском и закреплением |
+| **ИИ-чат** | Groq LLM (llama-3.3-70b / deepseek-r1) · контекст по весу/тренировкам/задачам |
+| **Синхронизация** | Облако Supabase — снимок данных по принципу LWW, работает офлайн |
+| **Настройки** | Профиль · тема (светлая/тёмная/системная) · единицы (кг/lbs) · ключ Groq · экспорт JSON · сброс данных |
+
+---
+
+## Структура репозитория
 
 ```
 multi-tracker/
-  flutter/    — iOS + Windows native app (Flutter / Dart)
-  web/        — Web app (coming soon)
+  flutter/    — нативное приложение iOS + Windows (Flutter / Dart)
+  web/        — веб-приложение (Vite + React + TypeScript, SPA)
 ```
 
 ---
 
-## Flutter app
+## Веб-приложение (web/)
 
-### Prerequisites
+**Стек:** Vite · React 19 · TypeScript · React Router · Zustand · SCSS-модули · framer-motion · Supabase · Recharts.
+Архитектура — Feature-Sliced Design: `src/{shared,entities,features,widgets,app}`, единый алиас `@/` → `src/`.
 
-**All platforms**
+### Запуск
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Откроется на **http://localhost:3000**.
+
+> ⚠️ Если после переезда с прошлой версии в браузере «пропали стили» или ошибки `Unexpected token '<'` — это старый service worker от предыдущей сборки.
+> Открой DevTools → **Application → Storage → Clear site data** (или вкладка **Service Workers → Unregister**), затем обнови страницу. Новый воркер чистит кеш сам.
+
+### Сборка
+
+```bash
+cd web
+npm run build      # результат в web/dist (статика — заливается на любой хостинг)
+npm run preview    # локальный предпросмотр прод-сборки
+```
+
+### Переменные окружения
+
+Файл `web/.env.local`:
+
+```
+VITE_SUPABASE_URL=https://<project>.supabase.co
+VITE_SUPABASE_ANON_KEY=<publishable/anon-ключ>
+```
+
+Используется только **публичный** anon/publishable ключ. Секретный (service) ключ в вебе не нужен и не должен попадать в код.
+
+---
+
+## Нативное приложение (flutter/)
+
+### Требования
+
 - Flutter ≥ 3.24 · Dart ≥ 3.5
+- **Windows:** Visual Studio 2022 (нагрузка «Разработка классических приложений на C++»)
+- **iOS:** сборка только на Mac — Xcode 15+, CocoaPods (`sudo gem install cocoapods`), и инструмент сайдлоада (SideStore / AltStore)
 
-**Windows**
-- Visual Studio 2022 — Desktop development with C++ workload
-
-**iOS** *(build requires a Mac)*
-- Xcode 15+
-- CocoaPods: `sudo gem install cocoapods`
-- SideStore or similar sideloading tool
-
-### Quick start
+### Запуск
 
 ```bash
 cd flutter
-
-# Install dependencies
 flutter pub get
 
-# Generate code (Drift ORM + Riverpod)
+# Кодогенерация (Drift ORM + Riverpod)
 dart run build_runner build --delete-conflicting-outputs
 
-# Run on Windows
+# Windows
 flutter run -d windows
 
-# Run on iOS device (Mac only)
+# iOS (только на Mac)
 cd ios && pod install && cd ..
 flutter run -d <device-id>
 ```
 
-### Build for release
+### Сборка релиза
 
 ```bash
 # Windows
 flutter build windows --release
 
-# iOS (Mac only)
+# iOS (только на Mac)
 cd ios && pod install && cd ..
 flutter build ios --release --no-codesign
-# Then archive in Xcode: Product → Archive → Distribute → Development
+# Затем в Xcode: Product → Archive → Distribute → Development
 ```
 
-### Architecture
+iOS-IPA также собирается в GitHub Actions автоматически при пуше тега `vX.Y.Z` (см. вкладку Releases).
+
+### Архитектура
 
 ```
 flutter/lib/
-  app/          # Router, theme tokens (light + dark), Riverpod providers
+  app/          # роутер, тема (светлая + тёмная), провайдеры Riverpod
   core/
-    ai/         # GroqClient, ContextBuilder (DB → prompt)
-    db/         # AppDatabase (Drift / SQLite WAL) — all tables and DAOs
-    network/    # Dio HTTP client
-    notifications/  # Local notifications (iOS)
-    storage/    # SecureStorage wrapper (API key, sync timestamp)
-    sync/       # Supabase LWW snapshot sync
-  features/
-    home/       # Dashboard
-    train/      # Workout logger
-    tasks/      # Tasks + Notes
-    ai_chat/    # AI chat
-    settings/   # Profile, theme, export
-  shared/
-    widgets/    # AdaptiveScaffold, AppModal, PageHeader
-  l10n/         # Localisation (ru + en)
-  main.dart     # Entry point
+    ai/         # GroqClient, ContextBuilder (БД → промпт)
+    db/         # AppDatabase (Drift / SQLite WAL) — таблицы и DAO
+    network/    # HTTP-клиент Dio
+    notifications/  # локальные уведомления (iOS)
+    storage/    # SecureStorage (ключ API, метка синхронизации)
+    sync/       # синхронизация Supabase (снимок, LWW)
+  features/     # home · train · tasks · ai_chat · settings
+  shared/widgets/
+  l10n/         # локализация (ru + en)
+  main.dart
 ```
 
-**State:** Riverpod · **DB:** Drift (SQLite WAL) · **AI:** Groq (OpenAI-compatible) · **Sync:** Supabase
+**State:** Riverpod · **БД:** Drift (SQLite WAL) · **ИИ:** Groq · **Синхронизация:** Supabase
 
-### AI chat setup (optional)
-
-1. [console.groq.com](https://console.groq.com) → API Keys → Create API key
-2. In-app: **Settings → ИИ → Groq API Key** → paste → tap **Проверить**
-
-The key is stored in the system keychain (iOS Keychain / Windows Credential Manager) and sent only to `api.groq.com`.
-
-### Code generation
-
-Run after changing DB tables, Riverpod providers, or localisations:
+После изменения таблиц БД, провайдеров или локализаций:
 
 ```bash
 dart run build_runner build --delete-conflicting-outputs
@@ -119,8 +138,24 @@ flutter gen-l10n
 
 ---
 
-## Roadmap
+## Настройка ИИ-чата (необязательно)
 
-- [ ] Web app (same feature set, Supabase backend)
-- [ ] Android app
-- [ ] Email confirmation via code on sign-up
+1. [console.groq.com](https://console.groq.com) → API Keys → создать ключ.
+2. В приложении: **Настройки → ИИ → Groq API Key** → вставить.
+
+Ключ хранится локально (на нативе — в системном хранилище ключей, в вебе — в localStorage) и отправляется только на `api.groq.com`.
+
+---
+
+## Синхронизация и данные
+
+- Источник правды в облаке — таблица `app_state` в Supabase (один JSON-снимок на пользователя, стратегия Last-Write-Wins).
+- Полный сброс облака: в Supabase → **SQL Editor** → `delete from app_state;`
+- Сброс локальных данных на устройстве: **Настройки → Сбросить данные**.
+
+---
+
+## Планы
+
+- [ ] Android
+- [ ] Подтверждение email кодом при регистрации
