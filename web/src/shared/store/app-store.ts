@@ -136,6 +136,31 @@ function nextId(state: AppState, table: string): number {
 
 function now(): string { return new Date().toISOString(); }
 
+// Date fields can arrive from two sources with different encodings:
+//   • Flutter/Drift snapshot → epoch number (ms, or seconds on older builds)
+//   • web-created rows        → ISO-8601 string
+// All UI code assumes ISO strings, so normalise every date field to ISO on the
+// way in (hydrate). Strings pass through untouched; nulls stay null.
+const DATE_KEYS = [
+  'date', 'createdAt', 'updatedAt', 'dueAt', 'notifyAt', 'completedAt', 'birthDate',
+] as const;
+
+function toIso(v: unknown): unknown {
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    const ms = v < 1e11 ? v * 1000 : v; // tolerate epoch-seconds vs ms
+    return new Date(ms).toISOString();
+  }
+  return v;
+}
+
+function normRows<T>(rows: T[] | undefined): T[] {
+  return (rows ?? []).map((r) => {
+    const o = { ...(r as Record<string, unknown>) };
+    for (const k of DATE_KEYS) if (o[k] != null) o[k] = toIso(o[k]);
+    return o as T;
+  });
+}
+
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 const initialSync: SyncStatus = {
@@ -182,25 +207,26 @@ export const useAppStore = create<AppState & AppActions>()(
     // ── Hydration ─────────────────────────────────────────────────────────
     hydrate: (snap) => set((s) => {
       const t = snap.tables;
-      s.profile = t.profile[0] ?? defaultProfile();
-      s.preferences = t.app_preferences[0] ?? defaultPrefs();
-      s.weightEntries = [...(t.weight_entries ?? [])].sort(
+      // Normalise all date fields (Flutter sends epoch numbers) → ISO strings.
+      s.profile = normRows(t.profile)[0] ?? defaultProfile();
+      s.preferences = normRows(t.app_preferences)[0] ?? defaultPrefs();
+      s.weightEntries = normRows(t.weight_entries).sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
-      s.goals = [...(t.goals ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
-      s.tasks = [...(t.task_items ?? [])].sort(
+      s.goals = normRows(t.goals).sort((a, b) => a.sortOrder - b.sortOrder);
+      s.tasks = normRows(t.task_items).sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       );
-      s.notes = [...(t.note_items ?? [])].sort((a, b) => {
+      s.notes = normRows(t.note_items).sort((a, b) => {
         if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });
-      s.workoutTemplates = t.workout_templates ?? [];
-      s.exerciseTemplates = t.exercise_templates ?? [];
+      s.workoutTemplates = normRows(t.workout_templates);
+      s.exerciseTemplates = normRows(t.exercise_templates);
       s.scheduleSlots = t.schedule_slots ?? [];
-      s.setEntries = t.set_entries ?? [];
-      s.workoutNotes = t.workout_notes ?? [];
-      s.chatMessages = [...(t.chat_messages ?? [])].sort(
+      s.setEntries = normRows(t.set_entries);
+      s.workoutNotes = normRows(t.workout_notes);
+      s.chatMessages = normRows(t.chat_messages).sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       );
 

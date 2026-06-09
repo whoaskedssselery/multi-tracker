@@ -680,6 +680,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
   Widget _buildMobileTaskGroups(ThemeTokens t) {
     final q = _searchQuery.toLowerCase();
+    final active = _allTasks
+        .where((t) => !t.isDone && (q.isEmpty || t.body.toLowerCase().contains(q)))
+        .toList();
     final done = _allTasks
         .where((t) => t.isDone && (q.isEmpty || t.body.toLowerCase().contains(q)))
         .toList();
@@ -687,19 +690,33 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
       children: [
         _buildMobileSearch(t),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
-            children: [
-              for (final (key, label) in _kMobileGroups) ...[
-                _mobileGroup(t, key, label),
-              ],
-              if (done.isNotEmpty) ...[
-                _mobileGroupHeader(t, 'ВЫПОЛНЕНО'),
-                _mobileGroupCard(t, done),
-                const SizedBox(height: 8),
-              ],
-            ],
-          ),
+          child: (active.isEmpty && done.isEmpty)
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.checklist_outlined, size: 40, color: t.text4),
+                      const SizedBox(height: 12),
+                      Text(
+                        _searchQuery.isEmpty ? 'Нет задач' : 'Ничего не найдено',
+                        style: TextStyle(fontSize: 15, color: t.text3),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+                  children: [
+                    for (final (key, label) in _kMobileGroups) ...[
+                      _mobileGroup(t, key, label),
+                    ],
+                    if (done.isNotEmpty) ...[
+                      _mobileGroupHeader(t, 'ВЫПОЛНЕНО'),
+                      _mobileGroupCard(t, done),
+                      const SizedBox(height: 8),
+                    ],
+                  ],
+                ),
         ),
       ],
     );

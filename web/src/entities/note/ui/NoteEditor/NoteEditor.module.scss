@@ -1,4 +1,9 @@
-.editor { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.editor {
+  display: flex; flex-direction: column; height: 100%; overflow: hidden;
+  // Make the note modal feel spacious rather than collapsing to content size.
+  min-height: min(72vh, 660px);
+  @include mobile { min-height: 78dvh; }
+}
 
 .toolbar {
   display: flex;

@@ -99,7 +99,7 @@ export function TasksPage() {
 
       <TaskForm open={taskFormOpen} editing={editingTask} onClose={() => setTaskFormOpen(false)} />
 
-      <Modal open={noteObj !== null} onClose={() => setNoteId(null)} maxWidth={680}>
+      <Modal open={noteObj !== null} onClose={() => setNoteId(null)} maxWidth={860}>
         {noteObj && (
           <NoteEditor note={noteObj}
             onDelete={() => removeNote(noteObj.id)}
@@ -172,9 +172,9 @@ function NotesList({ pinned, regular, search, onOpen, onPin, onDelete }: {
     );
   }
   const section = (label: string, items: NoteItem[]) => items.length > 0 && (
-    <section className={styles.group}>
+    <section className={styles.noteSection}>
       <p className={styles.groupLabel}>{label}</p>
-      <div className={styles.noteList}>
+      <div className={styles.noteGrid}>
         {items.map(n => (
           <NoteCard key={n.id} note={n} selected={false}
             onSelect={() => onOpen(n.id)} onPin={() => onPin(n.id)} onDelete={() => onDelete(n.id)} />
@@ -183,7 +183,7 @@ function NotesList({ pinned, regular, search, onOpen, onPin, onDelete }: {
     </section>
   );
   return (
-    <div className={styles.groups}>
+    <div className={styles.noteSections}>
       {section('Закреплённые', pinned)}
       {section(pinned.length ? 'Остальные' : 'Все', regular)}
     </div>

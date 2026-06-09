@@ -16,6 +16,7 @@ interface Props {
 export function NoteEditor({ note, onDelete, onPinToggle }: Props) {
   const updateNote = useAppStore(s => s.updateNote);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   const flush = useCallback((title: string, body: string) => {
     updateNote(note.id, { title: title.trim() || 'Без названия', body });
@@ -27,6 +28,31 @@ export function NoteEditor({ note, onDelete, onPinToggle }: Props) {
   }, [flush]);
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  // Code support: Tab indents; Ctrl/Cmd+E wraps the selection in a ``` fence
+  // (or `inline` backticks for a single-line selection).
+  const onBodyKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const ta = e.currentTarget;
+    const { selectionStart: s, selectionEnd: en, value } = ta;
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      ta.value = value.slice(0, s) + '  ' + value.slice(en);
+      ta.selectionStart = ta.selectionEnd = s + 2;
+      schedule(note.title, ta.value);
+      return;
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') {
+      e.preventDefault();
+      const sel = value.slice(s, en);
+      const block = sel.includes('\n') || sel.length === 0;
+      const wrapped = block ? '```\n' + sel + '\n```' : '`' + sel + '`';
+      ta.value = value.slice(0, s) + wrapped + value.slice(en);
+      const caret = s + (block ? 4 : 1) + sel.length;
+      ta.selectionStart = ta.selectionEnd = caret;
+      schedule(note.title, ta.value);
+    }
+  }, [note.title, schedule]);
 
   const words = note.body.trim() ? note.body.trim().split(/\s+/).length : 0;
 
@@ -59,8 +85,10 @@ export function NoteEditor({ note, onDelete, onPinToggle }: Props) {
       </div>
 
       <div className={styles.bodyWrap}>
-        <textarea key={`b-${note.id}`} className={styles.bodyInput}
-          defaultValue={note.body} placeholder="Начни писать..."
+        <textarea key={`b-${note.id}`} ref={bodyRef} className={styles.bodyInput}
+          defaultValue={note.body} placeholder="Начни писать…  (Tab — отступ, Ctrl/⌘+E — код)"
+          spellCheck={false}
+          onKeyDown={onBodyKeyDown}
           onChange={e => schedule(note.title, e.target.value)}
           onBlur={e => flush(note.title, e.target.value)} />
       </div>

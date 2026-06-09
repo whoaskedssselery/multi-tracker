@@ -71,7 +71,16 @@
 .group { min-width: 0; }
 .groupLabel { @include caps-label; font-size: 12px; margin-bottom: $space-sm; padding-left: $space-xs; }
 .groupCard { @include surface-card($radius-xl); overflow: hidden; }
-.noteList  { @include surface-card($radius-xl); overflow: hidden; padding: $space-xs; }
+
+// ── Notes: full-width stacked sections, cards in a responsive grid ────────────
+.noteSections { display: flex; flex-direction: column; gap: $space-2xl; }
+.noteSection  { min-width: 0; }
+.noteGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: $space-md;
+  @include mobile { grid-template-columns: 1fr; }
+}
 
 // ── Empty ─────────────────────────────────────────────────────────────────────
 .empty { text-align: center; padding: $space-5xl $space-lg; }
