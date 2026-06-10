@@ -214,7 +214,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
   @override
   Widget build(BuildContext context) {
     final t = _t;
-    if (Platform.isIOS) return _buildIosPaged(context, t);
+    if (Platform.isIOS || Platform.isAndroid) return _buildIosPaged(context, t);
 
     // ── Desktop ──
     final slots     = ref.watch(scheduleSlotsProvider).valueOrNull ?? [];

@@ -155,7 +155,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final t = ThemeTokens.of(context);
     _msgs = ref.watch(chatMessagesForFilterProvider(_filter.key)).valueOrNull ?? [];
 
-    if (Platform.isIOS) return _buildIos(context, t);
+    if (Platform.isIOS || Platform.isAndroid) return _buildIos(context, t);
 
     return Scaffold(
       backgroundColor: t.bg,

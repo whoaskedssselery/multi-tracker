@@ -422,7 +422,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _templates = ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
     _workoutDates = ref.watch(workoutDatesProvider).valueOrNull ?? [];
 
-    if (Platform.isIOS) return _buildIos(context, t);
+    if (Platform.isIOS || Platform.isAndroid) return _buildIos(context, t);
 
     final name = _profile?.name.trim() ?? '';
     final greeting =
