@@ -114,6 +114,10 @@ jobs:
           sed -i '0,/<manifest[^>]*>/s//&\n    <uses-permission android:name="android.permission.INTERNET"\/>/' \
             android/app/src/main/AndroidManifest.xml
 
+          # A transitive plugin (flutter_plugin_android_lifecycle) needs compileSdk 36.
+          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' \
+            android/app/build.gradle.kts
+
           # flutter_local_notifications 18 requires core library desugaring.
           sed -i 's/compileOptions {/compileOptions {\n        isCoreLibraryDesugaringEnabled = true/' \
             android/app/build.gradle.kts
