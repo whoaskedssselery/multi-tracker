@@ -121,6 +121,12 @@ jobs:
           echo "--- app/build.gradle.kts (patched) ---"
           grep -nE "compileSdk|targetSdk|coreLibraryDesugar" android/app/build.gradle.kts || true
 
+          # Plugin modules compile against flutter.compileSdkVersion (35), but
+          # flutter_plugin_android_lifecycle now needs 36 → force compileSdk 36
+          # on every subproject (app + all plugins).
+          printf '\nsubprojects {\n    afterEvaluate {\n        extensions.findByName("android")?.let {\n            (it as com.android.build.gradle.BaseExtension).compileSdkVersion(36)\n        }\n    }\n}\n' \
+            >> android/build.gradle.kts
+
           # flutter_local_notifications 18 requires core library desugaring.
           sed -i 's/compileOptions {/compileOptions {\n        isCoreLibraryDesugaringEnabled = true/' \
             android/app/build.gradle.kts
