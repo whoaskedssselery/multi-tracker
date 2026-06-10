@@ -112,7 +112,9 @@
   display: inline-flex; align-items: center; gap: 6px;
   padding: 11px 16px; border-radius: $radius-md;
   background: var(--color-accent-tint); color: var(--color-accent-press);
-  font-size: 15px; font-weight: 600;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  @include pressable;
+  @include hover { filter: brightness(0.97); }
 }
 
 .restCard {

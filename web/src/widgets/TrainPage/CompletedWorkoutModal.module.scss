@@ -1,0 +1,40 @@
+.head { margin-bottom: $space-lg; }
+.doneTag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: $radius-pill;
+  background: var(--color-accent-tint); color: var(--color-accent-press);
+  font-size: 12px; font-weight: 600;
+}
+.title { font-size: 24px; font-weight: 800; color: var(--color-text1); letter-spacing: -0.02em; margin-top: $space-sm; }
+.date { @include mono; font-size: 13px; color: var(--color-text3); }
+
+.stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: $space-sm;
+  margin-bottom: $space-xl;
+}
+.stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: $space-md; border-radius: $radius-md;
+  background: var(--color-surface-sunken);
+}
+.statNum { font-size: 22px; font-weight: 800; color: var(--color-text1); }
+.statLabel { font-size: 11px; color: var(--color-text3); font-weight: 500; }
+
+.list { display: flex; flex-direction: column; gap: $space-md; }
+
+.exercise { @include surface-card; padding: $space-lg; }
+.exHead { display: flex; align-items: baseline; justify-content: space-between; gap: $space-md; margin-bottom: $space-sm; }
+.exName { font-size: 16px; font-weight: 600; color: var(--color-text1); }
+.exCount { @include mono; font-size: 12px; color: var(--color-text3); }
+
+.sets { display: flex; flex-wrap: wrap; gap: $space-sm; }
+.setChip {
+  display: inline-flex; align-items: baseline;
+  padding: 6px 11px; border-radius: $radius-sm;
+  background: var(--color-surface-sunken); border: 1px solid var(--color-border-soft);
+  font-size: 14px; font-weight: 600; color: var(--color-text1);
+}
+.setX { color: var(--color-text4); margin: 0 1px; font-weight: 400; }
+.noSets { color: var(--color-text4); font-size: 14px; }
+
+.footer { display: flex; justify-content: flex-end; gap: $space-sm; }

@@ -149,3 +149,34 @@
 
 .hint { margin-top: $space-xl; text-align: center; font-size: 12px; color: var(--color-text4); line-height: 1.5; }
 
+// ── OTP step ──────────────────────────────────────────────────────────────────
+.otpHead { text-align: center; margin-bottom: $space-lg; }
+.otpIcon { color: var(--color-accent); margin-bottom: $space-sm; }
+.otpTitle { font-size: 18px; font-weight: 700; color: var(--color-text1); }
+.otpSub {
+  font-size: 13px; color: var(--color-text3); margin-top: 4px; line-height: 1.5;
+  b { color: var(--color-text2); font-weight: 600; }
+}
+
+.otpInput {
+  text-align: center;
+  font-family: $font-mono;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  padding-right: 0;
+  text-indent: 0.4em; // optical centring with the letter-spacing
+}
+
+.otpFoot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: $space-md; margin-top: $space-md;
+}
+.otpLink {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 500; color: var(--color-accent);
+  cursor: pointer; @include no-tap-flash; @include transition-fast(color);
+  @include hover { color: var(--color-accent-press); }
+  &:disabled { color: var(--color-text4); cursor: default; }
+}
+

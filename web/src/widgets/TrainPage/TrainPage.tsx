@@ -13,6 +13,7 @@ import { dayKeyOf } from '@/shared/lib/utils/format';
 import type { ExerciseTemplate } from '@/shared/types';
 import { ProgramModal } from './ProgramModal';
 import { WorkoutLogModal } from './WorkoutLogModal';
+import { CompletedWorkoutModal } from './CompletedWorkoutModal';
 import styles from './TrainPage.module.scss';
 
 export function TrainPage() {
@@ -25,6 +26,7 @@ export function TrainPage() {
   const [selectedDow, setSelectedDow] = useState(dayOfWeek(new Date()));
   const [programOpen, setProgramOpen] = useState(false);
   const [logTarget, setLogTarget] = useState<{ day: DayItem; exercises: ExerciseTemplate[] } | null>(null);
+  const [doneTarget, setDoneTarget] = useState<{ day: DayItem; exercises: ExerciseTemplate[] } | null>(null);
 
   const weekStart = useMemo(
     () => addDays(weekMonday(new Date()), weekOffset * 7),
@@ -38,16 +40,27 @@ export function TrainPage() {
 
   const selected = days[selectedDow - 1];
 
-  const openLog = (day: DayItem) => {
+  // Tapping a DONE workout opens the read-only completed summary; an unfinished
+  // day (missed past / today / future) opens the editor to fill it in.
+  const openCard = (day: DayItem) => {
     if (!day.template) return;
     const key = dayKeyOf(day.date);
-    // A done past day shows exactly what was logged; a missed past day and
-    // today/future use the active program so it can still be filled in.
-    const exercises = (day.isPast && day.isDone)
-      ? exercisesLoggedOnDate(exerciseTpls, setEntries, day.template.id, key)
-      : activeExercises(exerciseTpls, day.template.id);
-    if (exercises.length === 0) return;
-    setLogTarget({ day, exercises });
+    if (day.isDone) {
+      const exercises = exercisesLoggedOnDate(exerciseTpls, setEntries, day.template.id, key);
+      if (exercises.length === 0) return;
+      setDoneTarget({ day, exercises });
+    } else {
+      const exercises = activeExercises(exerciseTpls, day.template.id);
+      if (exercises.length === 0) return;
+      setLogTarget({ day, exercises });
+    }
+  };
+
+  // "Редактировать" from the summary → editor with the logged exercises.
+  const editDone = () => {
+    if (!doneTarget?.day.template) return;
+    setLogTarget(doneTarget);
+    setDoneTarget(null);
   };
 
   const goToday = () => {
@@ -111,7 +124,7 @@ export function TrainPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.16 }}
             >
-              <DayCard day={selected} exerciseTpls={exerciseTpls} onOpen={() => openLog(selected)} />
+              <DayCard day={selected} exerciseTpls={exerciseTpls} onOpen={() => openCard(selected)} />
             </motion.div>
           </AnimatePresence>
         </div>
@@ -128,7 +141,7 @@ export function TrainPage() {
                 key={d.dow}
                 day={d}
                 count={d.template ? activeExercises(exerciseTpls, d.template.id).length : 0}
-                onOpen={() => openLog(d)}
+                onOpen={() => openCard(d)}
               />
             ))}
           </div>
@@ -136,6 +149,15 @@ export function TrainPage() {
       </div>
 
       {programOpen && <ProgramModal onClose={() => setProgramOpen(false)} />}
+      {doneTarget && (
+        <CompletedWorkoutModal
+          template={doneTarget.day.template!}
+          date={doneTarget.day.date}
+          exercises={doneTarget.exercises}
+          onClose={() => setDoneTarget(null)}
+          onEdit={editDone}
+        />
+      )}
       {logTarget && (
         <WorkoutLogModal
           template={logTarget.day.template!}
@@ -172,7 +194,10 @@ function DayCard({ day, exerciseTpls, onOpen }: {
       <div className={styles.dayFoot}>
         <span className={styles.dayCount}>{ex.length} упр.</span>
         {day.isDone ? (
-          <span className={styles.doneBadge}><Check size={15} /> Выполнено</span>
+          <button className={styles.doneBadge} onClick={onOpen}>
+            <Check size={15} /> Выполнено
+            <ChevronRight size={15} />
+          </button>
         ) : (
           <button className={styles.openBtn} onClick={onOpen}>Открыть</button>
         )}
