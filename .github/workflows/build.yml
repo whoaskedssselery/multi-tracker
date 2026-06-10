@@ -115,8 +115,11 @@ jobs:
             android/app/src/main/AndroidManifest.xml
 
           # A transitive plugin (flutter_plugin_android_lifecycle) needs compileSdk 36.
-          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' \
+          # Match any RHS (flutter.compileSdkVersion or a literal) and force 36.
+          sed -i -E 's/^([[:space:]]*)compileSdk[[:space:]]*=.*/\1compileSdk = 36/' \
             android/app/build.gradle.kts
+          echo "--- app/build.gradle.kts (patched) ---"
+          grep -nE "compileSdk|targetSdk|coreLibraryDesugar" android/app/build.gradle.kts || true
 
           # flutter_local_notifications 18 requires core library desugaring.
           sed -i 's/compileOptions {/compileOptions {\n        isCoreLibraryDesugaringEnabled = true/' \
