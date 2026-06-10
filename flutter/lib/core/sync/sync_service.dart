@@ -20,6 +20,10 @@ import 'supabase_config.dart';
 
 enum SyncOutcome { notSignedIn, pulled, pushedInitial, upToDate }
 
+/// Result of a sign-up attempt: an active session, an emailed code to verify,
+/// or a failure (error is on [SyncState]).
+enum AuthOutcome { signedIn, codeSent, failed }
+
 class SyncService {
   SyncService(this._db);
   final AppDatabase _db;
@@ -39,6 +43,15 @@ class SyncService {
 
   Future<void> signUp(String email, String password) =>
       _sb.auth.signUp(email: email.trim(), password: password);
+
+  /// Confirms a sign-up with the 6-digit code Supabase emailed (OTP).
+  Future<void> verifySignupOtp(String email, String token) =>
+      _sb.auth.verifyOTP(
+          type: OtpType.signup, email: email.trim(), token: token.trim());
+
+  /// Re-sends the sign-up confirmation code.
+  Future<void> resendSignup(String email) =>
+      _sb.auth.resend(type: OtpType.signup, email: email.trim());
 
   /// Sign out AND erase all local data (DB + Groq key + sync marker), so the
   /// device is left clean for the next account.
@@ -137,8 +150,7 @@ class SyncService {
   /// Signature of a snapshot's DB content (the tables), excluding the volatile
   /// `exportedAt`/`updated_at` AND `secrets` (the Groq key can differ per
   /// device and would otherwise cause endless echo pushes).
-  static String _sigOf(Map<String, dynamic> snap) =>
-      jsonEncode(snap['tables']);
+  static String _sigOf(Map<String, dynamic> snap) => jsonEncode(snap['tables']);
 
   Future<Map<String, dynamic>> _localSnapshot() async {
     final snap = await _db.exportSnapshot();
@@ -328,7 +340,8 @@ class SyncState {
       );
 }
 
-final syncServiceProvider = Provider<SyncService>((ref) => SyncService(database));
+final syncServiceProvider =
+    Provider<SyncService>((ref) => SyncService(database));
 
 final syncControllerProvider =
     NotifierProvider<SyncController, SyncState>(SyncController.new);
@@ -460,27 +473,50 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     if (m.contains('rate limit') || m.contains('too many')) {
       return 'Слишком много попыток. Попробуйте позже.';
     }
+    if (m.contains('expired') ||
+        m.contains('otp') ||
+        (m.contains('invalid') && m.contains('token'))) {
+      return 'Неверный или просроченный код. Запросите новый.';
+    }
     return msg;
   }
 
   /// Returns true if a session is active right after sign-up (email
   /// confirmation disabled). If confirmation is required, returns false and
   /// sets a status asking the user to confirm their email.
-  Future<bool> signUp(String email, String password) async {
-    state = state.copyWith(busy: true, clearError: true, status: 'Регистрация…');
+  Future<AuthOutcome> signUp(String email, String password) async {
+    state =
+        state.copyWith(busy: true, clearError: true, status: 'Регистрация…');
     try {
       await _svc.signUp(email, password);
       if (_svc.isSignedIn) {
         state = state.copyWith(
             busy: false, signedIn: true, email: email.trim(), status: null);
-        return true;
+        return AuthOutcome.signedIn;
       }
-      // No session → email confirmation is on. Tell the user.
+      // No session → Supabase emailed a confirmation code. Caller shows the
+      // code step.
+      state = state.copyWith(busy: false, status: null, clearError: true);
+      return AuthOutcome.codeSent;
+    } on AuthException catch (e) {
       state = state.copyWith(
-          busy: false,
-          status: null,
-          error: 'Подтвердите email, затем войдите.');
-      return false;
+          busy: false, error: _authFriendly(e.message), status: null);
+      return AuthOutcome.failed;
+    } catch (e) {
+      state = state.copyWith(busy: false, error: '$e', status: null);
+      return AuthOutcome.failed;
+    }
+  }
+
+  /// Verifies the emailed sign-up code. Returns true on success (session active).
+  Future<bool> verifyOtp(String email, String token) async {
+    state =
+        state.copyWith(busy: true, clearError: true, status: 'Проверка кода…');
+    try {
+      await _svc.verifySignupOtp(email, token);
+      state = state.copyWith(
+          busy: false, signedIn: true, email: email.trim(), status: null);
+      return true;
     } on AuthException catch (e) {
       state = state.copyWith(
           busy: false, error: _authFriendly(e.message), status: null);
@@ -488,6 +524,17 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     } catch (e) {
       state = state.copyWith(busy: false, error: '$e', status: null);
       return false;
+    }
+  }
+
+  /// Re-sends the sign-up confirmation code.
+  Future<void> resendOtp(String email) async {
+    try {
+      await _svc.resendSignup(email);
+    } on AuthException catch (e) {
+      state = state.copyWith(error: _authFriendly(e.message));
+    } catch (e) {
+      state = state.copyWith(error: '$e');
     }
   }
 
@@ -506,7 +553,8 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   Future<void> syncNow() async {
     if (!_svc.isSignedIn || _inFlight) return;
     _inFlight = true;
-    state = state.copyWith(busy: true, clearError: true, status: 'Синхронизация…');
+    state =
+        state.copyWith(busy: true, clearError: true, status: 'Синхронизация…');
     try {
       if (_dirty) {
         // Unpushed local edits → push them (don't pull-wipe).
@@ -563,7 +611,8 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   Future<void> _reconcile() async {
     if (_inFlight) return; // a sync is already running
     _inFlight = true;
-    state = state.copyWith(busy: true, clearError: true, status: 'Синхронизация…');
+    state =
+        state.copyWith(busy: true, clearError: true, status: 'Синхронизация…');
     try {
       if (_dirty) {
         // We have unpushed local edits — push them up instead of pulling, so a
@@ -594,8 +643,10 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   /// Human-friendly error text (raw TimeoutException/SocketException are scary).
   static String _friendly(Object e) {
     final s = e.toString();
-    if (s.contains('TimeoutException') || s.contains('SocketException') ||
-        s.contains('Failed host lookup') || s.contains('Connection')) {
+    if (s.contains('TimeoutException') ||
+        s.contains('SocketException') ||
+        s.contains('Failed host lookup') ||
+        s.contains('Connection')) {
       return 'Нет соединения — синхронизирую позже';
     }
     return s;

@@ -24,10 +24,29 @@ DateTime _weekMonday(DateTime d) =>
     DateTime(d.year, d.month, d.day - (d.weekday - 1));
 
 const _wdLabels = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
-const _wdFull   = ['Понедельник', 'Вторник', 'Среда', 'Четверг',
-                   'Пятница', 'Суббота', 'Воскресенье'];
-const _moShort  = ['янв', 'фев', 'мар', 'апр', 'май', 'июн',
-                   'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+const _wdFull = [
+  'Понедельник',
+  'Вторник',
+  'Среда',
+  'Четверг',
+  'Пятница',
+  'Суббота',
+  'Воскресенье'
+];
+const _moShort = [
+  'янв',
+  'фев',
+  'мар',
+  'апр',
+  'май',
+  'июн',
+  'июл',
+  'авг',
+  'сен',
+  'окт',
+  'ноя',
+  'дек'
+];
 
 String _fmtDate(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}';
@@ -51,7 +70,7 @@ class WeekGridScreen extends ConsumerStatefulWidget {
 }
 
 class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
-  int _weekOffset  = 0; // 0 = current week
+  int _weekOffset = 0; // 0 = current week
   int _selectedDow = DateTime.now().weekday; // 1=Mon..7=Sun
 
   // iOS week pager. _basePage maps to _weekOffset 0; large so you can swipe
@@ -173,6 +192,45 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
     }
   }
 
+  // ── Completed-workout summary ──────────────────────────────────────────────
+
+  /// Tapping a workout: a DONE day opens the read-only completed summary;
+  /// an unfinished day opens the log editor.
+  void _openDay(_DayItem day) {
+    final tmpl = day.template;
+    if (tmpl == null) return;
+    if (day.isDone) {
+      _showCompletedDialog(tmpl, day.date);
+    } else {
+      _showWorkoutDialog(tmpl, day.date);
+    }
+  }
+
+  Future<void> _showCompletedDialog(
+      WorkoutTemplateTableData template, DateTime date) async {
+    final exercises = await database.exercisesLoggedOnDate(template.id, date);
+    if (exercises.isEmpty || !mounted) return;
+    final setsByEx = <int, List<SetEntryTableData>>{};
+    for (final ex in exercises) {
+      setsByEx[ex.id] = await database.setsForExerciseOnDate(ex.id, date);
+    }
+    if (!mounted) return;
+    await showAppModal<void>(
+      context,
+      maxWidth: 640,
+      builder: (ctx) => _CompletedWorkoutDialog(
+        template: template,
+        dateLabel: '${_wdFull[date.weekday - 1]} · ${_fmtDate(date)}',
+        exercises: exercises,
+        setsByEx: setsByEx,
+        onEdit: () {
+          Navigator.pop(ctx);
+          _showWorkoutDialog(template, date);
+        },
+      ),
+    );
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   /// Builds the 7 day-items for [weekStart].
@@ -194,7 +252,8 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
     final scheduleMap =
         <int, ({WorkoutTemplateTableData tmpl, DateTime from})>{};
     for (final slot in slots) {
-      final t = templates.where((t) => t.id == slot.workoutTemplateId).firstOrNull;
+      final t =
+          templates.where((t) => t.id == slot.workoutTemplateId).firstOrNull;
       if (t == null) continue;
       final c = slot.createdAt;
       scheduleMap[slot.dayOfWeek] =
@@ -207,13 +266,14 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
       }
       return null;
     }
+
     return List.generate(7, (i) {
-      final date    = weekStart.add(Duration(days: i));
+      final date = weekStart.add(Duration(days: i));
       final dateMid = DateTime(date.year, date.month, date.day);
-      final dow     = i + 1;
-      final isDone  = logged.contains(dateMid);
+      final dow = i + 1;
+      final isDone = logged.contains(dateMid);
       final isToday = dateMid == todayMid;
-      final isPast  = dateMid.isBefore(todayMid);
+      final isPast = dateMid.isBefore(todayMid);
       // Logged workout (history) wins. Otherwise the scheduled plan shows ONLY
       // from the day the slot was added onward — missed days after that stay
       // visible and fillable; days before the slot existed show nothing.
@@ -223,7 +283,11 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
         if (s != null && !dateMid.isBefore(s.from)) tmpl = s.tmpl;
       }
       return _DayItem(
-        dow: dow, date: date, template: tmpl, isDone: isDone, isToday: isToday);
+          dow: dow,
+          date: date,
+          template: tmpl,
+          isDone: isDone,
+          isToday: isToday);
     });
   }
 
@@ -233,9 +297,9 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
     if (Platform.isIOS || Platform.isAndroid) return _buildIosPaged(context, t);
 
     // ── Desktop ──
-    final slots     = ref.watch(scheduleSlotsProvider).valueOrNull ?? [];
+    final slots = ref.watch(scheduleSlotsProvider).valueOrNull ?? [];
     final templates = ref.watch(workoutTemplatesProvider).valueOrNull ?? [];
-    final logged    = ref.watch(loggedDatesProvider(_weekStart)).valueOrNull ?? {};
+    final logged = ref.watch(loggedDatesProvider(_weekStart)).valueOrNull ?? {};
     final loggedTmpls =
         ref.watch(loggedTemplatesProvider(_weekStart)).valueOrNull ?? {};
     final weekStart = _weekStart;
@@ -256,7 +320,8 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
                   t: t,
                   onTap: () => setState(() => _weekOffset--)),
               const SizedBox(width: 8),
-              _outlinedBtn('Сегодня', t: t,
+              _outlinedBtn('Сегодня',
+                  t: t,
                   onTap: () => setState(() {
                         _weekOffset = 0;
                         _selectedDow = DateTime.now().weekday;
@@ -322,8 +387,8 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
                     goToPage(_basePage); // animate back to current week
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: t.surface,
                       border: Border.all(color: t.border),
@@ -350,8 +415,8 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
                   setState(() => _weekOffset = page - _basePage),
               itemBuilder: (ctx, page) {
                 final offset = page - _basePage;
-                final ws = _weekMonday(DateTime.now())
-                    .add(Duration(days: offset * 7));
+                final ws =
+                    _weekMonday(DateTime.now()).add(Duration(days: offset * 7));
                 // Each page subscribes to ITS OWN week's data via a Consumer.
                 return Consumer(builder: (ctx, ref, _) {
                   final slots =
@@ -427,8 +492,8 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
     );
   }
 
-  static Widget _iosNavBtn(BuildContext context, ThemeTokens t,
-      IconData icon, VoidCallback onTap) {
+  static Widget _iosNavBtn(
+      BuildContext context, ThemeTokens t, IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -444,8 +509,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
     );
   }
 
-  Widget _iosTodayCard(
-      BuildContext context, ThemeTokens t, _DayItem day) {
+  Widget _iosTodayCard(BuildContext context, ThemeTokens t, _DayItem day) {
     if (day.template == null) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -492,33 +556,37 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
             const Spacer(),
             if (!day.isDone)
               FilledButton(
-                onPressed: () =>
-                    _showWorkoutDialog(day.template!, day.date),
+                onPressed: () => _showWorkoutDialog(day.template!, day.date),
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
                 child: const Text('Открыть',
                     style: TextStyle(fontWeight: FontWeight.w600)),
               )
             else
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: t.accentTint,
-                  borderRadius: AppRadius.mdAll,
+              GestureDetector(
+                onTap: () => _showCompletedDialog(day.template!, day.date),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: t.accentTint,
+                    borderRadius: AppRadius.mdAll,
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.check_circle_outline,
+                        size: 16, color: t.accentPress),
+                    const SizedBox(width: 6),
+                    Text('Выполнено',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: t.accentPress)),
+                    const SizedBox(width: 4),
+                    Icon(Icons.chevron_right, size: 16, color: t.accentPress),
+                  ]),
                 ),
-                child: Row(children: [
-                  Icon(Icons.check_circle_outline,
-                      size: 16, color: t.accentPress),
-                  const SizedBox(width: 6),
-                  Text('Выполнено',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: t.accentPress)),
-                ]),
               ),
           ]),
         ],
@@ -526,16 +594,12 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
     );
   }
 
-  Widget _iosWeekRow(
-      BuildContext context, ThemeTokens t, _DayItem day) {
+  Widget _iosWeekRow(BuildContext context, ThemeTokens t, _DayItem day) {
     final hasWorkout = day.template != null;
     return GestureDetector(
-      onTap: hasWorkout
-          ? () => _showWorkoutDialog(day.template!, day.date)
-          : null,
+      onTap: hasWorkout ? () => _openDay(day) : null,
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: hasWorkout ? t.accentTint : t.surface,
           borderRadius: AppRadius.mdAll,
@@ -550,18 +614,14 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
             child: Text(
               '${_wdLabels[day.dow - 1]} · ${_fmtDate(day.date)}',
               style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: t.text3),
+                  fontSize: 12, fontWeight: FontWeight.w500, color: t.text3),
             ),
           ),
           const SizedBox(width: 8),
           if (!hasWorkout)
             Text('Отдых',
                 style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: t.text3))
+                    fontSize: 14, fontWeight: FontWeight.w500, color: t.text3))
           else ...[
             Expanded(
               child: Column(
@@ -572,8 +632,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: t.text1)),
-                  _ExerciseCountText(
-                      templateId: day.template!.id, t: t),
+                  _ExerciseCountText(templateId: day.template!.id, t: t),
                 ],
               ),
             ),
@@ -676,8 +735,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
 
   // ── Day detail ────────────────────────────────────────────────────────────
 
-  Widget _buildDayDetail(
-      BuildContext context, ThemeTokens t, _DayItem day) {
+  Widget _buildDayDetail(BuildContext context, ThemeTokens t, _DayItem day) {
     if (day.template == null) {
       return _restCard(context, t, day);
     }
@@ -715,8 +773,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
                               fontWeight: FontWeight.w700,
                               color: t.text1)),
                       const SizedBox(height: 4),
-                      Text(
-                          '${_wdFull[day.dow - 1]} · ${_fmtDate(day.date)}',
+                      Text('${_wdFull[day.dow - 1]} · ${_fmtDate(day.date)}',
                           style: Theme.of(context)
                               .textTheme
                               .bodyMedium
@@ -738,31 +795,30 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
                       ),
                     )
                   else
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: t.accentTint,
-                        borderRadius: AppRadius.mdAll,
+                    FilledButton.tonal(
+                      onPressed: () =>
+                          _showCompletedDialog(day.template!, day.date),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: t.accentTint,
+                        foregroundColor: t.accentPress,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
                       ),
-                      child: Row(
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle_outline,
-                              size: 16, color: t.accentPress),
-                          const SizedBox(width: 6),
-                          Text('Готово',
+                          Icon(Icons.check_circle_outline, size: 16),
+                          SizedBox(width: 6),
+                          Text('Выполнено — открыть',
                               style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: t.accentPress)),
+                                  fontSize: 14, fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
                 ],
               ),
               const SizedBox(height: 20),
-              _ExerciseList(
-                  templateId: day.template!.id, date: day.date),
+              _ExerciseList(templateId: day.template!.id, date: day.date),
             ],
           ),
         ),
@@ -814,9 +870,7 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
           ),
           child: Text(label,
               style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: t.text1)),
+                  fontSize: 13, fontWeight: FontWeight.w500, color: t.text1)),
         ),
       ),
     );
@@ -854,8 +908,8 @@ class _ExercisePreview extends ConsumerWidget {
         ref.watch(exercisesForTemplateProvider(templateId)).valueOrNull ?? [];
     if (exercises.isEmpty) return const SizedBox.shrink();
     const maxShow = 3;
-    final names  = exercises.take(maxShow).map((e) => e.name).join(' · ');
-    final extra  = exercises.length > maxShow
+    final names = exercises.take(maxShow).map((e) => e.name).join(' · ');
+    final extra = exercises.length > maxShow
         ? '  · ещё ${exercises.length - maxShow}'
         : '';
     return Text(
@@ -875,9 +929,11 @@ class _ExerciseCountChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final count =
-        ref.watch(exercisesForTemplateProvider(templateId)).valueOrNull?.length
-            ?? 0;
+    final count = ref
+            .watch(exercisesForTemplateProvider(templateId))
+            .valueOrNull
+            ?.length ??
+        0;
     if (count == 0) return const SizedBox.shrink();
     final mins = (count * 9).clamp(20, 90);
     return Container(
@@ -904,11 +960,12 @@ class _ExerciseCountText extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final count =
-        ref.watch(exercisesForTemplateProvider(templateId)).valueOrNull?.length
-            ?? 0;
-    return Text('$count упр.',
-        style: TextStyle(fontSize: 12, color: t.text3));
+    final count = ref
+            .watch(exercisesForTemplateProvider(templateId))
+            .valueOrNull
+            ?.length ??
+        0;
+    return Text('$count упр.', style: TextStyle(fontSize: 12, color: t.text3));
   }
 }
 
@@ -951,8 +1008,8 @@ class _WorkoutStatusIcon extends StatelessWidget {
         color: t.surfaceSunken,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(Icons.trending_down, size: 16,
-          color: t.warning.withValues(alpha: 0.8)),
+      child: Icon(Icons.trending_down,
+          size: 16, color: t.warning.withValues(alpha: 0.8)),
     );
   }
 }
@@ -1097,8 +1154,8 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
         }
       }
       if (sets.isNotEmpty) {
-        await widget.db.logSets(
-            exerciseId: ex.id, date: widget.date, sets: sets);
+        await widget.db
+            .logSets(exerciseId: ex.id, date: widget.date, sets: sets);
       }
     }
     if (!mounted) return;
@@ -1137,16 +1194,16 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-              _buildHeader(t),
-              Divider(height: 1, color: t.divider),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(wide ? 24 : 16),
-                  child: _buildExercises(t, wide),
-                ),
-              ),
-              Divider(height: 1, color: t.divider),
-              _focus == null ? _buildFooter(t) : _buildNumpad(t),
+          _buildHeader(t),
+          Divider(height: 1, color: t.divider),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(wide ? 24 : 16),
+              child: _buildExercises(t, wide),
+            ),
+          ),
+          Divider(height: 1, color: t.divider),
+          _focus == null ? _buildFooter(t) : _buildNumpad(t),
         ],
       ),
     );
@@ -1212,8 +1269,7 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
                     style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 2),
                 Text(widget.dateLabel,
-                    style:
-                        AppTypography.mono(fontSize: 13, color: t.text3)),
+                    style: AppTypography.mono(fontSize: 13, color: t.text3)),
               ],
             ),
           ),
@@ -1256,8 +1312,7 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
             Expanded(child: cards[i]),
             const SizedBox(width: 16),
             Expanded(
-                child:
-                    i + 1 < cards.length ? cards[i + 1] : const SizedBox()),
+                child: i + 1 < cards.length ? cards[i + 1] : const SizedBox()),
           ],
         ),
       ));
@@ -1375,8 +1430,7 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
     final (wCtrl, rCtrl) = widget.controllers[exId]![j];
     final raw = (isKg ? wCtrl : rCtrl).text.trim();
     final f = _focus;
-    final focused =
-        f != null && f.exId == exId && f.set == j && f.isKg == isKg;
+    final focused = f != null && f.exId == exId && f.set == j && f.isKg == isKg;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -1617,8 +1671,14 @@ class _ProgramDialogState extends ConsumerState<_ProgramDialog> {
 
   // Program colour palette (stored as ARGB int on the template).
   static const List<int> _hueValues = [
-    0xFF6B8F71, 0xFF6E8FB8, 0xFFC08552, 0xFF7FA08A,
-    0xFFB5896E, 0xFF9A7AA0, 0xFFC77B7B, 0xFF5B9AA0,
+    0xFF6B8F71,
+    0xFF6E8FB8,
+    0xFFC08552,
+    0xFF7FA08A,
+    0xFFB5896E,
+    0xFF9A7AA0,
+    0xFFC77B7B,
+    0xFF5B9AA0,
   ];
 
   @override
@@ -1639,54 +1699,54 @@ class _ProgramDialogState extends ConsumerState<_ProgramDialog> {
     return _editorOpen
         ? _editorView(t)
         : Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 16, 12, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text('Программы',
-                        style: Theme.of(context).textTheme.headlineMedium),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    color: t.text3,
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 16, 12, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text('Программы',
+                          style: Theme.of(context).textTheme.headlineMedium),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      color: t.text3,
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            // Segmented switcher
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
-              child: _segmented(t),
-            ),
-            Divider(height: 1, color: t.divider),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
-                child: _view == 'library'
-                    ? _library(t, templates)
-                    : _week(t, templates, slots),
+              // Segmented switcher
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
+                child: _segmented(t),
               ),
-            ),
-            Divider(height: 1, color: t.divider),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Готово'),
-                  ),
-                ],
+              Divider(height: 1, color: t.divider),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+                  child: _view == 'library'
+                      ? _library(t, templates)
+                      : _week(t, templates, slots),
+                ),
               ),
-            ),
-          ],
-        );
+              Divider(height: 1, color: t.divider),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Готово'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
   }
 
   Widget _segmented(ThemeTokens t) {
@@ -1722,7 +1782,8 @@ class _ProgramDialogState extends ConsumerState<_ProgramDialog> {
         color: t.surfaceSunken,
         borderRadius: AppRadius.mdAll,
       ),
-      child: Row(children: [seg('library', 'Мои программы'), seg('week', 'Неделя')]),
+      child: Row(
+          children: [seg('library', 'Мои программы'), seg('week', 'Неделя')]),
     );
   }
 
@@ -1771,8 +1832,9 @@ class _ProgramDialogState extends ConsumerState<_ProgramDialog> {
   }
 
   Widget _programCard(ThemeTokens t, WorkoutTemplateTableData tmpl) {
-    final exercises = ref.watch(exercisesForTemplateProvider(tmpl.id)).valueOrNull ??
-        const <ExerciseTemplateTableData>[];
+    final exercises =
+        ref.watch(exercisesForTemplateProvider(tmpl.id)).valueOrNull ??
+            const <ExerciseTemplateTableData>[];
     final preview = exercises.map((e) => e.name).take(3).join(' · ');
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1804,8 +1866,7 @@ class _ProgramDialogState extends ConsumerState<_ProgramDialog> {
                         children: [
                           Expanded(
                             child: Text(tmpl.name,
-                                style:
-                                    Theme.of(context).textTheme.titleLarge),
+                                style: Theme.of(context).textTheme.titleLarge),
                           ),
                           Text('${exercises.length} упр.',
                               style: AppTypography.mono(
@@ -1818,8 +1879,7 @@ class _ProgramDialogState extends ConsumerState<_ProgramDialog> {
                           child: Text(preview,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style:
-                                  TextStyle(fontSize: 13, color: t.text2)),
+                              style: TextStyle(fontSize: 13, color: t.text2)),
                         ),
                     ],
                   ),
@@ -1908,8 +1968,7 @@ class _ProgramDialogState extends ConsumerState<_ProgramDialog> {
     if (mounted) _closeEditor();
   }
 
-  void _addDraftExercise() =>
-      setState(() => _editExs.add(_ExDraft()));
+  void _addDraftExercise() => setState(() => _editExs.add(_ExDraft()));
 
   void _removeDraftExercise(int i) => setState(() {
         _editExs[i].ctrl.dispose();
@@ -2098,11 +2157,11 @@ class _ProgramDialogState extends ConsumerState<_ProgramDialog> {
               ),
             ),
             const SizedBox(width: 10),
-            _stepperLabeled(t, 'подх.', e.sets,
-                (v) => setState(() => e.sets = v), 1, 12),
+            _stepperLabeled(
+                t, 'подх.', e.sets, (v) => setState(() => e.sets = v), 1, 12),
             const SizedBox(width: 10),
-            _stepperLabeled(t, 'повт.', e.reps,
-                (v) => setState(() => e.reps = v), 1, 50),
+            _stepperLabeled(
+                t, 'повт.', e.reps, (v) => setState(() => e.reps = v), 1, 50),
             const SizedBox(width: 4),
             MouseRegion(
               cursor: SystemMouseCursors.click,
@@ -2146,8 +2205,7 @@ class _ProgramDialogState extends ConsumerState<_ProgramDialog> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              btn(Icons.remove,
-                  () => onChange(value > min ? value - 1 : min)),
+              btn(Icons.remove, () => onChange(value > min ? value - 1 : min)),
               SizedBox(
                 width: 24,
                 child: Text('$value',
@@ -2240,9 +2298,7 @@ class _ProgramDialogState extends ConsumerState<_ProgramDialog> {
             width: 40,
             child: Text(_wdLabels[dow - 1],
                 style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: t.text2)),
+                    fontSize: 13, fontWeight: FontWeight.w600, color: t.text2)),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -2290,8 +2346,8 @@ class _DayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isRest  = day.template == null;
-    final isDone  = day.isDone;
+    final isRest = day.template == null;
+    final isDone = day.isDone;
     final isToday = day.isToday;
 
     if (isRest) {
@@ -2300,8 +2356,7 @@ class _DayCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: t.bg,
           borderRadius: AppRadius.lgAll,
-          border: Border.all(
-              color: t.border.withValues(alpha: 0.5)),
+          border: Border.all(color: t.border.withValues(alpha: 0.5)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2315,12 +2370,9 @@ class _DayCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(_fmtDate(day.date),
                 style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: t.text4)),
+                    fontSize: 13, fontWeight: FontWeight.w500, color: t.text4)),
             const SizedBox(height: 16),
-            Text('Отдых',
-                style: TextStyle(fontSize: 13, color: t.text4)),
+            Text('Отдых', style: TextStyle(fontSize: 13, color: t.text4)),
           ],
         ),
       );
@@ -2357,8 +2409,7 @@ class _DayCard extends StatelessWidget {
                           letterSpacing: 0.5,
                           color: isDone ? t.accentPress : t.text3)),
                   if (isDone)
-                    Icon(Icons.check_circle,
-                        size: 12, color: t.accentPress),
+                    Icon(Icons.check_circle, size: 12, color: t.accentPress),
                 ],
               ),
               const SizedBox(height: 2),
@@ -2390,22 +2441,204 @@ class _DayCard extends StatelessWidget {
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.5,
-                        color: isDone || isToday
-                            ? t.accentPress
-                            : t.text3),
+                        color: isDone || isToday ? t.accentPress : t.text3),
                   ),
                   const SizedBox(width: 4),
                   Icon(Icons.arrow_forward,
                       size: 11,
-                      color: isDone || isToday
-                          ? t.accentPress
-                          : t.text3),
+                      color: isDone || isToday ? t.accentPress : t.text3),
                 ],
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─── Completed-workout summary dialog ─────────────────────────────────────────
+
+class _CompletedWorkoutDialog extends StatelessWidget {
+  const _CompletedWorkoutDialog({
+    required this.template,
+    required this.dateLabel,
+    required this.exercises,
+    required this.setsByEx,
+    required this.onEdit,
+  });
+
+  final WorkoutTemplateTableData template;
+  final String dateLabel;
+  final List<ExerciseTemplateTableData> exercises;
+  final Map<int, List<SetEntryTableData>> setsByEx;
+  final VoidCallback onEdit;
+
+  static String _w(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = ThemeTokens.of(context);
+    var totalSets = 0;
+    var totalVolume = 0.0;
+    for (final list in setsByEx.values) {
+      totalSets += list.length;
+      for (final s in list) {
+        totalVolume += s.weightKg * s.reps;
+      }
+    }
+
+    Widget stat(String num, String label) => Expanded(
+          child: Column(children: [
+            Text(num,
+                style: AppTypography.mono(
+                    fontSize: 20, weight: FontWeight.w800, color: t.text1)),
+            const SizedBox(height: 2),
+            Text(label, style: TextStyle(fontSize: 11, color: t.text3)),
+          ]),
+        );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 18, 12, 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                          color: t.accentTint, borderRadius: AppRadius.pill),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.check_circle_outline,
+                            size: 13, color: t.accentPress),
+                        const SizedBox(width: 4),
+                        Text('Выполнено',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: t.accentPress)),
+                      ]),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(template.name,
+                        style: Theme.of(context).textTheme.headlineMedium),
+                    const SizedBox(height: 2),
+                    Text(dateLabel,
+                        style:
+                            AppTypography.mono(fontSize: 13, color: t.text3)),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, size: 20),
+                color: t.text3,
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 6, 22, 14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+                color: t.surfaceSunken, borderRadius: AppRadius.mdAll),
+            child: Row(children: [
+              stat('${exercises.length}', 'упражнений'),
+              stat('$totalSets', 'подходов'),
+              stat(_w(totalVolume), 'кг объём'),
+            ]),
+          ),
+        ),
+        Divider(height: 1, color: t.divider),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
+            child: Column(
+              children: [
+                for (final ex in exercises)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: t.surface,
+                        border: Border.all(color: t.borderSoft),
+                        borderRadius: AppRadius.mdAll,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Expanded(
+                              child: Text(ex.name,
+                                  style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: t.text1)),
+                            ),
+                            Text('${setsByEx[ex.id]?.length ?? 0} подх.',
+                                style: AppTypography.mono(
+                                    fontSize: 12, color: t.text3)),
+                          ]),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final s in (setsByEx[ex.id] ??
+                                  const <SetEntryTableData>[]))
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 11, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: t.surfaceSunken,
+                                    border: Border.all(color: t.borderSoft),
+                                    borderRadius: AppRadius.smAll,
+                                  ),
+                                  child: Text('${_w(s.weightKg)}×${s.reps}',
+                                      style: AppTypography.mono(
+                                          fontSize: 14,
+                                          weight: FontWeight.w600,
+                                          color: t.text1)),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        Divider(height: 1, color: t.divider),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 14, 22, 16),
+          child: Row(children: [
+            const Spacer(),
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Закрыть')),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined, size: 16),
+              label: const Text('Редактировать'),
+            ),
+          ]),
+        ),
+      ],
     );
   }
 }

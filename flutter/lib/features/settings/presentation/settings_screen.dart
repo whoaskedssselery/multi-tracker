@@ -33,8 +33,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _obscureKey    = true;
-  bool _pingLoading   = false;
+  bool _obscureKey = true;
+  bool _pingLoading = false;
   bool _exportLoading = false;
   final _keyCtrl = TextEditingController();
   String _appVersion = '';
@@ -86,153 +86,158 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const AppPageHeader(title: 'Настройки'),
           Expanded(
             child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl3, vertical: AppSpacing.xl2),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Profile ──────────────────────────────────────
-            _sectionLabel('ПРОФИЛЬ'),
-            _card([
-              _editableRow('Имя', profile?.name ?? '—', t: t,
-                  onTap: () => _FieldEditDialog.show(
-                    context,
-                    title: 'Имя',
-                    initialValue: profile?.name ?? '',
-                    onSave: (v) => ref.read(dbProvider).upsertProfile(
-                      ProfileTableCompanion(name: Value(v)),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl3, vertical: AppSpacing.xl2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Profile ──────────────────────────────────────
+                  _sectionLabel('ПРОФИЛЬ'),
+                  _card([
+                    _editableRow('Имя', profile?.name ?? '—',
+                        t: t,
+                        onTap: () => _FieldEditDialog.show(
+                              context,
+                              title: 'Имя',
+                              initialValue: profile?.name ?? '',
+                              onSave: (v) => ref.read(dbProvider).upsertProfile(
+                                    ProfileTableCompanion(name: Value(v)),
+                                  ),
+                              validator: _validateName,
+                            )),
+                    _divider(t),
+                    _editableRow(
+                      'Рост',
+                      profile?.heightCm != null
+                          ? '${profile!.heightCm} см'
+                          : '—',
+                      t: t,
+                      onTap: () => _FieldEditDialog.show(
+                        context,
+                        title: 'Рост',
+                        initialValue: profile?.heightCm?.toString() ?? '',
+                        suffix: 'см',
+                        keyboardType: TextInputType.number,
+                        onSave: (v) {
+                          final n = int.tryParse(v.trim());
+                          if (n == null) return Future.value();
+                          return ref.read(dbProvider).upsertProfile(
+                                ProfileTableCompanion(heightCm: Value(n)),
+                              );
+                        },
+                        validator: _validateHeight,
+                      ),
                     ),
-                    validator: _validateName,
-                  )),
-              _divider(t),
-              _editableRow(
-                'Рост',
-                profile?.heightCm != null ? '${profile!.heightCm} см' : '—',
-                t: t,
-                onTap: () => _FieldEditDialog.show(
-                  context,
-                  title: 'Рост',
-                  initialValue: profile?.heightCm?.toString() ?? '',
-                  suffix: 'см',
-                  keyboardType: TextInputType.number,
-                  onSave: (v) {
-                    final n = int.tryParse(v.trim());
-                    if (n == null) return Future.value();
-                    return ref.read(dbProvider).upsertProfile(
-                      ProfileTableCompanion(heightCm: Value(n)),
-                    );
-                  },
-                  validator: _validateHeight,
-                ),
+                    _divider(t),
+                    _editableRow(
+                      'Целевой вес',
+                      profile?.targetWeightKg != null
+                          ? '${profile!.targetWeightKg} кг'
+                          : '—',
+                      t: t,
+                      onTap: () => _FieldEditDialog.show(
+                        context,
+                        title: 'Целевой вес',
+                        initialValue: profile?.targetWeightKg?.toString() ?? '',
+                        suffix: 'кг',
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        onSave: (v) {
+                          final n =
+                              double.tryParse(v.trim().replaceAll(',', '.'));
+                          if (n == null) return Future.value();
+                          return ref.read(dbProvider).upsertProfile(
+                                ProfileTableCompanion(targetWeightKg: Value(n)),
+                              );
+                        },
+                        validator: _validateWeight,
+                      ),
+                    ),
+                  ], t: t),
+                  const SizedBox(height: AppSpacing.xl2),
+
+                  // ── Appearance ───────────────────────────────────
+                  _sectionLabel('ВНЕШНИЙ ВИД'),
+                  _card([_themeRow(prefs?.themeMode ?? 'system', t)], t: t),
+                  const SizedBox(height: AppSpacing.xl2),
+
+                  // ── AI ───────────────────────────────────────────
+                  _sectionLabel('AI — GROQ'),
+                  _card([
+                    _apiKeySection(apiKey, safeModel, t),
+                    _divider(t),
+                    _modelRow(safeModel, t),
+                  ], t: t),
+                  const SizedBox(height: AppSpacing.xl2),
+
+                  // ── Sync ─────────────────────────────────────────
+                  if (SupabaseConfig.isConfigured) ...[
+                    _sectionLabel('СИНХРОНИЗАЦИЯ'),
+                    _card([_syncSection(t)], t: t),
+                    const SizedBox(height: AppSpacing.xl2),
+                  ],
+
+                  // ── Notifications ────────────────────────────────
+                  _sectionLabel('УВЕДОМЛЕНИЯ'),
+                  _card([
+                    _switchRow(
+                      'Уведомления',
+                      prefs?.notificationsEnabled ?? true,
+                      t: t,
+                      onChanged: (v) async {
+                        await ref.read(dbProvider).upsertPreferences(
+                              AppPreferencesTableCompanion(
+                                  notificationsEnabled: Value(v)),
+                            );
+                        // Ask for OS permission when enabling (Android 13+ / iOS).
+                        if (v)
+                          await NotificationsService.instance
+                              .requestPermissions();
+                      },
+                    ),
+                  ], t: t),
+                  const SizedBox(height: AppSpacing.xl2),
+
+                  // ── Data ─────────────────────────────────────────
+                  _sectionLabel('ДАННЫЕ'),
+                  _card([
+                    _actionRow('Экспорт данных (CSV)', Icons.download_outlined,
+                        _exportLoading ? null : _exportCsv,
+                        t: t),
+                    _divider(t),
+                    _actionRow('Экспорт данных (JSON)', Icons.code_outlined,
+                        _exportLoading ? null : _exportJson,
+                        t: t),
+                    _divider(t),
+                    _actionRow(
+                        'Импорт данных (JSON)',
+                        Icons.upload_file_outlined,
+                        _exportLoading ? null : _importJson,
+                        t: t),
+                    _divider(t),
+                    _actionRow(
+                      'Сбросить все данные',
+                      Icons.delete_forever_outlined,
+                      () => _confirmReset(context),
+                      color: AppColors.danger,
+                      t: t,
+                    ),
+                  ], t: t),
+                  const SizedBox(height: AppSpacing.xl2),
+
+                  // ── About ────────────────────────────────────────
+                  _sectionLabel('О ПРИЛОЖЕНИИ'),
+                  _card([
+                    _infoRow('Версия', _appVersion.isEmpty ? '…' : _appVersion,
+                        t: t),
+                    _divider(t),
+                    _infoRow('Платформа',
+                        '${Platform.operatingSystem[0].toUpperCase()}${Platform.operatingSystem.substring(1)}',
+                        t: t),
+                  ], t: t),
+                  const SizedBox(height: AppSpacing.xl4),
+                ],
               ),
-              _divider(t),
-              _editableRow(
-                'Целевой вес',
-                profile?.targetWeightKg != null
-                    ? '${profile!.targetWeightKg} кг'
-                    : '—',
-                t: t,
-                onTap: () => _FieldEditDialog.show(
-                  context,
-                  title: 'Целевой вес',
-                  initialValue: profile?.targetWeightKg?.toString() ?? '',
-                  suffix: 'кг',
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  onSave: (v) {
-                    final n =
-                        double.tryParse(v.trim().replaceAll(',', '.'));
-                    if (n == null) return Future.value();
-                    return ref.read(dbProvider).upsertProfile(
-                      ProfileTableCompanion(targetWeightKg: Value(n)),
-                    );
-                  },
-                  validator: _validateWeight,
-                ),
-              ),
-            ], t: t),
-            const SizedBox(height: AppSpacing.xl2),
-
-            // ── Appearance ───────────────────────────────────
-            _sectionLabel('ВНЕШНИЙ ВИД'),
-            _card([_themeRow(prefs?.themeMode ?? 'system', t)], t: t),
-            const SizedBox(height: AppSpacing.xl2),
-
-            // ── AI ───────────────────────────────────────────
-            _sectionLabel('AI — GROQ'),
-            _card([
-              _apiKeySection(apiKey, safeModel, t),
-              _divider(t),
-              _modelRow(safeModel, t),
-            ], t: t),
-            const SizedBox(height: AppSpacing.xl2),
-
-            // ── Sync ─────────────────────────────────────────
-            if (SupabaseConfig.isConfigured) ...[
-              _sectionLabel('СИНХРОНИЗАЦИЯ'),
-              _card([_syncSection(t)], t: t),
-              const SizedBox(height: AppSpacing.xl2),
-            ],
-
-            // ── Notifications ────────────────────────────────
-            _sectionLabel('УВЕДОМЛЕНИЯ'),
-            _card([
-              _switchRow(
-                'Уведомления',
-                prefs?.notificationsEnabled ?? true,
-                t: t,
-                onChanged: (v) async {
-                  await ref.read(dbProvider).upsertPreferences(
-                    AppPreferencesTableCompanion(
-                        notificationsEnabled: Value(v)),
-                  );
-                  // Ask for OS permission when enabling (Android 13+ / iOS).
-                  if (v) await NotificationsService.instance.requestPermissions();
-                },
-              ),
-            ], t: t),
-            const SizedBox(height: AppSpacing.xl2),
-
-            // ── Data ─────────────────────────────────────────
-            _sectionLabel('ДАННЫЕ'),
-            _card([
-              _actionRow('Экспорт данных (CSV)',
-                  Icons.download_outlined,
-                  _exportLoading ? null : _exportCsv,
-                  t: t),
-              _divider(t),
-              _actionRow('Экспорт данных (JSON)',
-                  Icons.code_outlined,
-                  _exportLoading ? null : _exportJson,
-                  t: t),
-              _divider(t),
-              _actionRow('Импорт данных (JSON)',
-                  Icons.upload_file_outlined,
-                  _exportLoading ? null : _importJson,
-                  t: t),
-              _divider(t),
-              _actionRow(
-                'Сбросить все данные',
-                Icons.delete_forever_outlined,
-                () => _confirmReset(context),
-                color: AppColors.danger,
-                t: t,
-              ),
-            ], t: t),
-            const SizedBox(height: AppSpacing.xl2),
-
-            // ── About ────────────────────────────────────────
-            _sectionLabel('О ПРИЛОЖЕНИИ'),
-            _card([
-              _infoRow('Версия', _appVersion.isEmpty ? '…' : _appVersion, t: t),
-              _divider(t),
-              _infoRow('Платформа',
-                  '${Platform.operatingSystem[0].toUpperCase()}${Platform.operatingSystem.substring(1)}',
-                  t: t),
-            ], t: t),
-            const SizedBox(height: AppSpacing.xl4),
-          ],
-        ),
             ),
           ),
         ],
@@ -334,7 +339,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final c = (color ?? t.text1).withValues(alpha: enabled ? 1.0 : 0.4);
     return InkWell(
       onTap: onTap,
-      mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      mouseCursor:
+          enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       borderRadius: AppRadius.lgAll,
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -435,13 +441,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               OutlinedButton.icon(
                 onPressed: sync.busy
                     ? null
-                    : () =>
-                        ref.read(syncControllerProvider.notifier).syncNow(),
+                    : () => ref.read(syncControllerProvider.notifier).syncNow(),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: t.text1,
                   side: BorderSide(color: t.border),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 ),
                 icon: const Icon(Icons.sync, size: 16),
                 label: const Text('Синхронизировать'),
@@ -450,10 +455,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               TextButton.icon(
                 onPressed: sync.busy
                     ? null
-                    : () =>
-                        ref.read(syncControllerProvider.notifier).signOut(),
-                style: TextButton.styleFrom(
-                    foregroundColor: AppColors.danger),
+                    : () => ref.read(syncControllerProvider.notifier).signOut(),
+                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
                 icon: const Icon(Icons.logout_outlined, size: 16),
                 label: const Text('Выйти'),
               ),
@@ -539,7 +542,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _showSyncSignIn(ThemeTokens t) async {
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
+    final codeCtrl = TextEditingController();
     var register = false; // false = sign in, true = create account
+    var otpStep = false; // showing the email-code verification step
+    var otpEmail = '';
     await showAppModal<void>(
       context,
       maxWidth: 440,
@@ -552,10 +558,95 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Future<void> submit() async {
             final email = emailCtrl.text;
             final pass = passCtrl.text;
-            final ok = register
-                ? await notifier.signUp(email, pass)
-                : await notifier.signIn(email, pass);
+            if (register) {
+              final outcome = await notifier.signUp(email, pass);
+              if (!ctx.mounted) return;
+              if (outcome == AuthOutcome.signedIn) {
+                Navigator.pop(ctx);
+              } else if (outcome == AuthOutcome.codeSent) {
+                setDlg(() {
+                  otpStep = true;
+                  otpEmail = email.trim();
+                });
+              }
+            } else {
+              final ok = await notifier.signIn(email, pass);
+              if (ok && ctx.mounted) Navigator.pop(ctx);
+            }
+          }
+
+          Future<void> verify() async {
+            final ok = await notifier.verifyOtp(otpEmail, codeCtrl.text);
             if (ok && ctx.mounted) Navigator.pop(ctx);
+          }
+
+          // ── Email-code verification step ──
+          if (otpStep) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 18, 16, 8),
+                  child: Row(children: [
+                    Expanded(
+                      child: Text('Подтверждение',
+                          style: Theme.of(ctx).textTheme.headlineMedium),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      color: tt.text3,
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ]),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Код отправлен на $otpEmail',
+                          style: TextStyle(fontSize: 13, color: tt.text3)),
+                      const SizedBox(height: 14),
+                      _syncField(ctx, codeCtrl, 'Код из письма', tt,
+                          keyboardType: TextInputType.number),
+                      if (sync.error != null) ...[
+                        const SizedBox(height: 10),
+                        Text(sync.error!,
+                            style: TextStyle(
+                                fontSize: 12, color: AppColors.danger)),
+                      ],
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () => notifier.resendOtp(otpEmail),
+                        child: Text('Отправить код повторно',
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: tt.accent,
+                                fontWeight: FontWeight.w500)),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 8, 22, 20),
+                  child: Row(children: [
+                    TextButton(
+                      onPressed: () => setDlg(() {
+                        otpStep = false;
+                        codeCtrl.clear();
+                      }),
+                      child: const Text('Назад'),
+                    ),
+                    const Spacer(),
+                    FilledButton(
+                      onPressed: sync.busy ? null : verify,
+                      child: Text(sync.busy ? '…' : 'Подтвердить'),
+                    ),
+                  ]),
+                ),
+              ],
+            );
           }
 
           return Column(
@@ -612,8 +703,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     if (sync.error != null) ...[
                       const SizedBox(height: 10),
                       Text(sync.error!,
-                          style: TextStyle(
-                              fontSize: 12, color: AppColors.danger)),
+                          style:
+                              TextStyle(fontSize: 12, color: AppColors.danger)),
                     ],
                   ],
                 ),
@@ -630,9 +721,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(width: 8),
                     FilledButton(
                       onPressed: sync.busy ? null : submit,
-                      child: Text(sync.busy
-                          ? '…'
-                          : (register ? 'Создать' : 'Войти')),
+                      child: Text(
+                          sync.busy ? '…' : (register ? 'Создать' : 'Войти')),
                     ),
                   ],
                 ),
@@ -667,8 +757,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _syncField(BuildContext ctx, TextEditingController ctrl, String label,
-      ThemeTokens t,
+  Widget _syncField(
+      BuildContext ctx, TextEditingController ctrl, String label, ThemeTokens t,
       {bool obscure = false, TextInputType? keyboardType}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -777,13 +867,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           if (hasKey) ...[
             const SizedBox(height: 12),
             FilledButton(
-              onPressed:
-                  _pingLoading ? null : () => _pingGroq(apiKey, model),
+              onPressed: _pingLoading ? null : () => _pingGroq(apiKey, model),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(0, 34),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                textStyle: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600),
+                textStyle:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
               child: _pingLoading
                   ? const SizedBox(
@@ -812,8 +901,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _ThemePicker(
             value: current,
             onChanged: (v) => ref.read(dbProvider).upsertPreferences(
-              AppPreferencesTableCompanion(themeMode: Value(v)),
-            ),
+                  AppPreferencesTableCompanion(themeMode: Value(v)),
+                ),
           ),
         ],
       ),
@@ -843,8 +932,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onChanged: (v) {
               if (v == null) return;
               ref.read(dbProvider).upsertPreferences(
-                AppPreferencesTableCompanion(aiModel: Value(v)),
-              );
+                    AppPreferencesTableCompanion(aiModel: Value(v)),
+                  );
             },
           ),
         ],
@@ -856,8 +945,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _showKeyEditor(BuildContext ctx, String? current) async {
     _keyCtrl.text = current ?? '';
-    final isDesktop =
-        MediaQuery.sizeOf(ctx).width >= kDesktopBreakpoint;
+    final isDesktop = MediaQuery.sizeOf(ctx).width >= kDesktopBreakpoint;
 
     Future<void> save(BuildContext sheetCtx) async {
       await ref.read(groqApiKeyProvider.notifier).set(_keyCtrl.text);
@@ -881,8 +969,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 borderRadius: AppRadius.mdAll,
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
           ),
           const SizedBox(height: AppSpacing.xl2),
@@ -931,8 +1019,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Groq API Key',
-                  style: Theme.of(sheetCtx).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600, fontSize: 17)),
+                  style: Theme.of(sheetCtx)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w600, fontSize: 17)),
               const SizedBox(height: AppSpacing.xl),
               body(sheetCtx),
             ],
@@ -940,7 +1030,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       );
     }
-
   }
 
   // ── Groq ping ────────────────────────────────────────────────
@@ -973,8 +1062,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (!mounted) return;
       if (res.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Ключ работает')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Ключ работает')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Ошибка ${res.statusCode}: $body'),
@@ -983,8 +1072,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Сетевая ошибка: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Сетевая ошибка: $e')));
     } finally {
       if (mounted) setState(() => _pingLoading = false);
     }
@@ -1014,8 +1103,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () => Navigator.pop(c, true),
             child: const Text('Сбросить',
                 style: TextStyle(
-                    color: AppColors.danger,
-                    fontWeight: FontWeight.w600)),
+                    color: AppColors.danger, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -1034,8 +1122,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         } catch (_) {/* offline — auto-push will retry later */}
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Все данные удалены')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Все данные удалены')));
       }
     }
   }
@@ -1143,7 +1231,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       buf.writeln('# WEIGHT');
       buf.writeln('date,value,note');
       for (final w in data['weight'] as List) {
-        buf.writeln('${w['date']},${w['value']},${_csv(w['note']?.toString() ?? '')}');
+        buf.writeln(
+            '${w['date']},${w['value']},${_csv(w['note']?.toString() ?? '')}');
       }
       buf.writeln();
 
@@ -1209,8 +1298,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required String mimeType,
   }) async {
     if (Platform.isWindows) {
-      final dir =
-          await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+      final dir = await getDownloadsDirectory() ??
+          await getApplicationDocumentsDirectory();
       final file = File('${dir.path}\\$fileName');
       await file.writeAsBytes(bytes);
       if (mounted) {
@@ -1300,8 +1389,7 @@ class _FieldEditDialog extends StatefulWidget {
     String? suffix,
     TextInputType? keyboardType,
   }) {
-    final isDesktop =
-        MediaQuery.sizeOf(context).width >= kDesktopBreakpoint;
+    final isDesktop = MediaQuery.sizeOf(context).width >= kDesktopBreakpoint;
     final widget = _FieldEditDialog(
       title: title,
       initialValue: initialValue,
@@ -1427,8 +1515,10 @@ class _FieldEditDialogState extends State<_FieldEditDialog> {
         children: [
           Text(
             widget.title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600),
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: AppSpacing.xl),
           _buildField(),
@@ -1477,8 +1567,8 @@ class _ThemePicker extends StatelessWidget {
               onTap: () => onChanged(o.$1),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
                   color: active ? t.surface : Colors.transparent,
                   borderRadius: AppRadius.pill,
@@ -1488,8 +1578,7 @@ class _ThemePicker extends StatelessWidget {
                   o.$2,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight:
-                        active ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                     color: active ? t.text1 : t.text3,
                   ),
                 ),

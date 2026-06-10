@@ -20,7 +20,8 @@ class ProfileTable extends Table {
   DateTimeColumn get birthDate => dateTime().nullable()();
   IntColumn get heightCm => integer().nullable()();
   RealColumn get targetWeightKg => real().nullable()();
-  TextColumn get units => text().withDefault(const Constant('kg'))(); // 'kg' | 'lbs'
+  TextColumn get units =>
+      text().withDefault(const Constant('kg'))(); // 'kg' | 'lbs'
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -33,8 +34,10 @@ class AppPreferencesTable extends Table {
   // 'light' | 'dark' | 'system'
   TextColumn get themeMode => text().withDefault(const Constant('system'))();
   // 'llama-3.3-70b-versatile' | 'llama-3.1-8b-instant' | 'mixtral-8x7b-32768'
-  TextColumn get aiModel => text().withDefault(const Constant('llama-3.3-70b-versatile'))();
-  BoolColumn get notificationsEnabled => boolean().withDefault(const Constant(true))();
+  TextColumn get aiModel =>
+      text().withDefault(const Constant('llama-3.3-70b-versatile'))();
+  BoolColumn get notificationsEnabled =>
+      boolean().withDefault(const Constant(true))();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -60,8 +63,8 @@ class WeightEntryTable extends Table {
   String get tableName => 'weight_entries';
 
   IntColumn get id => integer().autoIncrement()();
-  DateTimeColumn get date => dateTime()();  // stored as midnight UTC
-  RealColumn get value => real()();        // in user units
+  DateTimeColumn get date => dateTime()(); // stored as midnight UTC
+  RealColumn get value => real()(); // in user units
   TextColumn get note => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -85,7 +88,8 @@ class ExerciseTemplateTable extends Table {
   String get tableName => 'exercise_templates';
 
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get workoutTemplateId => integer().references(WorkoutTemplateTable, #id)();
+  IntColumn get workoutTemplateId =>
+      integer().references(WorkoutTemplateTable, #id)();
   TextColumn get name => text()();
   // sortOrder >= 0 → active in the current program (display order).
   // sortOrder == -1 → ARCHIVED: removed from the program but kept so past
@@ -104,7 +108,8 @@ class ScheduleSlotTable extends Table {
   String get tableName => 'schedule_slots';
 
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get workoutTemplateId => integer().references(WorkoutTemplateTable, #id)();
+  IntColumn get workoutTemplateId =>
+      integer().references(WorkoutTemplateTable, #id)();
   IntColumn get dayOfWeek => integer()(); // 1=Mon … 7=Sun (ISO 8601)
   // When this slot was added. The schedule only applies to days on/after this
   // date — a newly added workout never back-fills earlier days in the calendar.
@@ -117,9 +122,10 @@ class SetEntryTable extends Table {
   String get tableName => 'set_entries';
 
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get exerciseTemplateId => integer().references(ExerciseTemplateTable, #id)();
+  IntColumn get exerciseTemplateId =>
+      integer().references(ExerciseTemplateTable, #id)();
   DateTimeColumn get date => dateTime()(); // day of the session
-  IntColumn get setIndex => integer()();   // 0-based within the session
+  IntColumn get setIndex => integer()(); // 0-based within the session
   RealColumn get weightKg => real()();
   IntColumn get reps => integer()();
   TextColumn get note => text().nullable()();
@@ -132,7 +138,8 @@ class WorkoutNoteTable extends Table {
   String get tableName => 'workout_notes';
 
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get workoutTemplateId => integer().references(WorkoutTemplateTable, #id)();
+  IntColumn get workoutTemplateId =>
+      integer().references(WorkoutTemplateTable, #id)();
   DateTimeColumn get date => dateTime()();
   TextColumn get body => text()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
@@ -145,7 +152,8 @@ class AiAnalysisTable extends Table {
   String get tableName => 'ai_analyses';
 
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get exerciseTemplateId => integer().references(ExerciseTemplateTable, #id)();
+  IntColumn get exerciseTemplateId =>
+      integer().references(ExerciseTemplateTable, #id)();
   DateTimeColumn get date => dateTime()();
   // 'progress' | 'plateau' | 'regress' | 'loading'
   TextColumn get verdict => text()();
@@ -232,30 +240,30 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (m) async {
-      await m.createAll();
-      await _seedDefaultProfile();
-      await _seedDefaultPreferences();
-    },
-    onUpgrade: (m, from, to) async {
-      if (from < 2) {
-        await m.createTable(appPreferencesTable);
-        await _seedDefaultPreferences();
-      }
-      if (from < 3) {
-        await m.addColumn(workoutTemplateTable, workoutTemplateTable.color);
-      }
-      if (from < 4) {
-        // Existing slots get "now" → they apply from the update date onward,
-        // so the calendar doesn't retroactively claim past days.
-        await m.addColumn(scheduleSlotTable, scheduleSlotTable.createdAt);
-      }
-    },
-    beforeOpen: (details) async {
-      await customStatement('PRAGMA foreign_keys = ON');
-      await customStatement('PRAGMA journal_mode = WAL');
-    },
-  );
+        onCreate: (m) async {
+          await m.createAll();
+          await _seedDefaultProfile();
+          await _seedDefaultPreferences();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(appPreferencesTable);
+            await _seedDefaultPreferences();
+          }
+          if (from < 3) {
+            await m.addColumn(workoutTemplateTable, workoutTemplateTable.color);
+          }
+          if (from < 4) {
+            // Existing slots get "now" → they apply from the update date onward,
+            // so the calendar doesn't retroactively claim past days.
+            await m.addColumn(scheduleSlotTable, scheduleSlotTable.createdAt);
+          }
+        },
+        beforeOpen: (details) async {
+          await customStatement('PRAGMA foreign_keys = ON');
+          await customStatement('PRAGMA journal_mode = WAL');
+        },
+      );
 
   Future<void> _seedDefaultProfile() async {
     await into(profileTable).insert(
@@ -275,8 +283,7 @@ class AppDatabase extends _$AppDatabase {
   // ── Profile DAO ──────────────────────────────────────────────
 
   Stream<ProfileTableData?> watchProfile() =>
-      (select(profileTable)..where((t) => t.id.equals(1)))
-          .watchSingleOrNull();
+      (select(profileTable)..where((t) => t.id.equals(1))).watchSingleOrNull();
 
   Future<void> upsertProfile(ProfileTableCompanion companion) =>
       (update(profileTable)..where((t) => t.id.equals(1)))
@@ -295,12 +302,12 @@ class AppDatabase extends _$AppDatabase {
   // ── Weight DAO ───────────────────────────────────────────────────────────
 
   /// Stream of weight entries newest-first, capped at [limit] rows.
-  Stream<List<WeightEntryTableData>> watchWeightEntries(
-          {int limit = 366}) =>
+  Stream<List<WeightEntryTableData>> watchWeightEntries({int limit = 366}) =>
       (select(weightEntryTable)
             ..orderBy([
               (t) => OrderingTerm.desc(t.date),
-              (t) => OrderingTerm.desc(t.createdAt), // tiebreaker for same-day entries
+              (t) => OrderingTerm.desc(
+                  t.createdAt), // tiebreaker for same-day entries
             ])
             ..limit(limit))
           .watch();
@@ -324,13 +331,12 @@ class AppDatabase extends _$AppDatabase {
   // ── Tasks DAO ────────────────────────────────────────────────────────────
 
   /// All tasks, active first, then by creation time.
-  Stream<List<TaskItemTableData>> watchAllTasks() =>
-      (select(taskItemTable)
-            ..orderBy([
-              (t) => OrderingTerm(expression: t.isDone),
-              (t) => OrderingTerm.asc(t.createdAt),
-            ]))
-          .watch();
+  Stream<List<TaskItemTableData>> watchAllTasks() => (select(taskItemTable)
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.isDone),
+          (t) => OrderingTerm.asc(t.createdAt),
+        ]))
+      .watch();
 
   Future<int> addTask({
     required String body,
@@ -408,14 +414,13 @@ class AppDatabase extends _$AppDatabase {
   Future<List<ExerciseTemplateTableData>> exercisesLoggedOnDate(
       int templateId, DateTime date) async {
     final mid = DateTime(date.year, date.month, date.day);
-    final logged = await (select(setEntryTable)
-          ..where((t) => t.date.equals(mid)))
-        .get();
+    final logged =
+        await (select(setEntryTable)..where((t) => t.date.equals(mid))).get();
     final ids = logged.map((s) => s.exerciseTemplateId).toSet();
     if (ids.isEmpty) return const [];
     final exs = await (select(exerciseTemplateTable)
-          ..where((t) =>
-              t.workoutTemplateId.equals(templateId) & t.id.isIn(ids))
+          ..where(
+              (t) => t.workoutTemplateId.equals(templateId) & t.id.isIn(ids))
           ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
         .get();
     return exs;
@@ -463,6 +468,17 @@ class AppDatabase extends _$AppDatabase {
                   DateTime(r.date.year, r.date.month, r.date.day)
               });
 
+  /// Logged sets for [exerciseId] on [date] (ascending by setIndex).
+  Future<List<SetEntryTableData>> setsForExerciseOnDate(
+      int exerciseId, DateTime date) {
+    final mid = DateTime(date.year, date.month, date.day);
+    return (select(setEntryTable)
+          ..where((t) =>
+              t.exerciseTemplateId.equals(exerciseId) & t.date.equals(mid))
+          ..orderBy([(t) => OrderingTerm.asc(t.setIndex)]))
+        .get();
+  }
+
   /// Summary string of the last logged sets for [exerciseId], e.g. "80×8 · 80×8".
   Future<String> getLastSetsString(int exerciseId) async {
     final rows = await (select(setEntryTable)
@@ -480,21 +496,18 @@ class AppDatabase extends _$AppDatabase {
             r.date.month == lastDate.month &&
             r.date.day == lastDate.day)
         .map((s) {
-          final w = s.weightKg == s.weightKg.roundToDouble()
-              ? s.weightKg.toInt().toString()
-              : s.weightKg.toStringAsFixed(1);
-          return '${w}×${s.reps}';
-        })
-        .join(' · ');
+      final w = s.weightKg == s.weightKg.roundToDouble()
+          ? s.weightKg.toInt().toString()
+          : s.weightKg.toStringAsFixed(1);
+      return '${w}×${s.reps}';
+    }).join(' · ');
   }
 
   Future<int> addWorkoutTemplate(String name, {int color = 0xFF6B8F71}) =>
-      into(workoutTemplateTable).insert(
-          WorkoutTemplateTableCompanion.insert(
-              name: name, color: Value(color)));
+      into(workoutTemplateTable).insert(WorkoutTemplateTableCompanion.insert(
+          name: name, color: Value(color)));
 
-  Future<void> updateWorkoutTemplate(int id,
-      {String? name, int? color}) async {
+  Future<void> updateWorkoutTemplate(int id, {String? name, int? color}) async {
     await (update(workoutTemplateTable)..where((t) => t.id.equals(id))).write(
       WorkoutTemplateTableCompanion(
         name: name == null ? const Value.absent() : Value(name),
@@ -507,8 +520,7 @@ class AppDatabase extends _$AppDatabase {
   /// Reconciles a template's exercises with [exs] (id==null → insert,
   /// id!=null → update, existing-but-absent → delete with its set log).
   /// Each exercise stores [sets] empty rows of [reps] in defaultSetsJson.
-  Future<void> setTemplateExercises(
-      int templateId,
+  Future<void> setTemplateExercises(int templateId,
       List<({int? id, String name, int sets, int reps})> exs) async {
     final existing = await (select(exerciseTemplateTable)
           ..where((t) => t.workoutTemplateId.equals(templateId)))
@@ -530,17 +542,18 @@ class AppDatabase extends _$AppDatabase {
         } else {
           // Archive: sentinel sortOrder -1 hides it from the program while
           // keeping its logged set_entries as history.
-          await (update(exerciseTemplateTable)..where((t) => t.id.equals(ex.id)))
-              .write(const ExerciseTemplateTableCompanion(
-                  sortOrder: Value(-1)));
+          await (update(exerciseTemplateTable)
+                ..where((t) => t.id.equals(ex.id)))
+              .write(
+                  const ExerciseTemplateTableCompanion(sortOrder: Value(-1)));
         }
       }
     }
     for (var i = 0; i < exs.length; i++) {
       final e = exs[i];
       final n = e.sets < 1 ? 1 : e.sets;
-      final setsJson = jsonEncode(
-          List.generate(n, (_) => {'weight': 0.0, 'reps': e.reps}));
+      final setsJson =
+          jsonEncode(List.generate(n, (_) => {'weight': 0.0, 'reps': e.reps}));
       if (e.id != null) {
         await (update(exerciseTemplateTable)..where((t) => t.id.equals(e.id!)))
             .write(ExerciseTemplateTableCompanion(
@@ -582,7 +595,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> addExercise(
-          {required int templateId, required String name}) async {
+      {required int templateId, required String name}) async {
     final count = await (select(exerciseTemplateTable)
           ..where((t) => t.workoutTemplateId.equals(templateId)))
         .get();
@@ -596,8 +609,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> deleteExercise(int id) async {
-    await (delete(setEntryTable)
-          ..where((t) => t.exerciseTemplateId.equals(id)))
+    await (delete(setEntryTable)..where((t) => t.exerciseTemplateId.equals(id)))
         .go();
     await (delete(exerciseTemplateTable)..where((t) => t.id.equals(id))).go();
   }
@@ -671,8 +683,7 @@ class AppDatabase extends _$AppDatabase {
         final seen = <String>{};
         final result = <DateTime>[];
         for (final r in rows) {
-          final key =
-              '${r.date.year}-${r.date.month}-${r.date.day}';
+          final key = '${r.date.year}-${r.date.month}-${r.date.day}';
           if (seen.add(key)) {
             result.add(DateTime(r.date.year, r.date.month, r.date.day));
           }
@@ -709,7 +720,8 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
 
-  Future<List<ChatMessageTableData>> getLastChatMessages({int limit = 20}) async {
+  Future<List<ChatMessageTableData>> getLastChatMessages(
+      {int limit = 20}) async {
     final rows = await (select(chatMessageTable)
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
           ..limit(limit))
@@ -734,19 +746,17 @@ class AppDatabase extends _$AppDatabase {
 
   /// Clears only messages belonging to [filter].
   Future<void> clearChatHistoryForFilter(String filter) =>
-      (delete(chatMessageTable)
-            ..where((t) => t.contextFilter.equals(filter)))
+      (delete(chatMessageTable)..where((t) => t.contextFilter.equals(filter)))
           .go();
 
   // ── Notes DAO ────────────────────────────────────────────────────────────
 
-  Stream<List<NoteItemTableData>> watchNotes() =>
-      (select(noteItemTable)
-            ..orderBy([
-              (t) => OrderingTerm.desc(t.isPinned),
-              (t) => OrderingTerm.desc(t.updatedAt),
-            ]))
-          .watch();
+  Stream<List<NoteItemTableData>> watchNotes() => (select(noteItemTable)
+        ..orderBy([
+          (t) => OrderingTerm.desc(t.isPinned),
+          (t) => OrderingTerm.desc(t.updatedAt),
+        ]))
+      .watch();
 
   Future<int> addNote({String title = '', String body = ''}) =>
       into(noteItemTable).insert(NoteItemTableCompanion.insert(
@@ -762,8 +772,8 @@ class AppDatabase extends _$AppDatabase {
   }) =>
       (update(noteItemTable)..where((t) => t.id.equals(id))).write(
         NoteItemTableCompanion(
-          title:    title    != null ? Value(title)    : const Value.absent(),
-          body:     body     != null ? Value(body)     : const Value.absent(),
+          title: title != null ? Value(title) : const Value.absent(),
+          body: body != null ? Value(body) : const Value.absent(),
           isPinned: isPinned != null ? Value(isPinned) : const Value.absent(),
           updatedAt: Value(DateTime.now()),
         ),
@@ -813,10 +823,10 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<Map<String, dynamic>> exportAllData() async {
-    final weights   = await select(weightEntryTable).get();
-    final tasks     = await select(taskItemTable).get();
-    final notes     = await select(noteItemTable).get();
-    final goals     = await select(goalTable).get();
+    final weights = await select(weightEntryTable).get();
+    final tasks = await select(taskItemTable).get();
+    final notes = await select(noteItemTable).get();
+    final goals = await select(goalTable).get();
     final templates = await (select(workoutTemplateTable)
           ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
         .get();
@@ -838,12 +848,14 @@ class AppDatabase extends _$AppDatabase {
             .get();
         exList.add({
           'name': ex.name,
-          'sets': sets.map((s) => {
-                'date': s.date.toIso8601String(),
-                'setIndex': s.setIndex,
-                'weightKg': s.weightKg,
-                'reps': s.reps,
-              }).toList(),
+          'sets': sets
+              .map((s) => {
+                    'date': s.date.toIso8601String(),
+                    'setIndex': s.setIndex,
+                    'weightKg': s.weightKg,
+                    'reps': s.reps,
+                  })
+              .toList(),
         });
       }
       workoutsJson.add({'name': tmpl.name, 'exercises': exList});
@@ -851,33 +863,41 @@ class AppDatabase extends _$AppDatabase {
 
     return {
       'exportedAt': DateTime.now().toIso8601String(),
-      'weight': weights.map((w) => {
-            'date': w.date.toIso8601String(),
-            'value': w.value,
-            'note': w.note,
-          }).toList(),
-      'tasks': tasks.map((t) => {
-            'body': t.body,
-            'group': t.group,
-            'priority': t.priority,
-            'isDone': t.isDone,
-            'completedAt': t.completedAt?.toIso8601String(),
-            'createdAt': t.createdAt.toIso8601String(),
-          }).toList(),
-      'notes': notes.map((n) => {
-            'title': n.title,
-            'body': n.body,
-            'isPinned': n.isPinned,
-            'createdAt': n.createdAt.toIso8601String(),
-            'updatedAt': n.updatedAt.toIso8601String(),
-          }).toList(),
-      'goals': goals.map((g) => {
-            'label': g.label,
-            'startValue': g.startValue,
-            'currentValue': g.currentValue,
-            'targetValue': g.targetValue,
-            'unit': g.unit,
-          }).toList(),
+      'weight': weights
+          .map((w) => {
+                'date': w.date.toIso8601String(),
+                'value': w.value,
+                'note': w.note,
+              })
+          .toList(),
+      'tasks': tasks
+          .map((t) => {
+                'body': t.body,
+                'group': t.group,
+                'priority': t.priority,
+                'isDone': t.isDone,
+                'completedAt': t.completedAt?.toIso8601String(),
+                'createdAt': t.createdAt.toIso8601String(),
+              })
+          .toList(),
+      'notes': notes
+          .map((n) => {
+                'title': n.title,
+                'body': n.body,
+                'isPinned': n.isPinned,
+                'createdAt': n.createdAt.toIso8601String(),
+                'updatedAt': n.updatedAt.toIso8601String(),
+              })
+          .toList(),
+      'goals': goals
+          .map((g) => {
+                'label': g.label,
+                'startValue': g.startValue,
+                'currentValue': g.currentValue,
+                'targetValue': g.targetValue,
+                'unit': g.unit,
+              })
+          .toList(),
       'workouts': workoutsJson,
     };
   }
@@ -938,21 +958,18 @@ class AppDatabase extends _$AppDatabase {
         'schedule_slots': (await select(scheduleSlotTable).get())
             .map((r) => r.toJson())
             .toList(),
-        'set_entries': (await select(setEntryTable).get())
-            .map((r) => r.toJson())
-            .toList(),
+        'set_entries':
+            (await select(setEntryTable).get()).map((r) => r.toJson()).toList(),
         'workout_notes': (await select(workoutNoteTable).get())
             .map((r) => r.toJson())
             .toList(),
         'ai_analyses': (await select(aiAnalysisTable).get())
             .map((r) => r.toJson())
             .toList(),
-        'task_items': (await select(taskItemTable).get())
-            .map((r) => r.toJson())
-            .toList(),
-        'note_items': (await select(noteItemTable).get())
-            .map((r) => r.toJson())
-            .toList(),
+        'task_items':
+            (await select(taskItemTable).get()).map((r) => r.toJson()).toList(),
+        'note_items':
+            (await select(noteItemTable).get()).map((r) => r.toJson()).toList(),
         'chat_messages': (await select(chatMessageTable).get())
             .map((r) => r.toJson())
             .toList(),
@@ -989,20 +1006,21 @@ class AppDatabase extends _$AppDatabase {
 
       // Insert parents → children.
       for (final j in rows('profile')) {
-        await into(profileTable)
-            .insert(ProfileTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+        await into(profileTable).insert(ProfileTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('app_preferences')) {
         await into(appPreferencesTable).insert(
-            AppPreferencesTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+            AppPreferencesTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('goals')) {
-        await into(goalTable)
-            .insert(GoalTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+        await into(goalTable).insert(GoalTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('weight_entries')) {
-        await into(weightEntryTable).insert(
-            WeightEntryTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+        await into(weightEntryTable).insert(WeightEntryTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('workout_templates')) {
         await into(workoutTemplateTable).insert(
@@ -1015,32 +1033,32 @@ class AppDatabase extends _$AppDatabase {
             mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('schedule_slots')) {
-        await into(scheduleSlotTable).insert(
-            ScheduleSlotTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+        await into(scheduleSlotTable).insert(ScheduleSlotTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('set_entries')) {
-        await into(setEntryTable).insert(
-            SetEntryTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+        await into(setEntryTable).insert(SetEntryTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('workout_notes')) {
-        await into(workoutNoteTable).insert(
-            WorkoutNoteTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+        await into(workoutNoteTable).insert(WorkoutNoteTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('ai_analyses')) {
-        await into(aiAnalysisTable).insert(
-            AiAnalysisTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+        await into(aiAnalysisTable).insert(AiAnalysisTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('task_items')) {
-        await into(taskItemTable).insert(
-            TaskItemTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+        await into(taskItemTable).insert(TaskItemTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('note_items')) {
-        await into(noteItemTable).insert(
-            NoteItemTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+        await into(noteItemTable).insert(NoteItemTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('chat_messages')) {
-        await into(chatMessageTable).insert(
-            ChatMessageTableData.fromJson(j), mode: InsertMode.insertOrReplace);
+        await into(chatMessageTable).insert(ChatMessageTableData.fromJson(j),
+            mode: InsertMode.insertOrReplace);
       }
     });
   }
