@@ -435,12 +435,32 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
           busy: false, signedIn: true, email: email.trim(), status: null);
       return true;
     } on AuthException catch (e) {
-      state = state.copyWith(busy: false, error: e.message, status: null);
+      state = state.copyWith(
+          busy: false, error: _authFriendly(e.message), status: null);
       return false;
     } catch (e) {
       state = state.copyWith(busy: false, error: '$e', status: null);
       return false;
     }
+  }
+
+  /// Maps Supabase auth errors to clear Russian text. Supabase returns one
+  /// message for both a missing account and a wrong password.
+  static String _authFriendly(String msg) {
+    final m = msg.toLowerCase();
+    if (m.contains('invalid login credentials')) {
+      return 'Неверная почта или пароль. Если аккаунта ещё нет — зарегистрируйтесь.';
+    }
+    if (m.contains('email not confirmed')) {
+      return 'Почта не подтверждена — откройте письмо для подтверждения.';
+    }
+    if (m.contains('already registered')) {
+      return 'Аккаунт с такой почтой уже есть — войдите.';
+    }
+    if (m.contains('rate limit') || m.contains('too many')) {
+      return 'Слишком много попыток. Попробуйте позже.';
+    }
+    return msg;
   }
 
   /// Returns true if a session is active right after sign-up (email
@@ -462,7 +482,8 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
           error: 'Подтвердите email, затем войдите.');
       return false;
     } on AuthException catch (e) {
-      state = state.copyWith(busy: false, error: e.message, status: null);
+      state = state.copyWith(
+          busy: false, error: _authFriendly(e.message), status: null);
       return false;
     } catch (e) {
       state = state.copyWith(busy: false, error: '$e', status: null);

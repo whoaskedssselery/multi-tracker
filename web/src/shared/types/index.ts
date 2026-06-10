@@ -86,6 +86,8 @@ export interface ScheduleSlot {
   id: number;
   workoutTemplateId: number;
   dayOfWeek: number; // 1=Mon..7=Sun
+  // When the slot was added; the schedule only applies on/after this date.
+  createdAt: string;
 }
 
 export interface SetEntry {

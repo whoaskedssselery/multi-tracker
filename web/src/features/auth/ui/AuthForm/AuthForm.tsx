@@ -18,6 +18,21 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 type Mode = 'signin' | 'signup';
 
+// Maps Supabase auth errors to clear Russian text. Supabase deliberately
+// returns one message for both a missing account and a wrong password.
+function authErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : '';
+  if (/invalid login credentials/i.test(msg))
+    return 'Неверная почта или пароль. Если аккаунта ещё нет — зарегистрируйтесь.';
+  if (/email not confirmed/i.test(msg))
+    return 'Почта не подтверждена — откройте письмо для подтверждения.';
+  if (/user already registered|already registered/i.test(msg))
+    return 'Аккаунт с такой почтой уже есть — войдите.';
+  if (/(rate limit|too many)/i.test(msg))
+    return 'Слишком много попыток. Попробуйте позже.';
+  return msg || 'Произошла ошибка';
+}
+
 export function AuthForm() {
   const navigate = useNavigate();
   const supabase = createClient();
@@ -48,7 +63,7 @@ export function AuthForm() {
       }
       navigate('/');
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Произошла ошибка');
+      toast.error(authErrorMessage(err));
     } finally {
       setLoading(false);
     }

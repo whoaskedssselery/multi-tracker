@@ -83,9 +83,10 @@ function loggedTemplatesByDay(
 
 /**
  * The 7 day-items for [weekStart].
- *   • Past days  → what was LOGGED (history); if nothing was logged, the
- *     scheduled plan still shows so a missed day stays visible and fillable.
- *   • Today/future → the scheduled plan.
+ *   • Logged days  → what was actually done (history), always preserved.
+ *   • Otherwise the scheduled plan shows ONLY from the day the slot was added
+ *     onward — a new workout never back-fills earlier days; a missed day after
+ *     that stays visible and can be filled in late.
  */
 export function computeDays(
   weekStart: Date,
@@ -101,10 +102,13 @@ export function computeDays(
   const byId = (id: number | null | undefined) =>
     (id == null ? null : templates.find(t => t.id === id) ?? null);
 
-  const scheduleMap = new Map<number, WorkoutTemplate | null>();
+  // dayOfWeek → { template, effective-from day-key }.
+  const scheduleMap = new Map<number, { template: WorkoutTemplate; from: string }>();
   for (const slot of slots) {
     const t = templates.find(x => x.id === slot.workoutTemplateId);
-    if (t) scheduleMap.set(slot.dayOfWeek, t);
+    if (!t) continue;
+    const from = slot.createdAt ? dayKeyOf(new Date(slot.createdAt)) : todayKey;
+    scheduleMap.set(slot.dayOfWeek, { template: t, from });
   }
 
   const loggedTmpls = loggedTemplatesByDay(exercises, sets);
@@ -115,13 +119,15 @@ export function computeDays(
     const key = dayKeyOf(date);
     const dow = i + 1;
     const isPast = date.getTime() < todayMid.getTime();
-    // Past: logged workout (history) or, if missed, the scheduled plan so it
-    // can still be filled in late. Today/future: the scheduled plan.
-    const tmpl = isPast
-      ? (byId(loggedTmpls.get(key)) ?? scheduleMap.get(dow) ?? null)
-      : (scheduleMap.get(dow) ?? null);
+    // Logged workout (history) wins. Otherwise the scheduled plan applies only
+    // on/after the day the slot was added.
+    let template = byId(loggedTmpls.get(key));
+    if (!template) {
+      const s = scheduleMap.get(dow);
+      if (s && key >= s.from) template = s.template;
+    }
     return {
-      dow, date, template: tmpl,
+      dow, date, template,
       isDone: loggedDays.has(key),
       isToday: key === todayKey,
       isPast,

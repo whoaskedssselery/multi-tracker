@@ -188,12 +188,17 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
   ) {
     final today = DateTime.now();
     final todayMid = DateTime(today.year, today.month, today.day);
-    final scheduleMap = <int, WorkoutTemplateTableData?>{};
+    // dayOfWeek → (template, effective-from day). A slot only applies to days
+    // on/after the date it was added, so a new workout never back-fills earlier
+    // days in the calendar.
+    final scheduleMap =
+        <int, ({WorkoutTemplateTableData tmpl, DateTime from})>{};
     for (final slot in slots) {
-      try {
-        scheduleMap[slot.dayOfWeek] =
-            templates.firstWhere((t) => t.id == slot.workoutTemplateId);
-      } catch (_) {}
+      final t = templates.where((t) => t.id == slot.workoutTemplateId).firstOrNull;
+      if (t == null) continue;
+      final c = slot.createdAt;
+      scheduleMap[slot.dayOfWeek] =
+          (tmpl: t, from: DateTime(c.year, c.month, c.day));
     }
     WorkoutTemplateTableData? byId(int? id) {
       if (id == null) return null;
@@ -209,11 +214,14 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
       final isDone  = logged.contains(dateMid);
       final isToday = dateMid == todayMid;
       final isPast  = dateMid.isBefore(todayMid);
-      // Past: the logged workout (history) or, if missed, the scheduled plan
-      // so it stays visible and can be filled in late. Today/future: schedule.
-      final tmpl    = isPast
-          ? (byId(loggedTmpls[dateMid]) ?? scheduleMap[dow])
-          : scheduleMap[dow];
+      // Logged workout (history) wins. Otherwise the scheduled plan shows ONLY
+      // from the day the slot was added onward — missed days after that stay
+      // visible and fillable; days before the slot existed show nothing.
+      WorkoutTemplateTableData? tmpl = byId(loggedTmpls[dateMid]);
+      if (tmpl == null) {
+        final s = scheduleMap[dow];
+        if (s != null && !dateMid.isBefore(s.from)) tmpl = s.tmpl;
+      }
       return _DayItem(
         dow: dow, date: date, template: tmpl, isDone: isDone, isToday: isToday);
     });

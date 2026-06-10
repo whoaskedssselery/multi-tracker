@@ -540,7 +540,9 @@ export const useAppStore = create<AppState & AppActions>()(
       s.scheduleSlots = s.scheduleSlots.filter(sl => sl.dayOfWeek !== dayOfWeek);
       if (templateId != null) {
         const id = nextId(s, 'schedule');
-        s.scheduleSlots.push({ id, workoutTemplateId: templateId, dayOfWeek });
+        s.scheduleSlots.push({
+          id, workoutTemplateId: templateId, dayOfWeek, createdAt: now(),
+        });
       }
       s.isDirty = true;
     }),

@@ -106,6 +106,9 @@ class ScheduleSlotTable extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get workoutTemplateId => integer().references(WorkoutTemplateTable, #id)();
   IntColumn get dayOfWeek => integer()(); // 1=Mon … 7=Sun (ISO 8601)
+  // When this slot was added. The schedule only applies to days on/after this
+  // date — a newly added workout never back-fills earlier days in the calendar.
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
 /// Individual set logged for an exercise on a date
@@ -225,7 +228,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -241,6 +244,11 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await m.addColumn(workoutTemplateTable, workoutTemplateTable.color);
+      }
+      if (from < 4) {
+        // Existing slots get "now" → they apply from the update date onward,
+        // so the calendar doesn't retroactively claim past days.
+        await m.addColumn(scheduleSlotTable, scheduleSlotTable.createdAt);
       }
     },
     beforeOpen: (details) async {
