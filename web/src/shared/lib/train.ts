@@ -83,7 +83,8 @@ function loggedTemplatesByDay(
 
 /**
  * The 7 day-items for [weekStart].
- *   • Past days  → what was actually LOGGED (history); plan never applies back.
+ *   • Past days  → what was LOGGED (history); if nothing was logged, the
+ *     scheduled plan still shows so a missed day stays visible and fillable.
  *   • Today/future → the scheduled plan.
  */
 export function computeDays(
@@ -114,7 +115,11 @@ export function computeDays(
     const key = dayKeyOf(date);
     const dow = i + 1;
     const isPast = date.getTime() < todayMid.getTime();
-    const tmpl = isPast ? byId(loggedTmpls.get(key)) : (scheduleMap.get(dow) ?? null);
+    // Past: logged workout (history) or, if missed, the scheduled plan so it
+    // can still be filled in late. Today/future: the scheduled plan.
+    const tmpl = isPast
+      ? (byId(loggedTmpls.get(key)) ?? scheduleMap.get(dow) ?? null)
+      : (scheduleMap.get(dow) ?? null);
     return {
       dow, date, template: tmpl,
       isDone: loggedDays.has(key),

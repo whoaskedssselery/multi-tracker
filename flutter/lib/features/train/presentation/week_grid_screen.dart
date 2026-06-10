@@ -87,12 +87,16 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
     final now = DateTime.now();
     final todayMid = DateTime(now.year, now.month, now.day);
     final dateMid = DateTime(date.year, date.month, date.day);
-    // Past day → show exactly what was logged then (incl. archived exercises),
-    // so editing history doesn't pull in the current program. Today/future →
-    // the current active program exercises.
-    final exercises = dateMid.isBefore(todayMid)
+    // A logged past day shows exactly what was done then (incl. archived
+    // exercises), so editing history doesn't pull in the current program.
+    // A missed past day (nothing logged) and today/future use the current
+    // active program, so a forgotten day can still be filled in late.
+    var exercises = dateMid.isBefore(todayMid)
         ? await database.exercisesLoggedOnDate(template.id, date)
         : await database.watchExercisesForTemplate(template.id).first;
+    if (exercises.isEmpty) {
+      exercises = await database.watchExercisesForTemplate(template.id).first;
+    }
     if (exercises.isEmpty || !mounted) return;
 
     // Pre-load last sets for each exercise
@@ -205,7 +209,11 @@ class _WeekGridScreenState extends ConsumerState<WeekGridScreen> {
       final isDone  = logged.contains(dateMid);
       final isToday = dateMid == todayMid;
       final isPast  = dateMid.isBefore(todayMid);
-      final tmpl    = isPast ? byId(loggedTmpls[dateMid]) : scheduleMap[dow];
+      // Past: the logged workout (history) or, if missed, the scheduled plan
+      // so it stays visible and can be filled in late. Today/future: schedule.
+      final tmpl    = isPast
+          ? (byId(loggedTmpls[dateMid]) ?? scheduleMap[dow])
+          : scheduleMap[dow];
       return _DayItem(
         dow: dow, date: date, template: tmpl, isDone: isDone, isToday: isToday);
     });

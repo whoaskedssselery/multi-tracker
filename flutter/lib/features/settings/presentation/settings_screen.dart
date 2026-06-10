@@ -18,6 +18,7 @@ import '../../../app/theme/spacing.dart';
 import '../../../app/theme/theme_tokens.dart';
 import '../../../app/theme/typography.dart';
 import '../../../core/db/database.dart';
+import '../../../core/notifications/notifications_service.dart';
 import '../../../core/sync/supabase_config.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../../main.dart';
@@ -180,10 +181,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 'Уведомления',
                 prefs?.notificationsEnabled ?? true,
                 t: t,
-                onChanged: (v) => ref.read(dbProvider).upsertPreferences(
-                  AppPreferencesTableCompanion(
-                      notificationsEnabled: Value(v)),
-                ),
+                onChanged: (v) async {
+                  await ref.read(dbProvider).upsertPreferences(
+                    AppPreferencesTableCompanion(
+                        notificationsEnabled: Value(v)),
+                  );
+                  // Ask for OS permission when enabling (Android 13+ / iOS).
+                  if (v) await NotificationsService.instance.requestPermissions();
+                },
               ),
             ], t: t),
             const SizedBox(height: AppSpacing.xl2),

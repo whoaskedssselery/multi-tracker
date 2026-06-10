@@ -64,8 +64,8 @@ export function SettingsPage() {
   // Read app version
   useEffect(() => {
     fetch('/manifest.json').then(r => r.json())
-      .then(m => setAppVersion(m.version ?? '1.0.3'))
-      .catch(() => setAppVersion('1.0.3'));
+      .then(m => setAppVersion(m.version ?? '1.0.4'))
+      .catch(() => setAppVersion('1.0.4'));
   }, []);
 
   const { register, handleSubmit, formState: { errors }, reset: resetForm } = useForm<PF>({
@@ -251,7 +251,7 @@ export function SettingsPage() {
           onChange={e => { const f = e.target.files?.[0]; if (f) importJson(f); e.target.value = ''; }} />
 
         <Section label="О ПРИЛОЖЕНИИ">
-          <Row label="Версия" value={appVersion || '1.0.3'} />
+          <Row label="Версия" value={appVersion || '1.0.4'} />
           <Div /><Row label="Платформа" value="Web" />
         </Section>
       </div>

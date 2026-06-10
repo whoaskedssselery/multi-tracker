@@ -4,13 +4,16 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
-/// Unified local notifications — iOS (Windows: no-op in this version)
+/// Unified local notifications — iOS + Android (Windows: no-op in this version)
 class NotificationsService {
   NotificationsService._();
   static final NotificationsService instance = NotificationsService._();
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+
+  // Platforms with a flutter_local_notifications implementation we use.
+  static bool get _supported => Platform.isIOS || Platform.isAndroid;
 
   // ── channel ids ──────────────────────────────────────────────
   static const _channelTasks   = 'tasks';
@@ -22,9 +25,9 @@ class NotificationsService {
     if (_initialized) return;
     tz.initializeTimeZones();
 
-    if (!Platform.isIOS) {
+    if (!_supported) {
       _initialized = true;
-      return; // flutter_local_notifications v18 has no Windows implementation
+      return; // no Windows implementation in v18
     }
 
     const ios = DarwinInitializationSettings(
@@ -32,17 +35,19 @@ class NotificationsService {
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
+    // Uses the app launcher icon for the status-bar notification.
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
 
     try {
       await _plugin.initialize(
-        const InitializationSettings(iOS: ios),
+        const InitializationSettings(iOS: ios, android: android),
         onDidReceiveNotificationResponse: _onTap,
       );
     } catch (e) {
-      // NSCocoaErrorDomain 3840: UserDefaults contains corrupt pending-notification
-      // data from a previous install. Mark as initialized so the app doesn't
-      // retry on every call; notifications will silently no-op this session.
-      debugPrint('flutter_local_notifications init failed (corrupt cache?): $e');
+      // e.g. NSCocoaErrorDomain 3840 on iOS from a corrupt pending-notification
+      // cache. Mark initialized so we don't retry every call; notifications
+      // silently no-op this session.
+      debugPrint('flutter_local_notifications init failed: $e');
       _initialized = true;
       return;
     }
@@ -52,12 +57,21 @@ class NotificationsService {
 
   // ── permissions ──────────────────────────────────────────────
   Future<bool> requestPermissions() async {
-    if (!Platform.isIOS) return true;
+    if (!_supported) return true;
+    await _ensureInit();
+    if (Platform.isIOS) {
+      final granted = await _plugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+      return granted ?? false;
+    }
+    // Android 13+ requires runtime POST_NOTIFICATIONS consent.
     final granted = await _plugin
         .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(alert: true, badge: true, sound: true);
-    return granted ?? false;
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+    return granted ?? true; // older Android grants at install time
   }
 
   // ── schedule task reminder ────────────────────────────────────
@@ -67,7 +81,7 @@ class NotificationsService {
     required String body,
     required DateTime scheduledAt,
   }) async {
-    if (!Platform.isIOS) return;
+    if (!_supported) return;
     await _ensureInit();
     final tzTime = tz.TZDateTime.from(scheduledAt, tz.local);
     await _plugin.zonedSchedule(
@@ -76,7 +90,7 @@ class NotificationsService {
       body,
       tzTime,
       _details(_channelTasks, 'Task Reminders', 'Reminders for your tasks'),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: null,
@@ -89,7 +103,7 @@ class NotificationsService {
     required int hour,
     required int minute,
   }) async {
-    if (!Platform.isIOS) return;
+    if (!_supported) return;
     await _ensureInit();
     await _plugin.zonedSchedule(
       id,
@@ -97,7 +111,7 @@ class NotificationsService {
       'Log your weight to keep the streak going',
       _nextInstanceOfTime(hour, minute),
       _details(_channelWeight, 'Weight Reminders', 'Daily weight log reminder'),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
@@ -110,7 +124,7 @@ class NotificationsService {
     required String workoutName,
     required DateTime scheduledAt,
   }) async {
-    if (!Platform.isIOS) return;
+    if (!_supported) return;
     await _ensureInit();
     final tzTime = tz.TZDateTime.from(scheduledAt, tz.local);
     await _plugin.zonedSchedule(
@@ -120,19 +134,19 @@ class NotificationsService {
       tzTime,
       _details(
           _channelWorkout, 'Workout Reminders', 'Training session reminders'),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
   Future<void> cancel(int id) async {
-    if (!Platform.isIOS) return;
+    if (!_supported) return;
     await _plugin.cancel(id);
   }
 
   Future<void> cancelAll() async {
-    if (!Platform.isIOS) return;
+    if (!_supported) return;
     await _plugin.cancelAll();
   }
 
@@ -142,11 +156,18 @@ class NotificationsService {
     String channelName,
     String channelDesc,
   ) =>
-      const NotificationDetails(
-        iOS: DarwinNotificationDetails(
+      NotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
+        ),
+        android: AndroidNotificationDetails(
+          channelId,
+          channelName,
+          channelDescription: channelDesc,
+          importance: Importance.high,
+          priority: Priority.high,
         ),
       );
 

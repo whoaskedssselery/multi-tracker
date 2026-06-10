@@ -132,7 +132,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
   // ── Notification helpers ──────────────────────────────────────────────────
 
-  static bool get _notifSupported => Platform.isIOS;
+  static bool get _notifSupported => Platform.isIOS || Platform.isAndroid;
 
   Future<void> _scheduleOrCancelNotif({
     required int taskId,

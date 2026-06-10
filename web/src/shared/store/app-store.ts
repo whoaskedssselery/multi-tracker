@@ -136,6 +136,19 @@ function nextId(state: AppState, table: string): number {
 
 function now(): string { return new Date().toISOString(); }
 
+// Newest-first by date, then by entry time / id so same-day entries keep the
+// order they were recorded (87.3 before 87.4 → 87.4 is the latest).
+function byDateDesc(
+  a: { date: string; createdAt: string; id: number },
+  b: { date: string; createdAt: string; id: number },
+): number {
+  const d = new Date(b.date).getTime() - new Date(a.date).getTime();
+  if (d !== 0) return d;
+  const c = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  if (c !== 0) return c;
+  return b.id - a.id;
+}
+
 // Date fields can arrive from two sources with different encodings:
 //   • Flutter/Drift snapshot → epoch number (ms, or seconds on older builds)
 //   • web-created rows        → ISO-8601 string
@@ -210,9 +223,7 @@ export const useAppStore = create<AppState & AppActions>()(
       // Normalise all date fields (Flutter sends epoch numbers) → ISO strings.
       s.profile = normRows(t.profile)[0] ?? defaultProfile();
       s.preferences = normRows(t.app_preferences)[0] ?? defaultPrefs();
-      s.weightEntries = normRows(t.weight_entries).sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      );
+      s.weightEntries = normRows(t.weight_entries).sort(byDateDesc);
       s.goals = normRows(t.goals).sort((a, b) => a.sortOrder - b.sortOrder);
       s.tasks = normRows(t.task_items).sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
@@ -354,8 +365,7 @@ export const useAppStore = create<AppState & AppActions>()(
         createdAt: now(),
       };
       s.weightEntries.unshift(entry);
-      s.weightEntries.sort((a, b) =>
-        new Date(b.date).getTime() - new Date(a.date).getTime());
+      s.weightEntries.sort(byDateDesc);
       s.isDirty = true;
     }),
 

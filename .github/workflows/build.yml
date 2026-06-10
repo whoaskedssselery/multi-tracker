@@ -110,8 +110,9 @@ jobs:
           # generate it for this build. Touches only android/, never ios/windows/lib.
           flutter create --platforms=android --org com.ssselery --project-name multi_tracker .
 
-          # Release APKs don't get INTERNET by default → add it (Supabase/Groq).
-          sed -i '0,/<manifest[^>]*>/s//&\n    <uses-permission android:name="android.permission.INTERNET"\/>/' \
+          # Release APKs don't get INTERNET by default → add it (Supabase/Groq),
+          # plus POST_NOTIFICATIONS for local notifications on Android 13+.
+          sed -i '0,/<manifest[^>]*>/s//&\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"\/>/' \
             android/app/src/main/AndroidManifest.xml
 
           # A transitive plugin (flutter_plugin_android_lifecycle) needs compileSdk 36.

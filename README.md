@@ -2,7 +2,7 @@
 
 Личное приложение для фитнеса и продуктивности — вес, тренировки (PPL), задачи, заметки и ИИ-чат.
 
-**Платформы:** iOS · Windows · Web
+**Платформы:** iOS · Android · Windows · Web
 
 Все данные синхронизируются между устройствами через Supabase (необязательно — приложение полностью работает офлайн).
 
@@ -105,9 +105,17 @@ flutter build windows --release
 cd ios && pod install && cd ..
 flutter build ios --release --no-codesign
 # Затем в Xcode: Product → Archive → Distribute → Development
+
+# Android (APK для сайдлоада)
+flutter build apk --release
 ```
 
-iOS-IPA также собирается в GitHub Actions автоматически при пуше тега `vX.Y.Z` (см. вкладку Releases).
+> Папка `android/` в репозитории не хранится — её создаёт CI командой
+> `flutter create --platforms=android` при сборке. Локально перед первой
+> Android-сборкой выполни ту же команду из `flutter/`.
+
+Сборки iOS (IPA), Windows (zip) и Android (APK) автоматически собираются в
+GitHub Actions и публикуются в Release при пуше тега `vX.Y.Z` (см. вкладку Releases).
 
 ### Архитектура
 
@@ -157,5 +165,5 @@ flutter gen-l10n
 
 ## Планы
 
-- [ ] Android
+- [x] Android
 - [ ] Подтверждение email кодом при регистрации

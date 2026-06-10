@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Check, Coffee, ListChecks } from 'lucide-rea
 import { useAppStore } from '@/shared/store';
 import {
   weekMonday, addDays, dayOfWeek, fmtDate, fmtWeekRange, computeDays,
-  activeExercises, exercisesLoggedOnDate, WD_LABELS, argbToCss,
+  activeExercises, exercisesLoggedOnDate, WD_LABELS,
   type DayItem,
 } from '@/shared/lib/train';
 import { dayKeyOf } from '@/shared/lib/utils/format';
@@ -41,7 +41,9 @@ export function TrainPage() {
   const openLog = (day: DayItem) => {
     if (!day.template) return;
     const key = dayKeyOf(day.date);
-    const exercises = day.isPast
+    // A done past day shows exactly what was logged; a missed past day and
+    // today/future use the active program so it can still be filled in.
+    const exercises = (day.isPast && day.isDone)
       ? exercisesLoggedOnDate(exerciseTpls, setEntries, day.template.id, key)
       : activeExercises(exerciseTpls, day.template.id);
     if (exercises.length === 0) return;
@@ -163,7 +165,7 @@ function DayCard({ day, exerciseTpls, onOpen }: {
   const preview = ex.slice(0, 4).map(e => e.name).join(' · ');
 
   return (
-    <div className={styles.dayCard} style={{ borderColor: argbToCss(day.template.color) }}>
+    <div className={styles.dayCard} style={{ borderColor: 'var(--color-accent)' }}>
       <span className={styles.caps}>{WD_LABELS[day.dow - 1]} · {fmtDate(day.date)}</span>
       <h2 className={styles.dayName}>{day.template.name}</h2>
       {preview && <p className={styles.dayPreview}>{preview}</p>}
@@ -187,7 +189,7 @@ function WeekRow({ day, count, onOpen }: { day: DayItem; count: number; onOpen: 
       className={`${styles.row} ${has ? styles.rowActive : ''}`}
       onClick={has ? onOpen : undefined}
       disabled={!has}
-      style={has ? { borderColor: `${argbToCss(day.template!.color)}55` } : undefined}
+      style={has ? { borderColor: 'rgba(var(--color-accent-rgb), 0.33)' } : undefined}
     >
       <span className={styles.rowDate}>{WD_LABELS[day.dow - 1]} · {fmtDate(day.date)}</span>
       {has ? (
