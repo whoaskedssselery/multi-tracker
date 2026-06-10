@@ -123,9 +123,12 @@ jobs:
 
           # Plugin modules compile against flutter.compileSdkVersion (35), but
           # flutter_plugin_android_lifecycle now needs 36 → force compileSdk 36
-          # on every subproject (app + all plugins).
-          printf '\nsubprojects {\n    afterEvaluate {\n        extensions.findByName("android")?.let {\n            (it as com.android.build.gradle.BaseExtension).compileSdkVersion(36)\n        }\n    }\n}\n' \
-            >> android/build.gradle.kts
+          # on every subproject. Registered via plugins.withId and PREPENDED so
+          # the hooks exist before Flutter's `evaluationDependsOn(":app")` forces
+          # evaluation (an appended afterEvaluate runs too late and throws).
+          printf 'subprojects {\n    plugins.withId("com.android.library") {\n        (extensions.getByName("android") as com.android.build.gradle.BaseExtension).compileSdkVersion(36)\n    }\n    plugins.withId("com.android.application") {\n        (extensions.getByName("android") as com.android.build.gradle.BaseExtension).compileSdkVersion(36)\n    }\n}\n\n' \
+            | cat - android/build.gradle.kts > android/build.gradle.kts.new
+          mv android/build.gradle.kts.new android/build.gradle.kts
 
           # flutter_local_notifications 18 requires core library desugaring.
           sed -i 's/compileOptions {/compileOptions {\n        isCoreLibraryDesugaringEnabled = true/' \
