@@ -302,12 +302,15 @@ class AppDatabase extends _$AppDatabase {
   // ── Weight DAO ───────────────────────────────────────────────────────────
 
   /// Stream of weight entries newest-first, capped at [limit] rows.
+  /// Primary: date DESC. Secondary: createdAt DESC (most recently recorded
+  /// entry for a given day sorts first). Tertiary: id DESC guards against
+  /// equal timestamps that can occur after importSnapshot.
   Stream<List<WeightEntryTableData>> watchWeightEntries({int limit = 366}) =>
       (select(weightEntryTable)
             ..orderBy([
               (t) => OrderingTerm.desc(t.date),
-              (t) => OrderingTerm.desc(
-                  t.createdAt), // tiebreaker for same-day entries
+              (t) => OrderingTerm.desc(t.createdAt),
+              (t) => OrderingTerm.desc(t.id),
             ])
             ..limit(limit))
           .watch();

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Pencil, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useAppStore } from '@/shared/store';
 import { Modal, Button } from '@/shared/ui';
 import { WD_FULL, fmtDate, dayOfWeek, setsOnDay, fmtW } from '@/shared/lib/train';
@@ -37,7 +37,7 @@ export function CompletedWorkoutModal({ template, date, exercises, onClose, onEd
       footer={
         <div className={styles.footer}>
           <Button variant="ghost" onClick={onClose}>Закрыть</Button>
-          <Button variant="secondary" icon={<Pencil size={15} />} onClick={onEdit}>
+          <Button variant="secondary" onClick={onEdit}>
             Редактировать
           </Button>
         </div>

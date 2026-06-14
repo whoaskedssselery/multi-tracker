@@ -221,14 +221,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  void _commitWeight() {
+  Future<void> _commitWeight() async {
     final v = double.tryParse(_weightDraft.replaceAll(',', '.'));
+    setState(() => _recordingWeight = false);
     if (v != null && v > 0 && v < 500) {
       final now = DateTime.now();
-      database.addWeightEntry(
-          value: v, date: DateTime(now.year, now.month, now.day));
+      try {
+        // UTC midnight so the date epoch matches web-created entries and
+        // cross-device sort order is consistent regardless of timezone.
+        await database.addWeightEntry(
+            value: v, date: DateTime.utc(now.year, now.month, now.day));
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Ошибка: $e'),
+                duration: const Duration(seconds: 3)),
+          );
+        }
+      }
     }
-    setState(() => _recordingWeight = false);
   }
 
   Future<void> _showGoalDialog({GoalTableData? editing}) async {

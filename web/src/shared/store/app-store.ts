@@ -138,11 +138,14 @@ function now(): string { return new Date().toISOString(); }
 
 // Newest-first by date, then by entry time / id so same-day entries keep the
 // order they were recorded (87.3 before 87.4 → 87.4 is the latest).
+// Date is compared by LOCAL calendar day (dayKey) rather than raw epoch so that
+// Flutter-origin dates (local-midnight epoch) and web-origin dates (UTC-midnight
+// ISO string) that represent the same calendar day sort together correctly.
 function byDateDesc(
   a: { date: string; createdAt: string; id: number },
   b: { date: string; createdAt: string; id: number },
 ): number {
-  const d = new Date(b.date).getTime() - new Date(a.date).getTime();
+  const d = dayKey(b.date).localeCompare(dayKey(a.date));
   if (d !== 0) return d;
   const c = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   if (c !== 0) return c;

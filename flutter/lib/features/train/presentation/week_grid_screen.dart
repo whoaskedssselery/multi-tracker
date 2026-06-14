@@ -2631,10 +2631,9 @@ class _CompletedWorkoutDialog extends StatelessWidget {
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Закрыть')),
             const SizedBox(width: 8),
-            FilledButton.icon(
+            FilledButton(
               onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined, size: 16),
-              label: const Text('Редактировать'),
+              child: const Text('Редактировать'),
             ),
           ]),
         ),
