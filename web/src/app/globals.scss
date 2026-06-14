@@ -18,6 +18,7 @@
   --color-text4: #B8B19C;
 
   --color-border:      #D9D2BE;
+  --color-border-rgb:  217, 210, 190;
   --color-border-soft: #E5DFCA;
   --color-divider:     #E8E2CF;
 
@@ -57,6 +58,7 @@
   --color-text4: #5E594D;
 
   --color-border:      #383229;
+  --color-border-rgb:  56, 50, 41;
   --color-border-soft: #2A251D;
   --color-divider:     #2A251D;
 
@@ -87,8 +89,6 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  // Prevent content shift when scrollbar appears
-  scrollbar-gutter: stable;
 }
 
 body {
