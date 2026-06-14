@@ -12,17 +12,15 @@
   @include mobile { display: none; }
 }
 
-.brand { display: flex; align-items: center; gap: 10px; padding: $space-xs $space-sm; margin-bottom: $space-lg + 4px; }
+.brand { display: flex; align-items: center; gap: 11px; padding: $space-xs $space-sm; margin-bottom: $space-lg + 4px; }
 
 .brandIcon {
-  width: 30px; height: 30px; border-radius: $radius-md; flex-shrink: 0;
-  background: var(--accent-grad);
-  box-shadow: 0 2px 8px rgba(var(--color-accent-rgb), 0.35);
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 16px; font-weight: 800; letter-spacing: -0.02em;
+  width: 30px; height: 30px; flex-shrink: 0;
+  border-radius: $radius-sm;
+  display: block; align-self: center;
 }
 
-.brandName { font-size: 16px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.01em; }
+.brandName { font-size: 17px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.02em; line-height: 1; align-self: center; }
 
 .nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 
@@ -41,11 +39,11 @@
 }
 
 .itemActive {
-  color: var(--color-accent-press);
-  font-weight: 700;
-  background: var(--color-accent-tint);
-  @include hover { background: var(--color-accent-tint); }
-  .itemIcon { color: var(--color-accent-press); }
+  color: var(--color-text1);
+  font-weight: 600;
+  background: var(--color-surface-raised);
+  @include hover { background: var(--color-surface-raised); }
+  .itemIcon { color: var(--color-accent); }
 }
 
 .itemIcon { flex-shrink: 0; @include transition-fast(color); }

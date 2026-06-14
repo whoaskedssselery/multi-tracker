@@ -29,7 +29,7 @@ export function WeightHistoryList() {
             <span className={`${styles.date} mono`}>{formatDateShort(e.date)}</span>
             <span className={`${styles.val} mono`}>{e.value.toFixed(1)}</span>
             {delta !== null && (
-              <span className={`${styles.delta} mono ${delta > 0 ? styles.up : delta < 0 ? styles.down : ''}`}>
+              <span className={`${styles.delta} ${delta > 0 ? styles.up : delta < 0 ? styles.down : ''}`}>
                 {delta > 0 ? '+' : ''}{delta.toFixed(1)}
               </span>
             )}

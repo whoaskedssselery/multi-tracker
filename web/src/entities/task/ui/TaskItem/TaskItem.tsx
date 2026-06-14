@@ -20,21 +20,22 @@ export function TaskItem({ task, isLast, onToggle, onEdit }: Props) {
 
   return (
     <motion.div className={`${styles.row} ${isLast ? styles.last : ''}`}
+      onClick={onEdit}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, height: 0 }}
       layout>
       <button className={`${styles.check} ${task.isDone ? styles.checked : ''}`}
-        onClick={onToggle} aria-label="Отметить">
+        onClick={e => { e.stopPropagation(); onToggle(); }} aria-label="Отметить">
         {task.isDone && <span className={styles.checkMark}>✓</span>}
       </button>
       {task.priority !== 'none' && (
         <span className={styles.prio} style={{ background: prioColor }} />
       )}
-      <span className={`${styles.body} ${task.isDone ? styles.done : ''}`} onClick={onEdit}>
+      <span className={`${styles.body} ${task.isDone ? styles.done : ''}`}>
         {task.body}
       </span>
-      <ChevronRight size={14} className={styles.arrow} onClick={onEdit} />
+      <ChevronRight size={15} className={styles.arrow} />
     </motion.div>
   );
 }

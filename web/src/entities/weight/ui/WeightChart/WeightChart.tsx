@@ -36,11 +36,6 @@ export function WeightChart({ entries, targetWeight }: Props) {
           <div className={styles.valueRow}>
             <span className={`${styles.value} mono`}>{latest ? latest.value.toFixed(1) : '—'}</span>
             <span className={styles.unit}>кг</span>
-            {diff !== null && (
-              <span className={`${styles.trend} ${trendUp ? styles.trendUp : trendDown ? styles.trendDown : ''}`}>
-                {trendUp ? '↑' : trendDown ? '↓' : '→'} {Math.abs(diff).toFixed(1)} за {period}
-              </span>
-            )}
           </div>
         </div>
         <div className={styles.periods}>

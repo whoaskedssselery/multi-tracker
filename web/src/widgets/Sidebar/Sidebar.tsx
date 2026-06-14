@@ -37,7 +37,7 @@ export function Sidebar() {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
-        <div className={styles.brandIcon}>M</div>
+        <img src="/icon.svg" className={styles.brandIcon} alt="" />
         <span className={styles.brandName}>Multi-tracker</span>
       </div>
 

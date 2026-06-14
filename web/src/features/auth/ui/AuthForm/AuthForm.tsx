@@ -134,7 +134,7 @@ export function AuthForm() {
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
 
         <div className={styles.logo}>
-          <div className={styles.logoIcon}>M</div>
+          <img src="/icon.svg" className={styles.logoIcon} alt="" />
           <span className={styles.logoText}>Multi-tracker</span>
         </div>
 

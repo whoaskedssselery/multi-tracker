@@ -13,8 +13,6 @@ export default defineConfig({
     preprocessorOptions: {
       scss: {
         loadPaths: [src],
-        // Auto-inject design tokens into every stylesheet (entry files only;
-        // partials pulled via @use are resolved by sass and skip this).
         additionalData: '@use "shared/styles/variables" as *; @use "shared/styles/mixins" as *;',
       },
     },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -46,6 +46,14 @@ export function TaskForm({ open, editing, defaultGroup = 'none', onClose }: Prop
     resolver: zodResolver(schema),
     defaultValues: { body: editing?.body ?? '' },
   });
+
+  useEffect(() => {
+    if (open) {
+      setGroup(editing?.group ?? defaultGroup);
+      setPriority(editing?.priority ?? 'none');
+      reset({ body: editing?.body ?? '' });
+    }
+  }, [open, editing, defaultGroup, reset]);
 
   const close = () => { onClose(); reset(); };
 

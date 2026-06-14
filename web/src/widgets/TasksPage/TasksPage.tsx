@@ -64,11 +64,11 @@ export function TasksPage() {
           <div className={styles.tabs}>
             <button className={`${styles.tab} ${tab === 'tasks' ? styles.tabActive : ''}`}
               onClick={() => switchTab('tasks')}>
-              Задачи<span className={styles.tabBadge}>{activeCount}</span>
+              Задачи
             </button>
             <button className={`${styles.tab} ${tab === 'notes' ? styles.tabActive : ''}`}
               onClick={() => switchTab('notes')}>
-              Заметки<span className={styles.tabBadge}>{notes.length}</span>
+              Заметки
             </button>
           </div>
           <Button variant="primary" size="md" icon={<Plus size={18} />}

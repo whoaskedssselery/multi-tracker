@@ -40,11 +40,12 @@
 
 .divider { height: 1px; border: none; background: var(--hairline); margin: 0 $space-xl; }
 
-.themes { display: flex; flex-wrap: wrap; gap: $space-sm; padding: $space-lg $space-xl; }
+.themes { display: flex; gap: $space-sm; padding: $space-lg $space-xl; }
 
 .themeBtn {
-  display: flex; align-items: center; gap: $space-sm;
-  padding: $space-sm + 2px $space-lg;
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: $space-sm;
+  padding: $space-sm + 2px $space-md;
   border-radius: $radius-md; border: 1.5px solid var(--color-border);
   background: var(--color-surface-sunken);
   font-size: 14px; font-weight: 500; color: var(--color-text2);

@@ -5,8 +5,13 @@
   padding: 13px $space-lg;
   @include hairline-bottom;
   min-height: $touch-target;
+  cursor: pointer;
+  @include no-tap-flash;
   @include transition-fast(background);
-  @include hover { background: var(--color-surface-sunken); }
+  @include hover {
+    background: var(--color-surface-sunken);
+    .arrow { opacity: 1; }
+  }
 }
 
 .last { border-bottom: none; }
@@ -33,20 +38,19 @@
 
 .body {
   flex: 1;
+  min-width: 0;
   font-size: 15px;
   color: var(--color-text1);
-  cursor: pointer;
   line-height: 1.4;
-  @include no-tap-flash;
+  @include truncate;
 }
 
 .done { text-decoration: line-through; color: var(--color-text3); }
 
 .arrow {
-  color: var(--color-text4);
+  color: var(--color-text3);
   flex-shrink: 0;
-  cursor: pointer;
-  @include transition-fast(color);
-  @include hover { color: var(--color-text2); }
+  opacity: 0;
+  @include transition-fast(opacity, color);
 }
 

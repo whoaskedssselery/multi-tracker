@@ -11,17 +11,16 @@
   &:last-child { border-bottom: none; }
 }
 
-.date  { @include mono; font-size: 12px; color: var(--color-text3); width: 56px; flex-shrink: 0; }
-.val   { @include mono; flex: 1; font-size: 16px; font-weight: 600; color: var(--color-text1); }
+.date { @include mono; font-size: 12px; color: var(--color-text3); width: 56px; flex-shrink: 0; }
+.val  { @include mono; flex: 1; font-size: 16px; font-weight: 600; color: var(--color-text1); }
 
 .delta {
-  @include mono;
-  font-size: 11px; font-weight: 600;
-  padding: 2px 7px; border-radius: $radius-pill;
-  background: var(--color-surface-sunken); color: var(--color-text3);
+  font-size: 14px; font-weight: 500;
+  min-width: 52px; text-align: right;
+  color: var(--color-text3);
 }
-.up    { color: var(--color-warning); background: rgba(201,122,58,0.12); }
-.down  { color: var(--color-success); background: var(--color-accent-tint); }
+.up   { color: var(--color-warning); }
+.down { color: var(--color-success); }
 
 .del {
   width: 34px; height: 34px;

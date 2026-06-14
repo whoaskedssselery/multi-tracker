@@ -23,13 +23,13 @@
 
 .blob1 {
   width: 520px; height: 520px;
-  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.45), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.30), transparent 70%);
   top: -120px; right: -120px;
 }
 
 .blob2 {
   width: 420px; height: 420px;
-  background: radial-gradient(circle, rgba(201, 122, 58, 0.22), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.12), transparent 70%);
   bottom: -100px; left: -100px;
   animation-delay: -7s;
 }
@@ -59,10 +59,7 @@
 .logoIcon {
   width: 38px; height: 38px;
   border-radius: $radius-md;
-  background: var(--accent-grad);
-  box-shadow: 0 4px 14px rgba(var(--color-accent-rgb), 0.4);
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 19px; font-weight: 800; letter-spacing: -0.02em;
+  flex-shrink: 0; display: block;
 }
 
 .logoText { font-size: 17px; font-weight: 700; color: var(--color-text1); letter-spacing: -0.01em; }

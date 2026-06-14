@@ -37,16 +37,16 @@
 // ── Cards ──────────────────────────────────────────────────────────────────
 .card { @include surface-card($radius-xl); padding: $space-2xl; }
 
-.cardHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: $space-lg; }
+.cardHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: $space-sm; }
 .caps { @include caps-label; font-size: 12px; }
 .cardIcon { color: var(--color-text4); }
 
 .addBtn {
   display: flex; align-items: center; justify-content: center;
   width: 36px; height: 36px; border-radius: $radius-pill;
-  color: var(--color-accent-press); background: var(--color-accent-tint);
+  color: var(--color-text3);
   @include pressable;
-  @include hover { filter: brightness(0.96); }
+  @include hover { color: var(--color-text1); }
 }
 
 .empty { font-size: 15px; color: var(--color-text4); padding: $space-sm 0; }

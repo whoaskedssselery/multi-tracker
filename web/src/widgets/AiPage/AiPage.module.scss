@@ -39,9 +39,10 @@
 }
 
 .filterActive {
-  background: var(--accent-grad); color: #fff; border-color: transparent;
+  background: var(--accent-grad); color: #fff;
+  border: none; padding: 8px 15px; // compensate 1px border removal
   box-shadow: 0 2px 8px rgba(var(--color-accent-rgb), 0.28);
-  @include hover { color: #fff; }
+  @include hover { color: #fff; filter: brightness(1.06); }
 }
 
 // ── Messages ────────────────────────────────────────────────────────────────
@@ -106,11 +107,8 @@
 }
 
 .emptyBadge {
-  width: 60px; height: 60px; border-radius: $radius-lg; margin-bottom: $space-md;
-  background: var(--accent-grad);
-  box-shadow: 0 8px 24px rgba(var(--color-accent-rgb), 0.4);
-  color: #fff; font-size: 19px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px; border-radius: $radius-lg; margin-bottom: $space-md;
+  display: block;
 }
 
 .emptyTitle { font-size: 16px; font-weight: 600; color: var(--color-text1); }
