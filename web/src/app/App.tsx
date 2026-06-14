@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { createClient } from '@/shared/lib/supabase/client';
@@ -17,6 +17,64 @@ export function App() {
 function Root() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const themeMode = useAppStore(s => s.preferences.themeMode);
+
+  // Scrollbar — show while scrolling or hovering near the right edge.
+  // CSS transitions on ::webkit-scrollbar-thumb don't fire on class removal from parent,
+  // so we use a separate .scrollbar-hiding class that carries a CSS keyframe animation.
+  useEffect(() => {
+    const EDGE = 60;
+    const FADE_MS = 600;
+    const hideTimers  = new WeakMap<Element, ReturnType<typeof setTimeout>>();
+    const fadeTimers  = new WeakMap<Element, ReturnType<typeof setTimeout>>();
+    let hovered: Element | null = null;
+
+    const show = (el: Element, cls: 'is-scrolling' | 'scrollbar-hover') => {
+      const ft = fadeTimers.get(el);
+      if (ft) { clearTimeout(ft); fadeTimers.delete(el); }
+      el.classList.remove('scrollbar-hiding');
+      el.classList.add(cls);
+    };
+
+    const hide = (el: Element, cls: 'is-scrolling' | 'scrollbar-hover') => {
+      el.classList.remove(cls);
+      el.classList.add('scrollbar-hiding');
+      const ft = setTimeout(() => el.classList.remove('scrollbar-hiding'), FADE_MS);
+      fadeTimers.set(el, ft);
+    };
+
+    const onScroll = (e: Event) => {
+      const el = e.target as Element;
+      show(el, 'is-scrolling');
+      const prev = hideTimers.get(el);
+      if (prev) clearTimeout(prev);
+      hideTimers.set(el, setTimeout(() => hide(el, 'is-scrolling'), 800));
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (hovered) { hide(hovered, 'scrollbar-hover'); hovered = null; }
+      let node = (document.elementFromPoint(e.clientX, e.clientY) ??
+                  document.elementFromPoint(e.clientX - EDGE, e.clientY)) as Element | null;
+      while (node && node !== document.documentElement) {
+        const oy = window.getComputedStyle(node).overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight + 1) {
+          const rect = node.getBoundingClientRect();
+          if (e.clientX >= rect.right - EDGE) {
+            show(node, 'scrollbar-hover');
+            hovered = node;
+          }
+          break;
+        }
+        node = node.parentElement;
+      }
+    };
+
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    document.addEventListener('mousemove', onMouseMove, { passive: true });
+    return () => {
+      document.removeEventListener('scroll', onScroll, { capture: true });
+      document.removeEventListener('mousemove', onMouseMove);
+    };
+  }, []);
 
   // Theme — applies on every screen, including auth.
   useEffect(() => {

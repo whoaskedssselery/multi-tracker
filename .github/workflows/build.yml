@@ -137,6 +137,13 @@ jobs:
           printf '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n' \
             >> android/app/build.gradle.kts
 
+          # Replace generated default icons with our custom bar-chart icon.
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            src="assets/icon/android/mipmap-${density}/ic_launcher.png"
+            dst="android/app/src/main/res/mipmap-${density}/ic_launcher.png"
+            if [ -f "$src" ]; then cp "$src" "$dst"; fi
+          done
+
           flutter pub get
           dart run build_runner build --delete-conflicting-outputs
           flutter build apk --release

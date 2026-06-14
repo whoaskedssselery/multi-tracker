@@ -106,17 +106,37 @@
   font-feature-settings: 'tnum' 1;
 }
 
-// Custom scrollbar (hidden on iOS, visible on desktop)
-@mixin scrollbar($width: 4px) {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+// Scrollbar fade-out keyframe — CSS transitions on ::webkit-scrollbar-thumb
+// don't fire when a class is removed from the parent, so we use an animation instead.
+@keyframes sb-fade-out {
+  from { background: rgba(var(--color-border-rgb), 0.75); }
+  to   { background: rgba(var(--color-border-rgb), 0);    }
+}
+
+// Custom scrollbar — hidden until scroll or edge hover (macOS overlay behaviour)
+@mixin scrollbar($width: 11px) {
+  // Do NOT set scrollbar-width — Chrome 121+ uses it to override ::webkit-scrollbar width.
+  // Firefox gets its default scrollbar; Chrome/Edge use the pseudo-element rules below.
 
   &::-webkit-scrollbar { width: $width; height: $width; }
   &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb {
-    background: var(--color-border);
+    background: rgba(var(--color-border-rgb), 0);
     border-radius: $radius-pill;
-    @include hover { background: var(--color-border-soft); }
+  }
+
+  &.is-scrolling,
+  &.scrollbar-hover {
+    &::-webkit-scrollbar-thumb {
+      background: rgba(var(--color-border-rgb), 0.75);
+      transition: background 0.15s ease;
+    }
+  }
+
+  &.scrollbar-hiding {
+    &::-webkit-scrollbar-thumb {
+      animation: sb-fade-out 0.6s ease forwards;
+    }
   }
 }
 

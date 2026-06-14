@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -41,6 +41,18 @@ export function GoalForm({ open, editing, onClose }: Props) {
       targetValue:  editing?.targetValue ?? 0,
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      setUnit(editing?.unit ?? 'kg');
+      reset({
+        label:        editing?.label ?? '',
+        startValue:   editing?.startValue ?? 0,
+        currentValue: editing?.currentValue ?? 0,
+        targetValue:  editing?.targetValue ?? 0,
+      });
+    }
+  }, [open, editing, reset]);
 
   const close = () => { onClose(); reset(); };
 
