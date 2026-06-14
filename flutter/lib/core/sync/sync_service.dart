@@ -254,6 +254,14 @@ class SyncService {
         await push();
         return SyncOutcome.pushedInitial;
       }
+      // Guard: device that has never synced before but already holds local data
+      // must not be silently overwritten by a cloud snapshot from another device.
+      // Push local first so nothing is lost; the other device will pull on its
+      // next reconcile and the user can decide which device's data to keep.
+      if (last == null && await _db.hasUserData()) {
+        await push();
+        return SyncOutcome.pushedInitial;
+      }
       await _applyPulled(remoteData, row['updated_at']);
       return SyncOutcome.pulled;
     }

@@ -983,10 +983,19 @@ class AppDatabase extends _$AppDatabase {
   Future<void> importSnapshot(Map<String, dynamic> snapshot) async {
     final tables =
         ((snapshot['tables'] as Map?) ?? const {}).cast<String, dynamic>();
+    final _fallbackTs = DateTime.now().toIso8601String();
     List<Map<String, dynamic>> rows(String key) =>
         ((tables[key] as List?) ?? const [])
             .map((e) => (e as Map).cast<String, dynamic>())
             .toList();
+    // Back-fill any non-nullable DateTime fields that may be absent in
+    // snapshots produced before the column was added (schema migrations add
+    // columns to the live DB but old exported JSON rows won't have them).
+    Map<String, dynamic> fillDates(Map<String, dynamic> j, List<String> keys) {
+      final out = Map<String, dynamic>.from(j);
+      for (final k in keys) out[k] ??= _fallbackTs;
+      return out;
+    }
 
     await transaction(() async {
       // Delete children → parents.
@@ -1024,16 +1033,20 @@ class AppDatabase extends _$AppDatabase {
       }
       for (final j in rows('workout_templates')) {
         await into(workoutTemplateTable).insert(
-            WorkoutTemplateTableData.fromJson(j),
+            WorkoutTemplateTableData.fromJson(
+                fillDates(j, ['createdAt', 'updatedAt'])),
             mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('exercise_templates')) {
         await into(exerciseTemplateTable).insert(
-            ExerciseTemplateTableData.fromJson(j),
+            ExerciseTemplateTableData.fromJson(
+                fillDates(j, ['createdAt', 'updatedAt'])),
             mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('schedule_slots')) {
-        await into(scheduleSlotTable).insert(ScheduleSlotTableData.fromJson(j),
+        // createdAt was added in schema v4 — old snapshots won't have it.
+        await into(scheduleSlotTable).insert(
+            ScheduleSlotTableData.fromJson(fillDates(j, ['createdAt'])),
             mode: InsertMode.insertOrReplace);
       }
       for (final j in rows('set_entries')) {
