@@ -116,7 +116,7 @@
 // ── Suggestions ─────────────────────────────────────────────────────────────
 .suggestions {
   display: flex; gap: $space-sm; flex-shrink: 0;
-  padding: 0 $space-3xl $space-sm; overflow-x: auto;
+  padding: 0 $space-3xl 0; overflow-x: auto;
   max-width: 820px; margin: 0 auto; width: 100%;
   &::-webkit-scrollbar { display: none; }
   @include mobile { padding: 0 $space-lg $space-sm; }
@@ -136,7 +136,7 @@
 .inputBar {
   flex-shrink: 0;
   display: flex; align-items: flex-end; gap: $space-md;
-  padding: $space-md $space-3xl;
+  padding: $space-sm $space-3xl $space-md;
   background: var(--color-bg);
   max-width: 820px; margin: 0 auto; width: 100%;
   @include mobile { padding: $space-md $space-lg; @include safe-bottom; }
