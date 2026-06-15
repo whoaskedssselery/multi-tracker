@@ -59,7 +59,7 @@
 
 // ── Streaks ────────────────────────────────────────────────────────────────
 .streakIcon { color: var(--color-warning); }
-.streakList { display: flex; flex-direction: column; gap: $space-md; }
-.streak { display: flex; align-items: baseline; gap: $space-md; }
-.streakNum { font-size: 28px; font-weight: 800; color: var(--color-accent-press); letter-spacing: -0.02em; min-width: 36px; }
+.streakList { display: flex; flex-direction: column; gap: $space-xs; }
+.streak { display: flex; align-items: baseline; gap: $space-sm; }
+.streakNum { font-size: 28px; font-weight: 800; color: var(--color-accent-press); letter-spacing: -0.02em; min-width: 24px; }
 .streakMeta { font-size: 14px; color: var(--color-text3); font-weight: 500; }
