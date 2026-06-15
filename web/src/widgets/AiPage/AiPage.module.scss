@@ -6,7 +6,6 @@
 // ── Header ──────────────────────────────────────────────────────────────────
 .header {
   padding: $space-3xl $space-3xl $space-md;
-  @include hairline-bottom;
   flex-shrink: 0;
   @include mobile { padding: calc(#{$space-xl} + env(safe-area-inset-top, 0px)) $space-xl $space-md; }
 }
@@ -138,7 +137,7 @@
   flex-shrink: 0;
   display: flex; align-items: flex-end; gap: $space-md;
   padding: $space-md $space-3xl;
-  border-top: 1px solid var(--hairline); background: var(--color-bg);
+  background: var(--color-bg);
   max-width: 820px; margin: 0 auto; width: 100%;
   @include mobile { padding: $space-md $space-lg; @include safe-bottom; }
 }

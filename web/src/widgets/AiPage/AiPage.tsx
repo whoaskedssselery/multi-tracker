@@ -137,7 +137,7 @@ export function AiPage() {
       <div className={styles.messages} ref={scrollRef}>
         {msgs.length === 0 ? (
           <div className={styles.empty}>
-            <img src="/icon.svg" className={styles.emptyBadge} alt="" />
+            <img src="/app_icon.png" className={styles.emptyBadge} alt="" />
             <p className={styles.emptyTitle}>Привет! Я твой ИИ-тренер.</p>
             <p className={styles.emptySub}>Спроси что-нибудь о тренировках, весе или задачах.</p>
           </div>
