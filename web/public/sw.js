@@ -1,6 +1,6 @@
-// Network-first service worker. v3 — purges all older caches on activate so a
-// stale shell (e.g. from the previous Next build) can never be served again.
-const CACHE = 'multi-tracker-v3';
+// Network-first service worker. v4 — guards against undefined-Response crash
+// when both network and cache miss (e.g. with VPN blocking GitHub CDN).
+const CACHE = 'multi-tracker-v4';
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -23,10 +23,18 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(req)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        // Only cache successful, non-opaque responses.
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        }
         return res;
       })
-      .catch(() => caches.match(req).then((m) => m || caches.match('/'))),
+      .catch(async () => {
+        // Fallback: cached version of the exact URL, then the shell, then a
+        // synthetic 503 — respondWith must never receive undefined.
+        const cached = (await caches.match(req)) ?? (await caches.match('/'));
+        return cached ?? new Response('Offline', { status: 503, statusText: 'Offline' });
+      }),
   );
 });
