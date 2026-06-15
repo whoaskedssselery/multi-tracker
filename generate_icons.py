@@ -74,7 +74,7 @@ ANDROID_SIZES = [
 
 # ── Windows ICO ────────────────────────────────────────────────────────
 WIN_PATH  = r"flutter\windows\runner\resources\app_icon.ico"
-ICO_SIZES = [16, 32, 48, 64, 128, 256]
+ICO_SIZES = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256]
 
 
 def _save_ico(frames: list, path: str):
