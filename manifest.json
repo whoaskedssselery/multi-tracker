@@ -1,0 +1,35 @@
+{
+  "name": "Multi-tracker",
+  "short_name": "Tracker",
+  "version": "1.0.10",
+  "description": "Трекер веса, тренировок, задач и заметок",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#FAF7F0",
+  "theme_color": "#6B8F71",
+  "orientation": "portrait-primary",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Задачи",
+      "short_name": "Задачи",
+      "url": "/tasks"
+    },
+    {
+      "name": "Записать вес",
+      "short_name": "Вес",
+      "url": "/"
+    }
+  ],
+  "categories": ["productivity", "health", "fitness"]
+}
