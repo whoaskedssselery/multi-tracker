@@ -1,7 +1,7 @@
 name: multi_tracker
 description: Personal multi-tracker — weight log, workouts (PPL), tasks, notes, AI chat (Groq).
 publish_to: none
-version: 1.0.9+9
+version: 1.0.10+10
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
@@ -77,6 +77,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+
+  assets:
+    - assets/icon/app_icon.png
 
   fonts:
     # Manrope — sans for all text. Variable font (wght axis only, no opsz),

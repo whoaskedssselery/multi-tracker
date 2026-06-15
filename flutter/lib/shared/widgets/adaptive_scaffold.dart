@@ -253,26 +253,12 @@ class _DesktopSidebar extends StatelessWidget {
             padding: const EdgeInsets.only(left: 12, bottom: 18),
             child: Row(
               children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.accent, AppColors.accentPress],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: AppRadius.smAll,
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'M',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                ClipRRect(
+                  borderRadius: AppRadius.smAll,
+                  child: Image.asset(
+                    'assets/icon/app_icon.png',
+                    width: 26,
+                    height: 26,
                   ),
                 ),
                 const SizedBox(width: 10),

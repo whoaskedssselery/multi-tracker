@@ -319,24 +319,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.accent, AppColors.accentPress],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: AppRadius.mdAll,
-              ),
-              child: const Center(
-                child: Text('ИИ',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700)),
-              ),
+            ClipRRect(
+              borderRadius: AppRadius.mdAll,
+              child: Image.asset('assets/icon/app_icon.png',
+                  width: 56, height: 56),
             ),
             const SizedBox(height: 16),
             Text('Привет! Я твой ИИ-тренер.',
@@ -370,25 +356,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           horizontal: AppSpacing.xl3, vertical: AppSpacing.sm),
       child: Row(
         children: [
-          Container(
-            width: 30,
-            height: 30,
-            margin: const EdgeInsets.only(right: 10),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.accent, AppColors.accentPress],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: AppRadius.smAll,
-            ),
-            child: const Center(
-              child: Text('AI',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700)),
-            ),
+          ClipRRect(
+            borderRadius: AppRadius.smAll,
+            child: Image.asset('assets/icon/app_icon.png',
+                width: 30, height: 30),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -609,23 +580,11 @@ class _MessageBubble extends StatelessWidget {
         children: [
           if (!isUser) ...[
             Container(
-              width: 30,
-              height: 30,
               margin: const EdgeInsets.only(right: 10, top: 2),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.accent, AppColors.accentPress],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+              child: ClipRRect(
                 borderRadius: AppRadius.smAll,
-              ),
-              child: const Center(
-                child: Text('ИИ',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700)),
+                child: Image.asset('assets/icon/app_icon.png',
+                    width: 30, height: 30),
               ),
             ),
           ],
