@@ -2,7 +2,7 @@
 
 Личное приложение для фитнеса и продуктивности — вес, тренировки (PPL), задачи, заметки и ИИ-чат.
 
-**Платформы:** iOS · Android · Windows · Web
+**Платформы:** iOS · Android · Windows · Web → [multi-tracker.ru](https://multi-tracker.ru)
 
 Все данные синхронизируются между устройствами через Supabase (необязательно — приложение полностью работает офлайн).
 
@@ -25,7 +25,7 @@
 
 ```
 multi-tracker/
-  flutter/    — нативное приложение iOS + Windows (Flutter / Dart)
+  flutter/    — нативное приложение iOS · Android · Windows (Flutter / Dart)
   web/        — веб-приложение (Vite + React + TypeScript, SPA)
 ```
 
@@ -46,9 +46,6 @@ npm run dev
 
 Откроется на **http://localhost:3000**.
 
-> ⚠️ Если после переезда с прошлой версии в браузере «пропали стили» или ошибки `Unexpected token '<'` — это старый service worker от предыдущей сборки.
-> Открой DevTools → **Application → Storage → Clear site data** (или вкладка **Service Workers → Unregister**), затем обнови страницу. Новый воркер чистит кеш сам.
-
 ### Сборка
 
 ```bash
@@ -66,7 +63,7 @@ VITE_SUPABASE_URL=https://<project>.supabase.co
 VITE_SUPABASE_ANON_KEY=<publishable/anon-ключ>
 ```
 
-Используется только **публичный** anon/publishable ключ. Секретный (service) ключ в вебе не нужен и не должен попадать в код.
+Используется только **публичный** anon/publishable ключ.
 
 ---
 
@@ -76,7 +73,8 @@ VITE_SUPABASE_ANON_KEY=<publishable/anon-ключ>
 
 - Flutter ≥ 3.24 · Dart ≥ 3.5
 - **Windows:** Visual Studio 2022 (нагрузка «Разработка классических приложений на C++»)
-- **iOS:** сборка только на Mac — Xcode 15+, CocoaPods (`sudo gem install cocoapods`), и инструмент сайдлоада (SideStore / AltStore)
+- **iOS:** сборка только на Mac — Xcode 15+, CocoaPods (`sudo gem install cocoapods`)
+- **Android:** Android SDK, Flutter с включённой платформой android
 
 ### Запуск
 
@@ -93,6 +91,9 @@ flutter run -d windows
 # iOS (только на Mac)
 cd ios && pod install && cd ..
 flutter run -d <device-id>
+
+# Android
+flutter run -d <device-id>
 ```
 
 ### Сборка релиза
@@ -106,7 +107,7 @@ cd ios && pod install && cd ..
 flutter build ios --release --no-codesign
 # Затем в Xcode: Product → Archive → Distribute → Development
 
-# Android (APK для сайдлоада)
+# Android (APK)
 flutter build apk --release
 ```
 
@@ -116,6 +117,14 @@ flutter build apk --release
 
 Сборки iOS (IPA), Windows (zip) и Android (APK) автоматически собираются в
 GitHub Actions и публикуются в Release при пуше тега `vX.Y.Z` (см. вкладку Releases).
+
+### Иконки
+
+Иконки для всех платформ генерируются из одного источника:
+
+```bash
+python generate_icons.py   # Pillow: pip install Pillow
+```
 
 ### Архитектура
 
@@ -160,10 +169,3 @@ flutter gen-l10n
 - Источник правды в облаке — таблица `app_state` в Supabase (один JSON-снимок на пользователя, стратегия Last-Write-Wins).
 - Полный сброс облака: в Supabase → **SQL Editor** → `delete from app_state;`
 - Сброс локальных данных на устройстве: **Настройки → Сбросить данные**.
-
----
-
-## Планы
-
-- [x] Android
-- [ ] Подтверждение email кодом при регистрации
